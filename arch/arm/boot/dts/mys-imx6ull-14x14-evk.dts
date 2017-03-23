@@ -145,6 +145,39 @@
 			spi-max-frequency = <100000>;
 		};
 	};
+
+    leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_leds>;
+
+		led0: cpu {
+			label = "user";
+			gpios = <&gpio5 1 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+		};
+
+        led1: user {
+			label = "cpu";
+			gpios = <&gpio5 2 GPIO_ACTIVE_LOW>;
+			default-state = "on";
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
+    gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_key>;
+
+		user {
+			label = "User Button";
+			gpios = <&gpio5 0 GPIO_ACTIVE_HIGH>;
+			gpio-key,wakeup;
+			linux,code = <KEY_1>;
+		};
+    };
+
 };
 
 &gpmi{
@@ -563,6 +596,19 @@
 		pinctrl_wdog: wdoggrp {
 			fsl,pins = <
 				MX6UL_PAD_LCD_RESET__WDOG1_WDOG_ANY    0x30b0
+			>;
+		};
+
+        pinctrl_leds: ledgrp {
+			fsl,pins = <
+                MX6UL_PAD_SNVS_TAMPER1__GPIO5_IO01 0x1b0b0
+                MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02 0x1b0b0
+			>;
+		};
+
+        pinctrl_gpio_key: keygrp {
+			fsl,pins = <
+                MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00 0x1b0b0
 			>;
 		};
 	};

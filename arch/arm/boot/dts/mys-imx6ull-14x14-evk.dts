@@ -210,7 +210,8 @@
 	phy-mode = "rmii";
 	phy-handle = <&ethphy0>;
 	status = "okay";
-	mdio {
+
+    mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -219,7 +220,6 @@
 			reg = <0>;
 		};
     };
-
 };
 
 &fec2 {
@@ -229,7 +229,7 @@
 	phy-handle = <&ethphy1>;
 	status = "disabled";
 
-	mdio {
+    mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -238,6 +238,7 @@
 			reg = <1>;
 		};
 	};
+
 };
 
 &flexcan1 {
@@ -336,6 +337,8 @@
 
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
+				MX6UL_PAD_GPIO1_IO06__ENET1_MDIO	0x1b0b0
+				MX6UL_PAD_GPIO1_IO07__ENET1_MDC		0x1b0b0
 				MX6UL_PAD_ENET1_RX_EN__ENET1_RX_EN	0x1b0b0
 				MX6UL_PAD_ENET1_RX_ER__ENET1_RX_ER	0x1b0b0
 				MX6UL_PAD_ENET1_RX_DATA0__ENET1_RDATA00	0x1b0b0
@@ -344,15 +347,11 @@
 				MX6UL_PAD_ENET1_TX_DATA0__ENET1_TDATA00	0x1b0b0
 				MX6UL_PAD_ENET1_TX_DATA1__ENET1_TDATA01	0x1b0b0
 				MX6UL_PAD_ENET1_TX_CLK__ENET1_REF_CLK1	0x4001b031
-                MX6UL_PAD_GPIO1_IO06__ENET1_MDIO 0x1b0b0
-                MX6UL_PAD_GPIO1_IO07__ENET1_MDC  0x1b0b0
 			>;
 		};
 
 		pinctrl_enet2: enet2grp {
 			fsl,pins = <
-				MX6UL_PAD_GPIO1_IO07__ENET2_MDC		0x1b0b0
-				MX6UL_PAD_GPIO1_IO06__ENET2_MDIO	0x1b0b0
 				MX6UL_PAD_ENET2_RX_EN__ENET2_RX_EN	0x1b0b0
 				MX6UL_PAD_ENET2_RX_ER__ENET2_RX_ER	0x1b0b0
 				MX6UL_PAD_ENET2_RX_DATA0__ENET2_RDATA00	0x1b0b0
@@ -763,14 +762,12 @@
 };
 
 &usdhc1 {
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc1>;
-	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
-	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
 	cd-gpios = <&gpio1 19 GPIO_ACTIVE_LOW>;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
-	vmmc-supply = <&reg_sd1_vmmc>;
+	bus-width = <4>;
 	status = "okay";
 };
 
@@ -778,7 +775,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	non-removable;
-	status = "okay";
+	status = "disabled";
 };
 
 &wdog1 {

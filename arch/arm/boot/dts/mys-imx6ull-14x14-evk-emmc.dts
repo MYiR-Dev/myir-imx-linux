@@ -9,13 +9,6 @@
 #include "mys-imx6ull-14x14-evk.dts"
 
 &usdhc1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usdhc1>;
-	/*pinctrl-names = "default", "state_100mhz", "state_200mhz";
-	pinctrl-0 = <&pinctrl_usdhc2_8bit>;
-	pinctrl-1 = <&pinctrl_usdhc2_8bit_100mhz>;
-	pinctrl-2 = <&pinctrl_usdhc2_8bit_200mhz>;*/
-	bus-width = <4>;
 	status = "okay";
 };
 &usdhc2 {

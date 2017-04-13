@@ -74,13 +74,13 @@
 
 		reg_gpio_dvfs: regulator-gpio {
 			compatible = "regulator-gpio";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_dvfs>;
+			/*pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_dvfs>;*/
 			regulator-min-microvolt = <1300000>;
 			regulator-max-microvolt = <1400000>;
 			regulator-name = "gpio_dvfs";
 			regulator-type = "voltage";
-			gpios = <&gpio5 3 GPIO_ACTIVE_HIGH>;
+			/*gpios = <&gpio5 3 GPIO_ACTIVE_HIGH>;*/
 			states = <1300000 0x1 1400000 0x0>;
 		};
 	};
@@ -145,12 +145,44 @@
 			spi-max-frequency = <100000>;
 		};
 	};
+
+    leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_leds>;
+
+		led0: cpu {
+			label = "user";
+			gpios = <&gpio5 1 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+		};
+
+        led1: user {
+			label = "cpu";
+			gpios = <&gpio5 2 GPIO_ACTIVE_LOW>;
+			default-state = "on";
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
+    gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_key>;
+
+		user {
+			label = "User Button";
+			gpios = <&gpio5 0 GPIO_ACTIVE_HIGH>;
+			gpio-key,wakeup;
+			linux,code = <KEY_1>;
+		};
+    };
 };
 
 &cpu0 {
 	arm-supply = <&reg_arm>;
 	soc-supply = <&reg_soc>;
-	dc-supply = <&reg_gpio_dvfs>;
+	/*dc-supply = <&reg_gpio_dvfs>;*/
 };
 
 &clks {
@@ -196,9 +228,9 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethphy1: ethernet-phy@2 {
+		ethphy1: ethernet-phy@1 {
 			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <2>;
+			reg = <1>;
 		};
 	};
 };
@@ -207,14 +239,14 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1>;
 	xceiver-supply = <&reg_can_3v3>;
-	status = "okay";
+	status = "disabled";
 };
 
 &flexcan2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan2>;
 	xceiver-supply = <&reg_can_3v3>;
-	status = "okay";
+	status = "disabled";
 };
 
 &gpc {
@@ -251,6 +283,17 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
+
+    ft5x06: ft5x06@38 {
+		compatible = "ft5x06_ts";
+		reg = <0x38>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&edt_ft5x06_pins>;
+		tp_int = <&gpio5 4 0>;
+		tp_resetn = <&gpio5 3 0>;
+        polling_mode = /bits/ 8 <1>;
+        multi_touch = /bits/ 8 <0>;
+	};
 
 	codec: wm8960@1a {
 		compatible = "wlf,wm8960";
@@ -290,7 +333,14 @@
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059 /* SD1 CD */
 				MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059 /* SD1 VSELECT */
 				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
-				MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00	0x80000000
+				/*MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00	0x80000000 */
+			>;
+		};
+
+        edt_ft5x06_pins: ft5x06 {
+			fsl,pins = <
+				MX6UL_PAD_SNVS_TAMPER3__GPIO5_IO03	0x1b0b0
+				MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04	0x1b0b0
 			>;
 		};
 
@@ -319,6 +369,8 @@
 
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
+				MX6UL_PAD_GPIO1_IO06__ENET1_MDIO	0x1b0b0
+				MX6UL_PAD_GPIO1_IO07__ENET1_MDC		0x1b0b0
 				MX6UL_PAD_ENET1_RX_EN__ENET1_RX_EN	0x1b0b0
 				MX6UL_PAD_ENET1_RX_ER__ENET1_RX_ER	0x1b0b0
 				MX6UL_PAD_ENET1_RX_DATA0__ENET1_RDATA00	0x1b0b0
@@ -326,9 +378,7 @@
 				MX6UL_PAD_ENET1_TX_EN__ENET1_TX_EN	0x1b0b0
 				MX6UL_PAD_ENET1_TX_DATA0__ENET1_TDATA00	0x1b0b0
 				MX6UL_PAD_ENET1_TX_DATA1__ENET1_TDATA01	0x1b0b0
-				MX6UL_PAD_ENET1_TX_CLK__ENET1_REF_CLK1	0x4001b031
-				MX6UL_PAD_GPIO1_IO06__ENET1_MDIO	0x1b0b0
-				MX6UL_PAD_GPIO1_IO07__ENET1_MDC		0x1b0b0
+				MX6UL_PAD_ENET1_TX_CLK__ENET1_REF_CLK1  0x4001b031
 			>;
 		};
 
@@ -588,6 +638,19 @@
 				MX6UL_PAD_LCD_RESET__WDOG1_WDOG_ANY    0x30b0
 			>;
 		};
+
+        pinctrl_leds: ledgrp {
+			fsl,pins = <
+                MX6UL_PAD_SNVS_TAMPER1__GPIO5_IO01 0x1b0b0
+                MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02 0x1b0b0
+			>;
+		};
+
+        pinctrl_gpio_key: keygrp {
+			fsl,pins = <
+                MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00 0x1b0b0
+			>;
+		};
 	};
 };
 
@@ -620,6 +683,24 @@
 			de-active = <1>;
 			pixelclk-active = <0>;
 			};
+/*
+            timing1: timing1 {
+			clock-frequency = <3300000>;
+			hactive = <800>;
+			vactive = <480>;
+			hfront-porch = <210>;
+			hback-porch = <46>;
+			hsync-len = <1>;
+			vback-porch = <22>;
+			vfront-porch = <23>;
+			vsync-len = <20>;
+
+			hsync-active = <0>;
+			vsync-active = <0>;
+			de-active = <1>;
+			pixelclk-active = <0>;
+			};
+*/
 		};
 	};
 };
@@ -659,7 +740,7 @@
 	assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
 	assigned-clock-rates = <0>, <12288000>;
 
-	status = "okay";
+	status = "disabled";
 };
 
 &sim2 {
@@ -726,14 +807,12 @@
 };
 
 &usdhc1 {
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-	pinctrl-0 = <&pinctrl_usdhc1>;
-	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
-	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
-	cd-gpios = <&gpio1 19 GPIO_ACTIVE_LOW>;
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_usdhc1>;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
-	vmmc-supply = <&reg_sd1_vmmc>;
+	cd-gpios = <&gpio1 19 GPIO_ACTIVE_LOW>;
+	bus-width = <4>;
 	status = "okay";
 };
 
@@ -741,7 +820,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	non-removable;
-	status = "okay";
+	bus-width = <8>;
+	status = "disabled";
 };
 
 &wdog1 {

@@ -74,13 +74,13 @@
 
 		reg_gpio_dvfs: regulator-gpio {
 			compatible = "regulator-gpio";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_dvfs>;
+			/*pinctrl-names = "default";
+			pinctrl-0 = <&pinctrl_dvfs>;*/
 			regulator-min-microvolt = <1300000>;
 			regulator-max-microvolt = <1400000>;
 			regulator-name = "gpio_dvfs";
 			regulator-type = "voltage";
-			gpios = <&gpio5 3 GPIO_ACTIVE_HIGH>;
+			/*gpios = <&gpio5 3 GPIO_ACTIVE_HIGH>;*/
 			states = <1300000 0x1 1400000 0x0>;
 		};
 	};
@@ -186,7 +186,7 @@
 &cpu0 {
 	arm-supply = <&reg_arm>;
 	soc-supply = <&reg_soc>;
-	dc-supply = <&reg_gpio_dvfs>;
+	/*dc-supply = <&reg_gpio_dvfs>;*/
 };
 
 &clks {
@@ -277,6 +277,17 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
+    ft5x06: ft5x06@38 {
+		compatible = "ft5x06_ts";
+		reg = <0x38>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&edt_ft5x06_pins>;
+		tp_int = <&gpio5 4 0>;
+		tp_resetn = <&gpio5 3 0>;
+        polling_mode = /bits/ 8 <1>;
+        multi_touch = /bits/ 8 <0>;
+	};
+
 	codec: wm8960@1a {
 		compatible = "wlf,wm8960";
 		reg = <0x1a>;
@@ -315,6 +326,13 @@
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059 /* SD1 CD */
 				MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059 /* SD1 VSELECT */
 				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
+			>;
+		};
+
+        edt_ft5x06_pins: ft5x06 {
+			fsl,pins = <
+				MX6UL_PAD_SNVS_TAMPER3__GPIO5_IO03	0x1b0b0
+				MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04	0x1b0b0
 			>;
 		};
 
@@ -655,6 +673,7 @@
 
 		display-timings {
 			native-mode = <&timing0>;
+
 			timing0: timing0 {
 			clock-frequency = <9200000>;
 			hactive = <480>;
@@ -671,6 +690,24 @@
 			de-active = <1>;
 			pixelclk-active = <0>;
 			};
+/*
+            timing1: timing1 {
+			clock-frequency = <3300000>;
+			hactive = <800>;
+			vactive = <480>;
+			hfront-porch = <210>;
+			hback-porch = <46>;
+			hsync-len = <1>;
+			vback-porch = <22>;
+			vfront-porch = <23>;
+			vsync-len = <20>;
+
+			hsync-active = <0>;
+			vsync-active = <0>;
+			de-active = <1>;
+			pixelclk-active = <0>;
+			};
+*/
 		};
 	};
 };
@@ -711,7 +748,7 @@
 	assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
 	assigned-clock-rates = <0>, <12288000>;
 
-	status = "okay";
+	status = "disabled";
 };
 
 &tsc {

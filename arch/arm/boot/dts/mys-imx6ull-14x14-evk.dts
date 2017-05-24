@@ -99,10 +99,10 @@
 		 * hp-det-pin: JD1 JD2  or JD3
 		 * hp-det-polarity = 0: hp detect high for headphone
 		 * hp-det-polarity = 1: hp detect high for speaker
-		 */
 		hp-det = <3 0>;
 		hp-det-gpios = <&gpio5 4 0>;
 		mic-det-gpios = <&gpio5 4 0>;
+		 */
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -209,7 +209,7 @@
 	pinctrl-0 = <&pinctrl_enet1>;
 	phy-mode = "rmii";
 	phy-handle = <&ethphy0>;
-    phy-reset-gpios = <&gpio5 6 0>;
+    phy-reset-gpios = <&gpio5 6 GPIO_ACTIVE_LOW>;
 	status = "okay";
 
     mdio {

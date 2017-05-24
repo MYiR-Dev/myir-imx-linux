@@ -205,7 +205,7 @@
 	pinctrl-0 = <&pinctrl_enet1>;
 	phy-mode = "rmii";
 	phy-handle = <&ethphy0>;
-    phy-reset-gpios = <&gpio5 6 0>;
+    phy-reset-gpios = <&gpio5 6 GPIO_ACTIVE_LOW>;
 	status = "okay";
 	mdio {
 		#address-cells = <1>;

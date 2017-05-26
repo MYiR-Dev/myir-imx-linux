@@ -765,8 +765,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_tsc>;
 	xnur-gpio = <&gpio1 3 GPIO_ACTIVE_LOW>;
-	measure-delay-time = <0xffff>;
-	pre-charge-time = <0xfff>;
+	measure-delay-time = <0xfffff>;
+	pre-charge-time = <0xffff>;
 	status = "okay";
 };
 

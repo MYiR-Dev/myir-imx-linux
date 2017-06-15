@@ -790,7 +790,7 @@ static int out_pga_event(struct snd_soc_dapm_widget *w,
 			snd_soc_write(codec, WM8904_DC_SERVO_1,
 				dcs_mask << WM8904_DCS_TRIG_STARTUP_0_SHIFT);
 
-			timeout = 500;
+			timeout = 20;
 		}
 
 		/* Wait for DC servo to complete */
@@ -1838,6 +1838,10 @@ static int wm8904_set_bias_level(struct snd_soc_codec *codec,
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 		clk_prepare_enable(wm8904->mclk);
+        snd_soc_update_bits(codec, WM8904_ADC_DIGITAL_VOLUME_RIGHT, WM8904_ADCR_VOL_MASK, WM8904_ADCR_VOL_MASK);
+        snd_soc_update_bits(codec, WM8904_ADC_DIGITAL_VOLUME_LEFT, WM8904_ADCL_VOL_MASK, WM8904_ADCL_VOL_MASK);
+        snd_soc_update_bits(codec, WM8904_ANALOGUE_LEFT_INPUT_0, WM8904_LIN_VOL_MASK,WM8904_LIN_VOL_MASK);
+        snd_soc_update_bits(codec, WM8904_ANALOGUE_RIGHT_INPUT_0, WM8904_RIN_VOL_MASK, WM8904_RIN_VOL_MASK);
 		break;
 
 	case SND_SOC_BIAS_PREPARE:

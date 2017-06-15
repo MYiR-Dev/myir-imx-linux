@@ -86,40 +86,20 @@
 	};
 
 	sound {
-		compatible = "fsl,imx6ul-evk-wm8960",
-			   "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
+		compatible = "fsl,imx6ul-evk-wm8904",
+			   "fsl,imx-audio-wm8904";
+		model = "wm8904-audio";
 		cpu-dai = <&sai2>;
 		audio-codec = <&codec>;
-		asrc-controller = <&asrc>;
-		codec-master;
+		/*asrc-controller = <&asrc>;*/
 		gpr = <&gpr>;
-		/*
-                 * hp-det = <hp-det-pin hp-det-polarity>;
-		 * hp-det-pin: JD1 JD2  or JD3
-		 * hp-det-polarity = 0: hp detect high for headphone
-		 * hp-det-polarity = 1: hp detect high for speaker
-		 */
-		hp-det = <3 0>;
-		hp-det-gpios = <&gpio5 4 0>;
-		mic-det-gpios = <&gpio5 4 0>;
 		audio-routing =
-			"Headphone Jack", "HP_L",
-			"Headphone Jack", "HP_R",
-			"Ext Spk", "SPK_LP",
-			"Ext Spk", "SPK_LN",
-			"Ext Spk", "SPK_RP",
-			"Ext Spk", "SPK_RN",
-			"LINPUT2", "Mic Jack",
-			"LINPUT3", "Mic Jack",
-			"RINPUT1", "Main MIC",
-			"RINPUT2", "Main MIC",
-			"Mic Jack", "MICB",
-			"Main MIC", "MICB",
-			"CPU-Playback", "ASRC-Playback",
-			"Playback", "CPU-Playback",
-			"ASRC-Capture", "CPU-Capture",
-			"CPU-Capture", "Capture";
+			"Headphone Jack", "HPOUTL",
+			"Headphone Jack", "HPOUTR",
+			"IN2L", "Line In Jack",
+			"IN2R", "Line In Jack",
+			"Mic", "MICBIAS",
+			"IN1L", "Mic";
 	};
 
 	spi4 {
@@ -296,12 +276,11 @@
         multi_touch = /bits/ 8 <0>;
 	};
 
-	codec: wm8960@1a {
-		compatible = "wlf,wm8960";
+    codec: wm8904@1a {
+		compatible = "wlf,wm8904";
 		reg = <0x1a>;
 		clocks = <&clks IMX6UL_CLK_SAI2>;
 		clock-names = "mclk";
-		wlf,shared-lrclk;
 	};
 
 	ov5640: ov5640@3c {
@@ -489,7 +468,7 @@
 				MX6UL_PAD_JTAG_TRST_B__SAI2_TX_DATA	0x11088
 				MX6UL_PAD_JTAG_TCK__SAI2_RX_DATA	0x11088
 				MX6UL_PAD_JTAG_TMS__SAI2_MCLK		0x17088
-				MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04	0x17059
+				/*MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04	0x17059*/
 			>;
 		};
 
@@ -742,7 +721,7 @@
 	assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
 	assigned-clock-rates = <0>, <12288000>;
 
-	status = "disabled";
+	status = "okay";
 };
 
 &sim2 {

@@ -86,23 +86,13 @@
 	};
 
 	sound {
-		compatible = "fsl,imx6ul-evk-wm8960",
-			   "fsl,imx-audio-wm8960";
-		model = "wm8960-audio";
+		compatible = "fsl,imx6ul-evk-wm8904",
+			   "fsl,imx-audio-wm8904";
+		model = "wm8904-audio";
 		cpu-dai = <&sai2>;
 		audio-codec = <&codec>;
-		asrc-controller = <&asrc>;
-		codec-master;
+		/*asrc-controller = <&asrc>;*/
 		gpr = <&gpr>;
-		/*
-                 * hp-det = <hp-det-pin hp-det-polarity>;
-		 * hp-det-pin: JD1 JD2  or JD3
-		 * hp-det-polarity = 0: hp detect high for headphone
-		 * hp-det-polarity = 1: hp detect high for speaker
-		hp-det = <3 0>;
-		hp-det-gpios = <&gpio5 4 0>;
-		mic-det-gpios = <&gpio5 4 0>;
-		 */
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -289,12 +279,11 @@
         multi_touch = /bits/ 8 <0>;
 	};
 
-	codec: wm8960@1a {
-		compatible = "wlf,wm8960";
+	codec: wm8904@1a {
+		compatible = "wlf,wm8904";
 		reg = <0x1a>;
 		clocks = <&clks IMX6UL_CLK_SAI2>;
 		clock-names = "mclk";
-		wlf,shared-lrclk;
 	};
 
 	ov5640: ov5640@3c {
@@ -652,11 +641,6 @@
                         >;
                 };
 
-                pinctrl_sai2_hp_det_b: sai2_hp_det_grp {
-                        fsl,pins = <
-                                MX6ULL_PAD_SNVS_TAMPER4__GPIO5_IO04   0x17059
-                        >;
-                };
         };
 };
 
@@ -742,15 +726,14 @@
 
 &sai2 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_sai2
-		     &pinctrl_sai2_hp_det_b>;
+	pinctrl-0 = <&pinctrl_sai2>;
 
 	assigned-clocks = <&clks IMX6UL_CLK_SAI2_SEL>,
 			  <&clks IMX6UL_CLK_SAI2>;
 	assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
 	assigned-clock-rates = <0>, <12288000>;
 
-	status = "disabled";
+	status = "okay";
 };
 
 &tsc {

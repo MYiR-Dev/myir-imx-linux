@@ -201,6 +201,14 @@
 	phy-handle = <&ethphy0>;
     phy-reset-gpios = <&gpio5 6 GPIO_ACTIVE_LOW>;
 	status = "okay";
+};
+
+&fec2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_enet2>;
+	phy-mode = "rmii";
+	phy-handle = <&ethphy1>;
+	status = "okay";
 
     mdio {
 		#address-cells = <1>;
@@ -210,20 +218,6 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <0>;
 		};
-    };
-};
-
-&fec2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_enet2>;
-	phy-mode = "rmii";
-	phy-handle = <&ethphy1>;
-	status = "disabled";
-
-    mdio {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
 		ethphy1: ethernet-phy@1 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <1>;
@@ -345,8 +339,6 @@
 
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
-				MX6UL_PAD_GPIO1_IO06__ENET1_MDIO	0x1b0b0
-				MX6UL_PAD_GPIO1_IO07__ENET1_MDC		0x1b0b0
 				MX6UL_PAD_ENET1_RX_EN__ENET1_RX_EN	0x1b0b0
 				MX6UL_PAD_ENET1_RX_ER__ENET1_RX_ER	0x1b0b0
 				MX6UL_PAD_ENET1_RX_DATA0__ENET1_RDATA00	0x1b0b0
@@ -361,6 +353,8 @@
 
 		pinctrl_enet2: enet2grp {
 			fsl,pins = <
+				MX6UL_PAD_GPIO1_IO06__ENET2_MDIO	0x1b0b0
+				MX6UL_PAD_GPIO1_IO07__ENET2_MDC		0x1b0b0
 				MX6UL_PAD_ENET2_RX_EN__ENET2_RX_EN	0x1b0b0
 				MX6UL_PAD_ENET2_RX_ER__ENET2_RX_ER	0x1b0b0
 				MX6UL_PAD_ENET2_RX_DATA0__ENET2_RDATA00	0x1b0b0

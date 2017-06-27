@@ -68,7 +68,7 @@
 			regulator-name = "VSD_3V3";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio1 9 GPIO_ACTIVE_HIGH>;
+			/*gpio = <&gpio1 9 GPIO_ACTIVE_HIGH>;*/
 			enable-active-high;
 		};
 
@@ -189,7 +189,7 @@
 
 	port {
 		csi1_ep: endpoint {
-			remote-endpoint = <&ov5640_ep>;
+			remote-endpoint = <&ov2659_ep>;
 		};
 	};
 };
@@ -280,22 +280,20 @@
 		clock-names = "mclk";
 	};
 
-	ov5640: ov5640@3c {
-		compatible = "ovti,ov5640";
-		reg = <0x3c>;
+	ov2659: ov2659@30 {
+		compatible = "ovti,ov2659";
+		reg = <0x30>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_csi1>;
 		clocks = <&clks IMX6UL_CLK_CSI>;
-		clock-names = "csi_mclk";
-		pwn-gpios = <&gpio_spi 6 1>;
-		rst-gpios = <&gpio_spi 5 0>;
-		csi_id = <0>;
-		mclk = <24000000>;
-		mclk_source = <0>;
+		clock-names = "xvclk";
+		pwn-gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;
+	    rst-gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
 		status = "okay";
 		port {
-			ov5640_ep: endpoint {
+			ov2659_ep: endpoint {
 				remote-endpoint = <&csi1_ep>;
+                link-frequencies = /bits/ 64 <70000000>;
 			};
 		};
 	};
@@ -309,7 +307,6 @@
 			fsl,pins = <
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059 /* SD1 CD */
 				MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059 /* SD1 VSELECT */
-				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
 			>;
 		};
 
@@ -334,6 +331,7 @@
 				MX6UL_PAD_CSI_DATA05__CSI_DATA07	0x1b088
 				MX6UL_PAD_CSI_DATA06__CSI_DATA08	0x1b088
 				MX6UL_PAD_CSI_DATA07__CSI_DATA09	0x1b088
+				/*MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x1b0b0  SD1 RESET */
 			>;
 		};
 
@@ -479,8 +477,6 @@
 			fsl,pins = <
 				MX6UL_PAD_UART2_TX_DATA__UART2_DCE_TX	0x1b0b1
 				MX6UL_PAD_UART2_RX_DATA__UART2_DCE_RX	0x1b0b1
-				MX6UL_PAD_UART3_RX_DATA__UART2_DCE_RTS	0x1b0b1
-				MX6UL_PAD_UART3_TX_DATA__UART2_DCE_CTS	0x1b0b1
 			>;
 		};
 
@@ -490,6 +486,14 @@
 				MX6UL_PAD_UART2_RX_DATA__UART2_DTE_TX	0x1b0b1
 				MX6UL_PAD_UART3_RX_DATA__UART2_DTE_CTS	0x1b0b1
 				MX6UL_PAD_UART3_TX_DATA__UART2_DTE_RTS	0x1b0b1
+			>;
+		};
+
+		pinctrl_uart3: uart3grp {
+			fsl,pins = <
+				MX6UL_PAD_UART3_RX_DATA__UART3_DCE_RX	0x1b0b1
+				MX6UL_PAD_UART3_TX_DATA__UART3_DCE_TX	0x1b0b1
+				MX6UL_PAD_UART1_CTS_B__GPIO1_IO18       0x1b0b1 /* RS485 RE/DE */
 			>;
 		};
 
@@ -748,10 +752,18 @@
 &uart2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
-	fsl,uart-has-rtscts;
+	/*fsl,uart-has-rtscts;*/
 	/* for DTE mode, add below change */
 	/* fsl,dte-mode; */
 	/* pinctrl-0 = <&pinctrl_uart2dte>; */
+	status = "okay";
+};
+
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3>;
+	fsl,rs485-gpio-txen = <&gpio1 18 GPIO_ACTIVE_HIGH>;
+    linux,rs485-enabled-at-boot-time;
 	status = "okay";
 };
 

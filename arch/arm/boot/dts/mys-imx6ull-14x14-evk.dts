@@ -85,39 +85,12 @@
 		};
 	};
 
-	sound {
-		compatible = "fsl,imx6ul-evk-wm8904",
-			   "fsl,imx-audio-wm8904";
-		model = "wm8904-audio";
-		cpu-dai = <&sai2>;
-		audio-codec = <&codec>;
-		/*asrc-controller = <&asrc>;*/
-		gpr = <&gpr>;
-		audio-routing =
-			"Headphone Jack", "HP_L",
-			"Headphone Jack", "HP_R",
-			"Ext Spk", "SPK_LP",
-			"Ext Spk", "SPK_LN",
-			"Ext Spk", "SPK_RP",
-			"Ext Spk", "SPK_RN",
-			"LINPUT2", "Mic Jack",
-			"LINPUT3", "Mic Jack",
-			"RINPUT1", "Main MIC",
-			"RINPUT2", "Main MIC",
-			"Mic Jack", "MICB",
-			"Main MIC", "MICB",
-			"CPU-Playback", "ASRC-Playback",
-			"Playback", "CPU-Playback",
-			"ASRC-Capture", "CPU-Capture",
-			"CPU-Capture", "Capture";
-	};
-
 	spi4 {
 		compatible = "spi-gpio";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_spi4>;
 		pinctrl-assert-gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
-		status = "okay";
+		status = "disabled";
 		gpio-sck = <&gpio5 11 0>;
 		gpio-mosi = <&gpio5 10 0>;
 		cs-gpios = <&gpio5 7 0>;
@@ -184,32 +157,13 @@
 	assigned-clock-rates = <786432000>;
 };
 
-&csi {
-	status = "okay";
-
-	port {
-		csi1_ep: endpoint {
-			remote-endpoint = <&ov2659_ep>;
-		};
-	};
-};
-
 &fec1 {
-	pinctrl-names = "default";
+	pinctrl-names = "default", "mdio";
 	pinctrl-0 = <&pinctrl_enet1>;
 	phy-mode = "rmii";
 	phy-handle = <&ethphy0>;
     phy-reset-gpios = <&gpio5 6 GPIO_ACTIVE_LOW>;
 	status = "okay";
-};
-
-&fec2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_enet2>;
-	phy-mode = "rmii";
-	phy-handle = <&ethphy1>;
-	status = "okay";
-
     mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -226,18 +180,19 @@
 
 };
 
-&flexcan1 {
+&fec2 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_flexcan1>;
-	xceiver-supply = <&reg_can_3v3>;
-	status = "okay";
+	pinctrl-0 = <&pinctrl_enet2>;
+	phy-mode = "rmii";
+	phy-handle = <&ethphy1>;
+	status = "disabled";
 };
 
 &flexcan2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan2>;
 	xceiver-supply = <&reg_can_3v3>;
-	status = "okay";
+	status = "disabled";
 };
 
 &gpc {
@@ -252,7 +207,7 @@
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1>;
-	status = "okay";
+	status = "disabled";
 
 };
 
@@ -273,30 +228,6 @@
         multi_touch = /bits/ 8 <0>;
 	};
 
-	codec: wm8904@1a {
-		compatible = "wlf,wm8904";
-		reg = <0x1a>;
-		clocks = <&clks IMX6UL_CLK_SAI2>;
-		clock-names = "mclk";
-	};
-
-	ov2659: ov2659@30 {
-		compatible = "ovti,ov2659";
-		reg = <0x30>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_csi1>;
-		clocks = <&clks IMX6UL_CLK_CSI>;
-		clock-names = "xvclk";
-		pwn-gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;
-	    rst-gpios = <&gpio1 9 GPIO_ACTIVE_LOW>;
-		status = "okay";
-		port {
-			ov2659_ep: endpoint {
-				remote-endpoint = <&csi1_ep>;
-                link-frequencies = /bits/ 64 <70000000>;
-			};
-		};
-	};
 };
 
 &iomuxc {
@@ -337,6 +268,8 @@
 
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
+				MX6UL_PAD_GPIO1_IO06__ENET1_MDIO	0x1b0b0
+				MX6UL_PAD_GPIO1_IO07__ENET1_MDC		0x1b0b0
 				MX6UL_PAD_ENET1_RX_EN__ENET1_RX_EN	0x1b0b0
 				MX6UL_PAD_ENET1_RX_ER__ENET1_RX_ER	0x1b0b0
 				MX6UL_PAD_ENET1_RX_DATA0__ENET1_RDATA00	0x1b0b0
@@ -361,13 +294,6 @@
 				MX6UL_PAD_ENET2_TX_DATA0__ENET2_TDATA00	0x1b0b0
 				MX6UL_PAD_ENET2_TX_DATA1__ENET2_TDATA01	0x1b0b0
 				MX6UL_PAD_ENET2_TX_CLK__ENET2_REF_CLK2	0x4001b031
-			>;
-		};
-
-		pinctrl_flexcan1: flexcan1grp{
-			fsl,pins = <
-				MX6UL_PAD_UART3_RTS_B__FLEXCAN1_RX	0x1b020
-				MX6UL_PAD_UART3_CTS_B__FLEXCAN1_TX	0x1b020
 			>;
 		};
 
@@ -486,14 +412,6 @@
 				MX6UL_PAD_UART2_RX_DATA__UART2_DTE_TX	0x1b0b1
 				MX6UL_PAD_UART3_RX_DATA__UART2_DTE_CTS	0x1b0b1
 				MX6UL_PAD_UART3_TX_DATA__UART2_DTE_RTS	0x1b0b1
-			>;
-		};
-
-		pinctrl_uart3: uart3grp {
-			fsl,pins = <
-				MX6UL_PAD_UART3_RX_DATA__UART3_DCE_RX	0x1b0b1
-				MX6UL_PAD_UART3_TX_DATA__UART3_DCE_TX	0x1b0b1
-				MX6UL_PAD_UART1_CTS_B__GPIO1_IO18       0x1b0b1 /* RS485 RE/DE */
 			>;
 		};
 
@@ -709,7 +627,7 @@
 &qspi {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_qspi>;
-	status = "okay";
+	status = "disabled";
 	ddrsmp=<0>;
 
 	flash0: n25q256a@0 {
@@ -731,7 +649,7 @@
 	assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
 	assigned-clock-rates = <0>, <12288000>;
 
-	status = "okay";
+	status = "disabled";
 };
 
 &tsc {
@@ -756,15 +674,7 @@
 	/* for DTE mode, add below change */
 	/* fsl,dte-mode; */
 	/* pinctrl-0 = <&pinctrl_uart2dte>; */
-	status = "okay";
-};
-
-&uart3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart3>;
-	fsl,rs485-gpio-txen = <&gpio1 18 GPIO_ACTIVE_HIGH>;
-    linux,rs485-enabled-at-boot-time;
-	status = "okay";
+	status = "disabled";
 };
 
 &usbotg1 {

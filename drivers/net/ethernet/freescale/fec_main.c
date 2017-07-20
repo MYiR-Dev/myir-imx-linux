@@ -2917,6 +2917,20 @@ static inline bool fec_enet_irq_workaround(struct fec_enet_private *fep)
 	return false;
 }
 
+static void reset_phy(struct fec_enet_private *fep)
+{
+    if (!gpio_is_valid(fep->phy_reset))
+        return;
+    
+    gpio_set_value(fep->phy_reset, 0);
+    if (fep->phy_reset_msec > 20)
+        msleep(fep->phy_reset_msec);
+    else
+        usleep_range(fep->phy_reset_msec * 1000,
+                fep->phy_reset_msec * 1000 + 1000);
+    gpio_set_value(fep->phy_reset, 1);
+}
+
 static int
 fec_enet_open(struct net_device *ndev)
 {
@@ -2929,6 +2943,8 @@ fec_enet_open(struct net_device *ndev)
 	ret = fec_enet_clk_enable(ndev, true);
 	if (ret)
 		return ret;
+
+    reset_phy(fep);
 
 	/* I should reset the ring buffers here, but I don't yet know
 	 * a simple way to do that.
@@ -3329,30 +3345,31 @@ static int fec_enet_init(struct net_device *ndev)
 #ifdef CONFIG_OF
 static void fec_reset_phy(struct platform_device *pdev)
 {
-	int err, phy_reset;
-	int msec = 1;
+	int err;
 	struct device_node *np = pdev->dev.of_node;
+	struct net_device *dev = platform_get_drvdata(pdev);
+	struct fec_enet_private *fep = netdev_priv(dev);
 
 	if (!np)
 		return;
 
-	err = of_property_read_u32(np, "phy-reset-duration", &msec);
+	err = of_property_read_u32(np, "phy-reset-duration", &fep->phy_reset_msec);
 	/* A sane reset duration should not be longer than 1s */
-	if (!err && msec > 1000)
-		msec = 1;
+	if (!err && fep->phy_reset_msec > 1000)
+		fep->phy_reset_msec = 1;
 
-	phy_reset = of_get_named_gpio(np, "phy-reset-gpios", 0);
-	if (!gpio_is_valid(phy_reset))
+	fep->phy_reset = of_get_named_gpio(np, "phy-reset-gpios", 0);
+	if (!gpio_is_valid(fep->phy_reset))
 		return;
 
-	err = devm_gpio_request_one(&pdev->dev, phy_reset,
+	err = devm_gpio_request_one(&pdev->dev, fep->phy_reset,
 				    GPIOF_OUT_INIT_LOW, "phy-reset");
 	if (err) {
 		dev_err(&pdev->dev, "failed to get phy-reset-gpios: %d\n", err);
 		return;
 	}
-	msleep(msec);
-	gpio_set_value(phy_reset, 1);
+	//msleep(msec);
+	//gpio_set_value(phy_reset, 1);
 }
 #else /* CONFIG_OF */
 static void fec_reset_phy(struct platform_device *pdev)
@@ -3572,6 +3589,7 @@ fec_probe(struct platform_device *pdev)
 	}
 
 	fec_reset_phy(pdev);
+	reset_phy(fep);
 
 	if (fep->bufdesc_ex)
 		fec_ptp_init(pdev);

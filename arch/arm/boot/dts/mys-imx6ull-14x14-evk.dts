@@ -158,11 +158,12 @@
 };
 
 &fec1 {
-	pinctrl-names = "default", "mdio";
+	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
 	phy-mode = "rmii";
 	phy-handle = <&ethphy0>;
     phy-reset-gpios = <&gpio5 6 GPIO_ACTIVE_LOW>;
+    phy-reset-duration = <5>;
 	status = "okay";
     mdio {
 		#address-cells = <1>;

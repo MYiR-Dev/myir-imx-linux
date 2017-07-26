@@ -159,6 +159,7 @@
 	phy-mode = "rmii";
 	phy-handle = <&ethphy0>;
     phy-reset-gpios = <&gpio5 6 GPIO_ACTIVE_LOW>;
+    phy-reset-duration = <5>;
 	status = "okay";
 
     mdio {
@@ -280,7 +281,7 @@
 				MX6UL_PAD_ENET1_TX_DATA0__ENET1_TDATA00	0x1b0b0
 				MX6UL_PAD_ENET1_TX_DATA1__ENET1_TDATA01	0x1b0b0
 				MX6UL_PAD_ENET1_TX_CLK__ENET1_REF_CLK1  0x4001b031
-				MX6UL_PAD_SNVS_TAMPER6__GPIO5_IO06	0x1b0b0
+				/*MX6UL_PAD_SNVS_TAMPER6__GPIO5_IO06	0x1b0b0*/
 			>;
 		};
 

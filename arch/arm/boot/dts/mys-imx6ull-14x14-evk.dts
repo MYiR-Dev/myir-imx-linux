@@ -242,12 +242,6 @@
 			>;
 		};
 
-        edt_ft5x06_pins: ft5x06 {
-			fsl,pins = <
-				MX6UL_PAD_SNVS_TAMPER3__GPIO5_IO03	0x1b0b0
-				MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04	0x1b0b0
-			>;
-		};
 
 		pinctrl_csi1: csi1grp {
 			fsl,pins = <
@@ -279,7 +273,6 @@
 				MX6UL_PAD_ENET1_TX_DATA0__ENET1_TDATA00	0x1b0b0
 				MX6UL_PAD_ENET1_TX_DATA1__ENET1_TDATA01	0x1b0b0
 				MX6UL_PAD_ENET1_TX_CLK__ENET1_REF_CLK1	0x4001b031
-				MX6UL_PAD_SNVS_TAMPER6__GPIO5_IO06	0x1b0b0
 			>;
 		};
 
@@ -510,53 +503,60 @@
 				MX6UL_PAD_LCD_RESET__WDOG1_WDOG_ANY    0x30b0
 			>;
 		};
-
-        pinctrl_leds: ledgrp {
-			fsl,pins = <
-                MX6UL_PAD_SNVS_TAMPER1__GPIO5_IO01 0x1b0b0
-                MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02 0x1b0b0
-			>;
-		};
-
-        pinctrl_gpio_key: keygrp {
-			fsl,pins = <
-                MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00 0x1b0b0
-			>;
-		};
 	};
 };
 
 &iomuxc_snvs {
 	pinctrl-names = "default_snvs";
-        pinctrl-0 = <&pinctrl_hog_2>;
-        imx6ul-evk {
+    pinctrl-0 = <&pinctrl_hog_2>;
+    imx6ul-evk {
 		pinctrl_hog_2: hoggrp-2 {
-                        fsl,pins = <
-                                MX6ULL_PAD_SNVS_TAMPER0__GPIO5_IO00      0x80000000
-                        >;
-                };
+            fsl,pins = <
+				MX6ULL_PAD_SNVS_TAMPER6__GPIO5_IO06	0x1b0b0
+            >;
+        };
+
+        edt_ft5x06_pins: ft5x06 {
+			fsl,pins = <
+				MX6ULL_PAD_SNVS_TAMPER3__GPIO5_IO03	0x1b0b0
+				MX6ULL_PAD_SNVS_TAMPER4__GPIO5_IO04	0x1b0b0
+			>;
+		};
+
+        pinctrl_leds: ledgrp {
+			fsl,pins = <
+                MX6ULL_PAD_SNVS_TAMPER1__GPIO5_IO01 0x1b0b0
+                MX6ULL_PAD_SNVS_TAMPER2__GPIO5_IO02 0x1b0b0
+			>;
+		};
+
+        pinctrl_gpio_key: keygrp {
+			fsl,pins = <
+                MX6ULL_PAD_SNVS_TAMPER0__GPIO5_IO00 0x1b0b0
+			>;
+		};
 
 		pinctrl_dvfs: dvfsgrp {
-                        fsl,pins = <
-                                MX6ULL_PAD_SNVS_TAMPER3__GPIO5_IO03      0x79
-                        >;
-                };
+            fsl,pins = <
+                MX6ULL_PAD_SNVS_TAMPER3__GPIO5_IO03      0x79
+            >;
+        };
 		
 		pinctrl_lcdif_reset: lcdifresetgrp {
-                        fsl,pins = <
-                                /* used for lcd reset */
-                                MX6ULL_PAD_SNVS_TAMPER9__GPIO5_IO09  0x79
-                        >;
-                };
+            fsl,pins = <
+                /* used for lcd reset */
+                MX6ULL_PAD_SNVS_TAMPER9__GPIO5_IO09  0x79
+            >;
+        };
 
 		pinctrl_spi4: spi4grp {
-                        fsl,pins = <
-                                MX6ULL_PAD_BOOT_MODE0__GPIO5_IO10        0x70a1
-                                MX6ULL_PAD_BOOT_MODE1__GPIO5_IO11        0x70a1
-                                MX6ULL_PAD_SNVS_TAMPER7__GPIO5_IO07      0x70a1
-                                MX6ULL_PAD_SNVS_TAMPER8__GPIO5_IO08      0x80000000
-                        >;
-                };
+            fsl,pins = <
+                MX6ULL_PAD_BOOT_MODE0__GPIO5_IO10        0x70a1
+                MX6ULL_PAD_BOOT_MODE1__GPIO5_IO11        0x70a1
+                MX6ULL_PAD_SNVS_TAMPER7__GPIO5_IO07      0x70a1
+                MX6ULL_PAD_SNVS_TAMPER8__GPIO5_IO08      0x80000000
+            >;
+        };
 
         };
 };

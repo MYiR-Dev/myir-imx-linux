@@ -594,8 +594,8 @@
 			pixelclk-active = <0>;
 			};
 /*
-            timing1: timing1 {
-			clock-frequency = <3300000>;
+            timing0: timing0 {
+			clock-frequency = <33000000>;
 			hactive = <800>;
 			vactive = <480>;
 			hfront-porch = <210>;
@@ -608,7 +608,7 @@
 			hsync-active = <0>;
 			vsync-active = <0>;
 			de-active = <1>;
-			pixelclk-active = <0>;
+			pixelclk-active = <1>;
 			};
 */
 		};

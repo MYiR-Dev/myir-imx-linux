@@ -68,8 +68,6 @@
 			regulator-name = "VSD_3V3";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio1 9 GPIO_ACTIVE_HIGH>;
-			enable-active-high;
 		};
 
 		reg_gpio_dvfs: regulator-gpio {
@@ -233,8 +231,10 @@
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059 /* SD1 CD */
-				MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059 /* SD1 VSELECT */
-				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
+				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* CSI Power */
+				MX6UL_PAD_GPIO1_IO05__GPIO1_IO05        0x17059 /* CSI RESET */
+				/*MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT	0x17059  SD1 VSELECT */
+				/*MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059  SD1 RESET */
 				/*MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00	0x80000000 */
 			>;
 		};
@@ -281,7 +281,6 @@
 				MX6UL_PAD_ENET1_TX_DATA0__ENET1_TDATA00	0x1b0b0
 				MX6UL_PAD_ENET1_TX_DATA1__ENET1_TDATA01	0x1b0b0
 				MX6UL_PAD_ENET1_TX_CLK__ENET1_REF_CLK1  0x4001b031
-				/*MX6UL_PAD_SNVS_TAMPER6__GPIO5_IO06	0x1b0b0*/
 			>;
 		};
 
@@ -573,11 +572,12 @@
 	status = "okay";
 
 	display0: display {
-		bits-per-pixel = <16>;
+		bits-per-pixel = <24>;
 		bus-width = <24>;
 
 		display-timings {
 			native-mode = <&timing0>;
+
 			timing0: timing0 {
 			clock-frequency = <9200000>;
 			hactive = <480>;
@@ -595,8 +595,8 @@
 			pixelclk-active = <0>;
 			};
 /*
-            timing1: timing1 {
-			clock-frequency = <3300000>;
+            timing0: timing0 {
+			clock-frequency = <33000000>;
 			hactive = <800>;
 			vactive = <480>;
 			hfront-porch = <210>;
@@ -609,7 +609,7 @@
 			hsync-active = <0>;
 			vsync-active = <0>;
 			de-active = <1>;
-			pixelclk-active = <0>;
+			pixelclk-active = <1>;
 			};
 */
 		};
@@ -667,7 +667,7 @@
 	pinctrl-assert-gpios = <&gpio4 23 GPIO_ACTIVE_HIGH>;
 	port = <1>;
 	sven_low_active;
-	status = "okay";
+	status = "disabled";
 };
 
 &tsc {

@@ -32,6 +32,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_graph.h>
+#include <linux/of_gpio.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/videodev2.h>
@@ -238,6 +239,10 @@ static const struct sensor_register ov2659_init_regs[] = {
 	{ REG_IO_CTRL00, 0x03 },
 	{ REG_IO_CTRL01, 0xff },
 	{ REG_IO_CTRL02, 0xe0 },
+	/* Software sleep : Sensor vsync signal may not output if
+	 * haven't sleep the sensor when transfer the array
+	 */
+	{ 0x0100, 0x01 },
 	{ 0x3633, 0x3d },
 	{ 0x3620, 0x02 },
 	{ 0x3631, 0x11 },
@@ -829,6 +834,8 @@ static const struct ov2659_pixfmt ov2659_formats[] = {
 	},
 };
 
+static int rst_gpio, pwn_gpio;
+
 static inline struct ov2659 *to_ov2659(struct v4l2_subdev *sd)
 {
 	return container_of(sd, struct ov2659, sd);
@@ -1175,6 +1182,72 @@ static int ov2659_set_format(struct ov2659 *ov2659)
 	return ov2659_write_array(ov2659->client, ov2659->format_ctrl_regs);
 }
 
+static int ov2659_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
+        u32 *code)
+{
+	if (index >= ARRAY_SIZE(ov2659_formats))
+		return -EINVAL;
+
+	*code = ov2659_formats[index].code;
+	return 0;
+}
+
+static int ov2659_mbus_set_fmt(struct v4l2_subdev *sd,
+			  struct v4l2_mbus_framefmt *mf)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	unsigned int index = ARRAY_SIZE(ov2659_formats);
+	const struct ov2659_framesize *size = NULL;
+	struct ov2659 *ov2659 = to_ov2659(sd);
+	int ret = 0;
+
+	dev_dbg(&client->dev, "ov2659_set_fmt\n");
+
+	__ov2659_try_frame_size(mf, &size);
+
+	while (--index >= 0)
+		if (ov2659_formats[index].code == mf->code)
+			break;
+
+	if (index < 0)
+		return -EINVAL;
+
+	mf->colorspace = V4L2_COLORSPACE_SRGB;
+	mf->code = ov2659_formats[index].code;
+	mf->field = V4L2_FIELD_NONE;
+
+	mutex_lock(&ov2659->lock);
+
+	{
+		s64 val;
+
+		if (ov2659->streaming) {
+			mutex_unlock(&ov2659->lock);
+			return -EBUSY;
+		}
+
+		ov2659->frame_size = size;
+		ov2659->format = *mf;
+		ov2659->format_ctrl_regs =
+			ov2659_formats[index].format_ctrl_regs;
+
+		if (ov2659->format.code != MEDIA_BUS_FMT_SBGGR8_1X8)
+			val = ov2659->pdata->link_frequency / 2;
+		else
+			val = ov2659->pdata->link_frequency;
+
+		ret = v4l2_ctrl_s_ctrl_int64(ov2659->link_frequency, val);
+		if (ret < 0)
+			dev_warn(&client->dev,
+				 "failed to set link_frequency rate (%d)\n",
+				 ret);
+	}
+
+	mutex_unlock(&ov2659->lock);
+	return ret;
+}
+
+
 static int ov2659_s_stream(struct v4l2_subdev *sd, int on)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1278,6 +1351,8 @@ static const struct v4l2_subdev_core_ops ov2659_subdev_core_ops = {
 
 static const struct v4l2_subdev_video_ops ov2659_subdev_video_ops = {
 	.s_stream = ov2659_s_stream,
+	.enum_mbus_fmt = ov2659_enum_fmt,
+	.s_mbus_fmt = ov2659_mbus_set_fmt,
 };
 
 static const struct v4l2_subdev_pad_ops ov2659_subdev_pad_ops = {
@@ -1297,6 +1372,22 @@ static const struct v4l2_subdev_internal_ops ov2659_subdev_internal_ops = {
 	.open = ov2659_open,
 };
 
+static void ov2659_reset(void)
+{
+	gpio_set_value(rst_gpio, 1);
+
+	gpio_set_value(pwn_gpio, 1);
+	msleep(5);
+	gpio_set_value(pwn_gpio, 0);
+	msleep(5);
+
+	gpio_set_value(rst_gpio, 0);
+	msleep(1);
+	gpio_set_value(rst_gpio, 1);
+	msleep(5);
+	gpio_set_value(pwn_gpio, 1);
+}
+
 static int ov2659_detect(struct v4l2_subdev *sd)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1304,6 +1395,8 @@ static int ov2659_detect(struct v4l2_subdev *sd)
 	int ret;
 
 	dev_dbg(&client->dev, "%s:\n", __func__);
+
+	ov2659_reset();
 
 	ret = ov2659_write(client, REG_SOFTWARE_RESET, 0x01);
 	if (ret != 0) {
@@ -1341,6 +1434,7 @@ ov2659_get_pdata(struct i2c_client *client)
 {
 	struct ov2659_platform_data *pdata;
 	struct device_node *endpoint;
+	struct device *dev = &client->dev;
 	int ret;
 
 	if (!IS_ENABLED(CONFIG_OF) || !client->dev.of_node)
@@ -1360,6 +1454,40 @@ ov2659_get_pdata(struct i2c_client *client)
 		dev_err(&client->dev, "link-frequencies property not found\n");
 		pdata = NULL;
 	}
+
+	if (of_get_property(dev->of_node, "rst-gpios", NULL)){
+		rst_gpio = of_get_named_gpio(dev->of_node, "rst-gpios", 0);
+		if (gpio_is_valid(rst_gpio)){
+			ret = devm_gpio_request_one(dev, rst_gpio,
+						    GPIOF_OUT_INIT_HIGH,
+						    "ov2659_reset");
+			if (ret < 0){
+				dev_err(dev, "init reset pin error %d\n", ret);
+				//return ret;
+			}
+		}else{
+			dev_err(dev, "no sensor reset pin available\n");
+			//return -EINVAL;
+		}
+	}
+
+	if (of_get_property(dev->of_node, "pwn-gpios", NULL)){
+		pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);
+		if (gpio_is_valid(pwn_gpio)){
+			ret = devm_gpio_request_one(dev, pwn_gpio,
+						    GPIOF_OUT_INIT_HIGH,
+						    "ov2659_pwdn");
+			if (ret < 0){
+				dev_err(dev, "init powerdown pin error %d\n",
+					ret);
+				//return ret;
+			}
+		}else{
+			dev_err(dev, "no sensor powerdown pin available\n");
+			//return -EINVAL;
+		}
+	}
+
 
 done:
 	of_node_put(endpoint);

@@ -8,7 +8,7 @@
  */
 
 #include "mys-imx6ul-14x14-evk.dts"
-#include "myb-6ulx.dtsi"
+#include "myb-6ul.dtsi"
 
 &usdhc1 {
 	status = "okay";

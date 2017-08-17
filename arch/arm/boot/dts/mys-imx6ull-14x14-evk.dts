@@ -144,7 +144,7 @@
 };
 
 &gpmi{
-    status = "okay";
+    status = "disabled";
 };
 &cpu0 {
 	arm-supply = <&reg_arm>;

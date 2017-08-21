@@ -7,16 +7,16 @@
  */
 
 #include "mys-imx6ull-14x14-evk.dts"
-#include "myb-6ulx.dtsi"
+#include "myb-6ull.dtsi"
 
 &usdhc1 {
 	status = "okay";
 };
 &usdhc2 {
 	pinctrl-names = "state_100mhz";
-	/*pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc2_8bit>;
-	pinctrl-2 = <&pinctrl_usdhc2_8bit_200mhz>;*/
+	pinctrl-2 = <&pinctrl_usdhc2_8bit_200mhz>;
 	pinctrl-1 = <&pinctrl_usdhc2_8bit_100mhz>;
 	bus-width = <8>;
 	non-removable;

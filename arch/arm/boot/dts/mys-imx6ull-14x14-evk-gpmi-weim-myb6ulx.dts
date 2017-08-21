@@ -7,7 +7,7 @@
  */
 
 #include "mys-imx6ull-14x14-evk.dts"
-#include "myb-6ulx.dtsi"
+#include "myb-6ull.dtsi"
 
 &gpmi {
 	pinctrl-names = "default";

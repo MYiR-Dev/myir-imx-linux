@@ -379,7 +379,9 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-9x9-evk-ldo.dtb \
 	mys-imx6ul-14x14-evk.dtb \
 	mys-imx6ul-14x14-evk-emmc.dtb \
-	mys-imx6ul-14x14-evk-gpmi-weim.dtb
+	mys-imx6ul-14x14-evk-gpmi-weim.dtb \
+	mys-imx6ul-14x14-evk-emmc-myb6ulx.dtb \
+	mys-imx6ul-14x14-evk-gpmi-weim-myb6ulx.dtb
 dtb-$(CONFIG_SOC_IMX6ULL) += \
 	imx6ull-14x14-ddr3-arm2.dtb \
 	imx6ull-14x14-ddr3-arm2-adc.dtb \
@@ -406,7 +408,9 @@ dtb-$(CONFIG_SOC_IMX6ULL) += \
 	imx6ull-9x9-evk-btwifi.dtb \
 	mys-imx6ull-14x14-evk.dtb \
 	mys-imx6ull-14x14-evk-gpmi-weim.dtb \
-	mys-imx6ull-14x14-evk-emmc.dtb 
+	mys-imx6ull-14x14-evk-emmc.dtb \
+	mys-imx6ull-14x14-evk-gpmi-weim-myb6ulx.dtb \
+	mys-imx6ull-14x14-evk-emmc-myb6ulx.dtb
 dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-12x12-lpddr3-arm2.dtb \
 	imx7d-12x12-lpddr3-arm2-m4.dtb \

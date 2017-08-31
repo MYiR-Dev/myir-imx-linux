@@ -1,0 +1,41 @@
+/*
+ * Copyright (C) 2017 MYiR Tech.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "mys-imx6ull-14x14-evk-emmc-myb6ulx.dts"
+
+&lcdif {
+	display = <&display0>;
+	status = "okay";
+
+	display0: display {
+		bits-per-pixel = <24>;
+		bus-width = <24>;
+
+		display-timings {
+			native-mode = <&timing0>;
+			timing0: timing0 {
+			clock-frequency = <33000000>;
+			hactive = <800>;
+			vactive = <480>;
+			hfront-porch = <210>;
+			hback-porch = <46>;
+			hsync-len = <1>;
+			vback-porch = <22>;
+			vfront-porch = <23>;
+			vsync-len = <20>;
+
+			hsync-active = <0>;
+			vsync-active = <0>;
+			de-active = <1>;
+			pixelclk-active = <0>;
+			};
+
+		};
+	};
+};
+

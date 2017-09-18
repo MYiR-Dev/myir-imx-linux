@@ -108,6 +108,8 @@
 &fec1 {
     pinctrl-names = "default";
     pinctrl-0 = "pinctrl_enet1_alt";
+    phy-reset-gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
+    phy-reset-duration = <5>;
     status = "okay";
     /delete-node/ mdio;
 };

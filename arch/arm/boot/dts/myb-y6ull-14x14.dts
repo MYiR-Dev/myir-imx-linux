@@ -62,34 +62,32 @@
 			regulator-max-microvolt = <3300000>;
 		};
 
-		reg_sd1_vmmc: regulator@1 {
+		/*reg_sd2_vmmc: regulator@1 {
 			compatible = "regulator-fixed";
 			regulator-name = "VSD_3V3";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			/*gpio = <&gpio1 9 GPIO_ACTIVE_HIGH>;*/
-			enable-active-high;
-		};
-
-		/*reg_gpio_ltemodule: regulator-lte {
-			compatible = "regulator-gpio";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_ltemodule>;
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-name = "gpio_lte_pwr";
-			gpios = <&gpio5 5 GPIO_ACTIVE_HIGH>;
+			gpio = <&gpio1 10 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};*/
 
-        reg_gpio_wifi: regulator-wifi {
-			compatible = "regulator-gpio";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_wifi>;
+		reg_usb_ltemodule: regulator@1 {
+			compatible = "regulator-fixed";
+			regulator-name = "ltemodule-pwr";
+			regulator-min-microvolt = <3800000>;
+			regulator-max-microvolt = <3800000>;
+			gpios = <&gpio5 5 GPIO_ACTIVE_HIGH>;
+			enable-active-high;
+			regulator-boot-on;
+		};
+
+		reg_gpio_wifi: regulator@2 {
+			compatible = "regulator-fixed";
+			regulator-name = "wifi-pwr";
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
-			regulator-name = "gpio_wifi_pwr";
-			gpios = <&gpio1 8 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio1 10 GPIO_ACTIVE_LOW>;
+			regulator-boot-on;
 		};
 
 	};
@@ -108,7 +106,7 @@
 		#size-cells = <0>;
 	};
 
-    leds {
+	leds {
 		compatible = "gpio-leds";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_leds>;
@@ -121,7 +119,7 @@
 		};
 	};
 
-    gpio-keys {
+	gpio-keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_gpio_key>;
@@ -132,9 +130,9 @@
 			gpio-key,wakeup;
 			linux,code = <KEY_1>;
 		};
-    };
+	};
 
-    sound {
+	sound {
 		compatible = "fsl,imx6ul-evk-wm8904",
 			   "fsl,imx-audio-wm8904";
 		model = "wm8904-audio";
@@ -149,17 +147,16 @@
 			"IN2R", "Line In Jack",
 			"Mic", "MICBIAS",
 			"IN1L", "Mic";
-    };
+	};
 };
 
 &gpmi{
-    status = "okay";
+	status = "disabled";
 };
 &cpu0 {
 	arm-supply = <&reg_arm>;
 	soc-supply = <&reg_soc>;
-	/*dc-supply = <&reg_gpio_ltemodule
-            &reg_gpio_wifi>;*/
+	/*dc-supply = <&reg_usb_ltemodule>;*/
 };
 
 &clks {
@@ -172,8 +169,7 @@
 	pinctrl-0 = <&pinctrl_enet1>;
 	phy-mode = "rmii";
 	phy-handle = <&ethphy0>;
-    phy-reset-gpios = <&gpio5 6 GPIO_ACTIVE_LOW>;
-    phy-reset-duration = <5>;
+	phy-reset-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
 
@@ -182,9 +178,10 @@
 	pinctrl-0 = <&pinctrl_enet2>;
 	phy-mode = "rmii";
 	phy-handle = <&ethphy1>;
+	phy-reset-gpios = <&gpio5 6 GPIO_ACTIVE_LOW>;
 	status = "okay";
 
-    mdio {
+	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
@@ -226,7 +223,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1>;
 	status = "disabled";
-
 };
 
 &i2c2 {
@@ -235,15 +231,15 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
-    ft5x06: ft5x06@38 {
+	ft5x06: ft5x06@38 {
 		compatible = "ft5x06_ts";
 		reg = <0x38>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&edt_ft5x06_pins>;
 		tp_int = <&gpio1 8 0>;
 		tp_resetn = <&gpio5 2 0>;
-        polling_mode = /bits/ 8 <1>;
-        multi_touch = /bits/ 8 <0>;
+		polling_mode = /bits/ 8 <1>;
+		multi_touch = /bits/ 8 <0>;
 	};
 
 	codec: wm8904@1a {
@@ -273,7 +269,7 @@
 		};
 	};
 
-    ov2659: ov2659@30 {
+	ov2659: ov2659@30 {
 		compatible = "ovti,ov2659";
 		reg = <0x30>;
 		pinctrl-names = "default";
@@ -281,7 +277,7 @@
 		clocks = <&clks IMX6UL_CLK_CSI>;
 		clock-names = "xvclk";
 		pwn-gpios = <&gpio5 4 GPIO_ACTIVE_HIGH>;
-	    rst-gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
+		rst-gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
 		status = "okay";
 		port {
 			ov2659_ep: endpoint {
@@ -300,14 +296,15 @@
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059 /* SD1 CD */
+				MX6UL_PAD_JTAG_MOD__GPIO1_IO10		0x17059 /* WiFi module power */
 			>;
 		};
 
-        pinctrl_wifi: wifigrp {
-            fsl,pins = <
+		pinctrl_wifi: wifigrp {
+			fsl,pins = <
 				MX6UL_PAD_JTAG_MOD__GPIO1_IO10		0x17059 /* WiFi module power */
-            >;
-        };
+			>;
+		};
 
 		pinctrl_csi1: csi1grp {
 			fsl,pins = <
@@ -410,8 +407,8 @@
 				MX6UL_PAD_LCD_DATA23__LCDIF_DATA23  0x79
 			>;
 		};
-        
-        pinctrl_lcdif_dat_16bits: lcdifdatgrp_16bits {
+
+		pinctrl_lcdif_dat_16bits: lcdifdatgrp_16bits {
 			fsl,pins = <
 				MX6UL_PAD_LCD_DATA00__LCDIF_DATA00  0x79
 				MX6UL_PAD_LCD_DATA01__LCDIF_DATA01  0x79
@@ -500,7 +497,7 @@
 			>;
 		};
 
-        pinctrl_uart4: uart4grp {
+		pinctrl_uart4: uart4grp {
 			fsl,pins = <
 				MX6UL_PAD_UART4_TX_DATA__UART4_DCE_TX   0x1b0b1
 				MX6UL_PAD_UART4_RX_DATA__UART4_DCE_RX   0x1b0b1
@@ -603,7 +600,7 @@
 			>;
 		};
 
-        edt_ft5x06_pins: ft5x06 {
+		edt_ft5x06_pins: ft5x06 {
 			fsl,pins = <
 				MX6UL_PAD_GPIO1_IO05__GPIO1_IO05	0x1b0b0 /* TP INT */
 			>;
@@ -613,48 +610,42 @@
 
 &iomuxc_snvs {
 	pinctrl-names = "default_snvs";
-    pinctrl-0 = <&pinctrl_hog_2>;
-    imx6ul-evk {
+	pinctrl-0 = <&pinctrl_hog_2>;
+	imx6ul-evk {
 		pinctrl_hog_2: hoggrp-2 {
-            fsl,pins = <
-                MX6ULL_PAD_SNVS_TAMPER0__GPIO5_IO00     0x80000000
-                MX6ULL_PAD_SNVS_TAMPER9__GPIO5_IO09     0x130b0 /* 4G module Reset */
-                MX6ULL_PAD_SNVS_TAMPER7__GPIO5_IO07     0x1b0b0 /* 4G module WakeOut */
-                MX6ULL_PAD_SNVS_TAMPER5__GPIO5_IO05     0x1b8b0 /* 4G module power */
+			fsl,pins = <
+				MX6ULL_PAD_SNVS_TAMPER0__GPIO5_IO00     0x80000000
+				MX6ULL_PAD_SNVS_TAMPER9__GPIO5_IO09     0x1b0b0 /* enet1 reset */
+				MX6ULL_PAD_SNVS_TAMPER7__GPIO5_IO07     0x1b0b0 /* 4G module WakeOut */
+				MX6ULL_PAD_SNVS_TAMPER6__GPIO5_IO06     0x1b0b0 /* enet2 reset */
+				MX6ULL_PAD_SNVS_TAMPER5__GPIO5_IO05     0x1b8b0 /* 4G module power */
 				MX6ULL_PAD_SNVS_TAMPER3__GPIO5_IO03     0x1b0b0 /* Camera RST */
 				MX6ULL_PAD_SNVS_TAMPER4__GPIO5_IO04     0x1b0b0 /* Camera PWRDN */
-                MX6ULL_PAD_SNVS_TAMPER2__GPIO5_IO02     0x1b0b0 /* TP Reset */
-            >;
-        };
+				MX6ULL_PAD_SNVS_TAMPER2__GPIO5_IO02     0x1b0b0 /* TP Reset */
+			>;
+		};
 
-		pinctrl_ltemodule: ltemodulegrp {
-            fsl,pins = <
-                MX6ULL_PAD_SNVS_TAMPER5__GPIO5_IO05     0x1b8b0 /* 4G module power */
-            >;
-        };
-		
 		pinctrl_spi4: spi4grp {
-            fsl,pins = <
-                MX6ULL_PAD_BOOT_MODE0__GPIO5_IO10        0x70a1
-                MX6ULL_PAD_BOOT_MODE1__GPIO5_IO11        0x70a1
-                MX6ULL_PAD_SNVS_TAMPER7__GPIO5_IO07      0x70a1
-                MX6ULL_PAD_SNVS_TAMPER8__GPIO5_IO08      0x80000000
-            >;
-        };
-
-
-        pinctrl_leds: ledgrp {
 			fsl,pins = <
-                MX6ULL_PAD_SNVS_TAMPER1__GPIO5_IO01 0x1b0b0
+				MX6ULL_PAD_BOOT_MODE0__GPIO5_IO10        0x70a1
+				MX6ULL_PAD_BOOT_MODE1__GPIO5_IO11        0x70a1
+				MX6ULL_PAD_SNVS_TAMPER7__GPIO5_IO07      0x70a1
+				MX6ULL_PAD_SNVS_TAMPER8__GPIO5_IO08      0x80000000
 			>;
 		};
 
-        pinctrl_gpio_key: keygrp {
+		pinctrl_leds: ledgrp {
 			fsl,pins = <
-                MX6ULL_PAD_SNVS_TAMPER0__GPIO5_IO00 0x1b0b0
+				MX6ULL_PAD_SNVS_TAMPER1__GPIO5_IO01 0x1b0b0
 			>;
 		};
-    };
+
+		pinctrl_gpio_key: keygrp {
+			fsl,pins = <
+				MX6ULL_PAD_SNVS_TAMPER0__GPIO5_IO00 0x1b0b0
+			>;
+		};
+	};
 };
 
 
@@ -690,7 +681,7 @@
 			pixelclk-active = <0>;
 			};
 /*
-            timing1: timing1 {
+			timing1: timing1 {
 			clock-frequency = <3300000>;
 			hactive = <800>;
 			vactive = <480>;
@@ -774,7 +765,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
 	fsl,rs485-gpio-txen = <&gpio1 18 GPIO_ACTIVE_HIGH>;
-    linux,rs485-enabled-at-boot-time;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 };
 

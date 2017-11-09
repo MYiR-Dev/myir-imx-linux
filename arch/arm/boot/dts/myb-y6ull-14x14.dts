@@ -297,6 +297,7 @@
 			fsl,pins = <
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059 /* SD1 CD */
 				MX6UL_PAD_JTAG_MOD__GPIO1_IO10		0x17059 /* WiFi module power */
+				MX6UL_PAD_NAND_CE1_B__GPIO4_IO14	0x17059 /* LTE Reset */
 			>;
 		};
 
@@ -616,9 +617,9 @@
 			fsl,pins = <
 				MX6ULL_PAD_SNVS_TAMPER0__GPIO5_IO00     0x80000000
 				MX6ULL_PAD_SNVS_TAMPER9__GPIO5_IO09     0x1b0b0 /* enet1 reset */
-				MX6ULL_PAD_SNVS_TAMPER7__GPIO5_IO07     0x1b0b0 /* 4G module WakeOut */
+				MX6ULL_PAD_SNVS_TAMPER7__GPIO5_IO07     0x1b0b0 /* LTE module WakeOut */
 				MX6ULL_PAD_SNVS_TAMPER6__GPIO5_IO06     0x1b0b0 /* enet2 reset */
-				MX6ULL_PAD_SNVS_TAMPER5__GPIO5_IO05     0x1b8b0 /* 4G module power */
+				MX6ULL_PAD_SNVS_TAMPER5__GPIO5_IO05     0x1b8b0 /* LTE module power */
 				MX6ULL_PAD_SNVS_TAMPER3__GPIO5_IO03     0x1b0b0 /* Camera RST */
 				MX6ULL_PAD_SNVS_TAMPER4__GPIO5_IO04     0x1b0b0 /* Camera PWRDN */
 				MX6ULL_PAD_SNVS_TAMPER2__GPIO5_IO02     0x1b0b0 /* TP Reset */

@@ -478,6 +478,8 @@ static struct urb *usb_wwan_setup_urb(struct usb_serial_port *port,
         if (desc->idVendor == 0x05C6 && (desc->idProduct == 0x9003 || desc->idProduct ==
                     0x9090 || desc->idProduct == 0x9215))
             urb->transfer_flags |= URB_ZERO_PACKET;
+        if (desc->idVendor == 0x2C7C && desc->idProduct == 0x0125)
+            urb->transfer_flags |= URB_ZERO_PACKET;
     }
 	return urb;
 }

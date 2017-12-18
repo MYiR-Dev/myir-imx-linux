@@ -599,7 +599,7 @@
 
 		pinctrl_lcdif_reset: lcdifresetgrp {
 			fsl,pins = <
-				MX6UL_PAD_LCD_RESET__LCDIF_RESET    0x79
+				MX6UL_PAD_LCD_RESET__GPIO3_IO04		0x1b0b0
 			>;
 		};
 
@@ -684,8 +684,8 @@
 			pixelclk-active = <0>;
 			};
 /*
-			timing1: timing1 {
-			clock-frequency = <3300000>;
+			timing0: timing0 {
+			clock-frequency = <33000000>;
 			hactive = <800>;
 			vactive = <480>;
 			hfront-porch = <210>;

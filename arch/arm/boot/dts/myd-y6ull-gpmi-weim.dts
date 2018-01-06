@@ -36,8 +36,8 @@
 				MX6UL_PAD_NAND_DATA07__RAWNAND_DATA07   0xb0b1
 			>;
 		};
-		
-        pinctrl_usdhc2_alt: usdhc2grp_alt {
+
+		pinctrl_usdhc2_alt: usdhc2grp_alt {
 			fsl,pins = <
 				MX6UL_PAD_LCD_DATA18__USDHC2_CMD  0x10069
 				MX6UL_PAD_LCD_DATA19__USDHC2_CLK  0x17059
@@ -54,11 +54,11 @@
 	status = "disabled";
 };
 &usdhc1 {
-    status = "okay";    
+	status = "okay";
 };
 &usdhc2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2_alt>;
 	bus-width = <4>;
-	status = "okay";
+	status = "disabled";
 };

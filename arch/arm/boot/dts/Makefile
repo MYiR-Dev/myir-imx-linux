@@ -420,7 +420,9 @@ dtb-$(CONFIG_SOC_IMX6ULL) += \
 	mys-imx6ull-14x14-evk-emmc-myb6ulx-lcd070.dtb \
 	mys-imx6ull-14x14-evk-emmc-myb6ulx.dtb \
 	myd-y6ull-gpmi-weim.dtb \
-	myd-y6ul-gpmi-weim.dtb
+	myd-y6ull-emmc.dtb \
+	myd-y6ul-gpmi-weim.dtb \
+	myd-y6ul-emmc.dtb
 dtb-$(CONFIG_SOC_IMX7D) += \
 	imx7d-12x12-lpddr3-arm2.dtb \
 	imx7d-12x12-lpddr3-arm2-m4.dtb \

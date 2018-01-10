@@ -24,6 +24,10 @@
 #include <linux/netdevice.h>
 #include <linux/smscphy.h>
 
+struct smsc_phy_priv {
+	bool energy_enable;
+};
+
 static int smsc_phy_config_intr(struct phy_device *phydev)
 {
 	int rc = phy_write (phydev, MII_LAN83C185_IM,
@@ -43,16 +47,19 @@ static int smsc_phy_ack_interrupt(struct phy_device *phydev)
 
 static int smsc_phy_config_init(struct phy_device *phydev)
 {
+	struct smsc_phy_priv *priv = phydev->priv;
 	int rc = phy_read(phydev, MII_LAN83C185_CTRL_STATUS);
 
 	if (rc < 0)
 		return rc;
 
-	/* Enable energy detect mode for this SMSC Transceivers */
-	rc = phy_write(phydev, MII_LAN83C185_CTRL_STATUS,
-		       rc | MII_LAN83C185_EDPWRDOWN);
-	if (rc < 0)
-		return rc;
+	if (priv->energy_enable) {
+		/* Enable energy detect mode for this SMSC Transceivers */
+		rc = phy_write(phydev, MII_LAN83C185_CTRL_STATUS,
+			       rc | MII_LAN83C185_EDPWRDOWN);
+		if (rc < 0)
+			return rc;
+	}
 
 	return smsc_phy_ack_interrupt(phydev);
 }
@@ -103,9 +110,10 @@ static int lan911x_config_init(struct phy_device *phydev)
  */
 static int lan87xx_read_status(struct phy_device *phydev)
 {
+	struct smsc_phy_priv *priv = phydev->priv;
 	int err = genphy_read_status(phydev);
 
-	if (!phydev->link) {
+	if (!phydev->link && priv->energy_enable) {
 		/* Disable EDPD to wake up PHY */
 		int rc = phy_read(phydev, MII_LAN83C185_CTRL_STATUS);
 		if (rc < 0)
@@ -131,6 +139,26 @@ static int lan87xx_read_status(struct phy_device *phydev)
 	}
 
 	return err;
+}
+
+static int smsc_phy_probe(struct phy_device *phydev)
+{
+	struct device *dev = &phydev->dev;
+	struct device_node *of_node = dev->of_node;
+	struct smsc_phy_priv *priv;
+
+	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
+	priv->energy_enable = true;
+
+	if (of_property_read_bool(of_node, "smsc,disable-energy-detect"))
+		priv->energy_enable = false;
+
+	phydev->priv = priv;
+
+	return 0;
 }
 
 static struct phy_driver smsc_phy_driver[] = {
@@ -233,6 +261,8 @@ static struct phy_driver smsc_phy_driver[] = {
 	.features	= (PHY_BASIC_FEATURES | SUPPORTED_Pause
 				| SUPPORTED_Asym_Pause),
 	.flags		= PHY_HAS_INTERRUPT | PHY_HAS_MAGICANEG,
+
+	.probe = smsc_phy_probe,
 
 	/* basic functions */
 	.config_aneg	= genphy_config_aneg,

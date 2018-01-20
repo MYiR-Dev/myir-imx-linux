@@ -91,7 +91,6 @@
 		cpu-dai = <&sai2>;
 		audio-codec = <&codec>;
 		asrc-controller = <&asrc>;
-		codec-master;
 		gpr = <&gpr>;
 		audio-routing =
 			"Headphone Jack", "HPOUTL",

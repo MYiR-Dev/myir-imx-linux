@@ -69,19 +69,6 @@
 			regulator-max-microvolt = <3300000>;
 			enable-active-high;
 		};
-/*
-		reg_gpio_dvfs: regulator-gpio {
-			compatible = "regulator-gpio";
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_dvfs>;
-			regulator-min-microvolt = <1300000>;
-			regulator-max-microvolt = <1400000>;
-			regulator-name = "gpio_dvfs";
-			regulator-type = "voltage";
-			gpios = <&gpio5 3 GPIO_ACTIVE_HIGH>;
-			states = <1300000 0x1 1400000 0x0>;
-		};
-*/
 	};
 
 	sound {
@@ -99,20 +86,6 @@
 			"IN2R", "Line In Jack",
 			"Mic Jack", "MICBIAS",
 			"IN1L", "Mic Jack";
-	};
-
-	spi4 {
-		compatible = "spi-gpio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_spi4>;
-		pinctrl-assert-gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
-		status = "disabled";
-		gpio-sck = <&gpio5 11 0>;
-		gpio-mosi = <&gpio5 10 0>;
-		cs-gpios = <&gpio5 7 0>;
-		num-chipselects = <1>;
-		#address-cells = <1>;
-		#size-cells = <0>;
 	};
 
 	leds {
@@ -147,7 +120,6 @@
 &cpu0 {
 	arm-supply = <&reg_arm>;
 	soc-supply = <&reg_soc>;
-	/*dc-supply = <&reg_gpio_dvfs>;*/
 };
 
 &clks {
@@ -160,7 +132,7 @@
 
 	port {
 		csi1_ep: endpoint {
-			remote-endpoint = <&ov5640_ep>;
+			remote-endpoint = <&ov2659_ep>;
 		};
 	};
 };
@@ -301,15 +273,17 @@
 		pinctrl_hog_1: hoggrp-1 {
 			fsl,pins = <
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19	0x17059 /* SD1 CD */
-				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
-				/*MX6UL_PAD_SNVS_TAMPER0__GPIO5_IO00	0x80000000*/
 				MX6UL_PAD_SNVS_TAMPER9__GPIO5_IO09	0x1b0b0 /* enet1 reset */
 				MX6UL_PAD_SNVS_TAMPER6__GPIO5_IO06	0x1b0b0 /* enet2 reset */
-				MX6UL_PAD_SNVS_TAMPER5__GPIO5_IO05	0x1b8b0 /* LTE module power */
+				MX6UL_PAD_SNVS_TAMPER5__GPIO5_IO05	0x1b0b0 /* LTE module power */
 				MX6UL_PAD_SNVS_TAMPER7__GPIO5_IO07	0x1b0b0 /* LTE module WakeOut */
+				MX6UL_PAD_SNVS_TAMPER8__GPIO5_IO08	0x1b0b0 /* LTE module WakeIn */
+				MX6UL_PAD_NAND_CE1_B__GPIO4_IO14	0x1b0b0 /* LTE module Reset */
 				MX6UL_PAD_SNVS_TAMPER3__GPIO5_IO03	0x1b0b0 /* Camera RST */
 				MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04	0x1b0b0 /* Camera PWRDN */
 				MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02	0x1b0b0 /* TP Reset */
+				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09	0x1b0b0 /* LCD_DISP */
+				MX6UL_PAD_GPIO1_IO00__ANATOP_OTG1_ID    0x17059 /* USB OTG1 ID */
 			>;
 		};
 
@@ -448,8 +422,6 @@
 				MX6UL_PAD_LCD_ENABLE__LCDIF_ENABLE  0x79
 				MX6UL_PAD_LCD_HSYNC__LCDIF_HSYNC    0x79
 				MX6UL_PAD_LCD_VSYNC__LCDIF_VSYNC    0x79
-				/* used for lcd reset */
-				MX6UL_PAD_LCD_RESET__GPIO3_IO04		0x1b0b0
 			>;
 		};
 
@@ -653,19 +625,26 @@
 				MX6UL_PAD_GPIO1_IO05__GPIO1_IO05	0x1b0b0 /* TP INT */
 			>;
 		};
+
+		pinctrl_lcdif_reset: lcdifresetgrp {
+			fsl,pins = <
+				MX6UL_PAD_LCD_RESET__GPIO3_IO04		0x1b0b0
+			>;
+		};
 	};
 };
 
 &lcdif {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_lcdif_dat_16bits
-		     &pinctrl_lcdif_ctrl>;
+		     &pinctrl_lcdif_ctrl
+		     &pinctrl_lcdif_reset>;
 	display = <&display0>;
 	status = "okay";
 
 	display0: display {
 		bits-per-pixel = <16>;
-		bus-width = <24>;
+		bus-width = <16>;
 
 		display-timings {
 			native-mode = <&timing0>;
@@ -842,7 +821,5 @@
 };
 
 &wdog1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wdog>;
-	fsl,wdog_b;
+	status = "disabled";
 };

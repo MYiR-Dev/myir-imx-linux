@@ -60,5 +60,5 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2_alt>;
 	bus-width = <4>;
-	status = "disabled";
+	status = "okay";
 };

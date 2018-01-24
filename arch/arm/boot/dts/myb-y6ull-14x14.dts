@@ -62,15 +62,6 @@
 			regulator-max-microvolt = <3300000>;
 		};
 
-		/*reg_sd2_vmmc: regulator@1 {
-			compatible = "regulator-fixed";
-			regulator-name = "VSD_3V3";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			gpio = <&gpio1 10 GPIO_ACTIVE_HIGH>;
-			enable-active-high;
-		};*/
-
 		reg_usb_ltemodule: regulator@1 {
 			compatible = "regulator-fixed";
 			regulator-name = "ltemodule-pwr";
@@ -90,20 +81,6 @@
 			regulator-boot-on;
 		};
 
-	};
-
-	spi4 {
-		compatible = "spi-gpio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_spi4>;
-		pinctrl-assert-gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
-		status = "disabled";
-		gpio-sck = <&gpio5 11 0>;
-		gpio-mosi = <&gpio5 10 0>;
-		cs-gpios = <&gpio5 7 0>;
-		num-chipselects = <1>;
-		#address-cells = <1>;
-		#size-cells = <0>;
 	};
 
 	leds {
@@ -156,7 +133,6 @@
 &cpu0 {
 	arm-supply = <&reg_arm>;
 	soc-supply = <&reg_soc>;
-	/*dc-supply = <&reg_usb_ltemodule>;*/
 };
 
 &clks {
@@ -303,6 +279,7 @@
 				MX6UL_PAD_JTAG_MOD__GPIO1_IO10		0x17059 /* WiFi module power */
 				MX6UL_PAD_NAND_CE1_B__GPIO4_IO14	0x17059 /* LTE Reset */
 				MX6UL_PAD_GPIO1_IO00__ANATOP_OTG1_ID    0x17059 /* USB OTG1 ID */
+				MX6UL_PAD_GPIO1_IO09__GPIO1_IO09	0x1b0b0 /* LCD_DISP */
 			>;
 		};
 
@@ -823,9 +800,7 @@
 		};
 	};
 };
-/*
+
 &wdog1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wdog>;
-	fsl,wdog_b;
-};*/
+	status = "okay";
+};

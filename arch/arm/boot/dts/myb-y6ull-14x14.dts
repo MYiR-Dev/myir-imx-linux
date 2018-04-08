@@ -216,7 +216,7 @@
 		reg = <0x38>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&edt_ft5x06_pins>;
-		tp_int = <&gpio1 8 0>;
+		tp_int = <&gpio1 5 0>;
 		tp_resetn = <&gpio5 2 0>;
 		polling_mode = /bits/ 8 <1>;
 		multi_touch = /bits/ 8 <0>;

@@ -628,10 +628,10 @@ static int imx_get_sensor_data(struct platform_device *pdev)
 	data->temp_passive = IMX_TEMP_PASSIVE;
 
 	/*
-	 * Set the default critical trip point to 20 C higher
+	 * Set the default critical trip point to 25 C higher
 	 * than passive trip point. Can be changed from userspace.
 	 */
-	data->temp_critical = IMX_TEMP_PASSIVE + 20 * 1000;
+	data->temp_critical = IMX_TEMP_PASSIVE + 25 * 1000;
 
 	return 0;
 }

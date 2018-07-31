@@ -1838,10 +1838,13 @@ static int wm8904_set_bias_level(struct snd_soc_codec *codec,
 	switch (level) {
 	case SND_SOC_BIAS_ON:
 		clk_prepare_enable(wm8904->mclk);
-        snd_soc_update_bits(codec, WM8904_ADC_DIGITAL_VOLUME_RIGHT, WM8904_ADCR_VOL_MASK, WM8904_ADCR_VOL_MASK);
-        snd_soc_update_bits(codec, WM8904_ADC_DIGITAL_VOLUME_LEFT, WM8904_ADCL_VOL_MASK, WM8904_ADCL_VOL_MASK);
-        snd_soc_update_bits(codec, WM8904_ANALOGUE_LEFT_INPUT_0, WM8904_LIN_VOL_MASK,WM8904_LIN_VOL_MASK);
-        snd_soc_update_bits(codec, WM8904_ANALOGUE_RIGHT_INPUT_0, WM8904_RIN_VOL_MASK, WM8904_RIN_VOL_MASK);
+		//snd_soc_update_bits(codec, WM8904_ADC_DIGITAL_VOLUME_RIGHT, WM8904_ADCR_VOL_MASK, WM8904_ADCR_VOL_MASK);
+		//snd_soc_update_bits(codec, WM8904_ADC_DIGITAL_VOLUME_LEFT, WM8904_ADCL_VOL_MASK, WM8904_ADCL_VOL_MASK);
+		//snd_soc_update_bits(codec, WM8904_ANALOGUE_LEFT_INPUT_0, WM8904_LIN_VOL_MASK,WM8904_LIN_VOL_MASK);
+		//snd_soc_update_bits(codec, WM8904_ANALOGUE_RIGHT_INPUT_0, WM8904_RIN_VOL_MASK, WM8904_RIN_VOL_MASK);
+		/* iput pag configration ,set mode：differential Line Mode  */
+		snd_soc_update_bits(codec, WM8904_ANALOGUE_LEFT_INPUT_1, WM8904_L_MODE_MASK, 0x01);
+		snd_soc_update_bits(codec, WM8904_ANALOGUE_RIGHT_INPUT_1, WM8904_R_MODE_MASK, 0x01);
 		break;
 
 	case SND_SOC_BIAS_PREPARE:

@@ -608,6 +608,9 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ul-14x14-evk-ecspi-slave.dtb \
 	imx6ul-14x14-evk-ecspi.dtb \
 	imx6ul-14x14-evk-gpmi-weim.dtb \
+	myb-imx6ul-14x14-base.dtb \
+	myd-y6ul-gpmi-weim.dtb \
+	myd-y6ul-emmc.dtb \
 	imx6ul-9x9-evk.dtb \
 	imx6ul-9x9-evk-ldo.dtb \
 	imx6ul-9x9-evk-btwifi.dtb \
@@ -632,6 +635,9 @@ dtb-$(CONFIG_SOC_IMX6UL) += \
 	imx6ull-14x14-evk-btwifi.dtb \
 	imx6ull-14x14-evk-btwifi-oob.dtb \
 	imx6ull-14x14-evk-gpmi-weim.dtb \
+	myb-imx6ull-14x14-base.dtb \
+	myd-y6ull-gpmi-weim.dtb \
+	myd-y6ull-emmc.dtb \
 	imx6ull-9x9-evk.dtb \
 	imx6ull-9x9-evk-ldo.dtb \
 	imx6ull-9x9-evk-btwifi.dtb \

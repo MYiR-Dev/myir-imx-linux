@@ -47,11 +47,9 @@
     pinctrl-names = "default";
     max-frequency = <50000000>;
     pinctrl-0 = <&pinctrl_usdhc2_alt &pinctrl_wifi>;
-   // pinctrl-0 = <&pinctrl_usdhc2_alt>;
     bus-width = <4>;
     no-1-8-v;   /* force 3.3V VIO */
     non-removable;
-//    mmc-pwrseq = <&usdhc2_pwrseq>;
     pm-ignore-notify;
     cap-power-off-card;
 //    /delete-property/ wakeup-source;

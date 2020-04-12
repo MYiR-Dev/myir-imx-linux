@@ -19,7 +19,7 @@
 };
 
 &csi {
-	status = "disabled";
+	status = "okay";
 };
 
 &iomuxc_snvs {                                                                                                                                    

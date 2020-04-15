@@ -1,8 +1,12 @@
-// SPDX-License-Identifier: GPL-2.0
-//
-// Freescale i.MX6UL touchscreen controller driver
-//
-// Copyright (C) 2015 Freescale Semiconductor, Inc.
+/*
+ * Freescale i.MX6UL touchscreen controller driver
+ *
+ * Copyright (C) 2015 Freescale Semiconductor, Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
 
 #include <linux/errno.h>
 #include <linux/kernel.h>
@@ -17,25 +21,19 @@
 #include <linux/platform_device.h>
 #include <linux/clk.h>
 #include <linux/io.h>
-#include <linux/log2.h>
+#include <linux/sort.h>
+
 
 /* ADC configuration registers field define */
 #define ADC_AIEN		(0x1 << 7)
 #define ADC_CONV_DISABLE	0x1F
-#define ADC_AVGE		(0x1 << 5)
 #define ADC_CAL			(0x1 << 7)
 #define ADC_CALF		0x2
 #define ADC_12BIT_MODE		(0x2 << 2)
-#define ADC_CONV_MODE_MASK	(0x3 << 2)
 #define ADC_IPG_CLK		0x00
-#define ADC_INPUT_CLK_MASK	0x3
 #define ADC_CLK_DIV_8		(0x03 << 5)
-#define ADC_CLK_DIV_MASK	(0x3 << 5)
 #define ADC_SHORT_SAMPLE_MODE	(0x0 << 4)
-#define ADC_SAMPLE_MODE_MASK	(0x1 << 4)
 #define ADC_HARDWARE_TRIGGER	(0x1 << 13)
-#define ADC_AVGS_SHIFT		14
-#define ADC_AVGS_MASK		(0x3 << 14)
 #define SELECT_CHANNEL_4	0x04
 #define SELECT_CHANNEL_1	0x01
 #define DISABLE_CONVERSION_INT	(0x0 << 7)
@@ -88,10 +86,8 @@ struct imx6ul_tsc {
 	struct clk *adc_clk;
 	struct gpio_desc *xnur_gpio;
 
-	u32 measure_delay_time;
-	u32 pre_charge_time;
-	bool average_enable;
-	u32 average_select;
+	int measure_delay_time;
+	int pre_charge_time;
 
 	struct completion completion;
 };
@@ -100,25 +96,19 @@ struct imx6ul_tsc {
  * TSC module need ADC to get the measure value. So
  * before config TSC, we should initialize ADC module.
  */
-static int imx6ul_adc_init(struct imx6ul_tsc *tsc)
+static void imx6ul_adc_init(struct imx6ul_tsc *tsc)
 {
-	u32 adc_hc = 0;
-	u32 adc_gc;
-	u32 adc_gs;
-	u32 adc_cfg;
-	unsigned long timeout;
+	int adc_hc = 0;
+	int adc_gc;
+	int adc_gs;
+	int adc_cfg;
+	int timeout;
 
 	reinit_completion(&tsc->completion);
 
 	adc_cfg = readl(tsc->adc_regs + REG_ADC_CFG);
-	adc_cfg &= ~(ADC_CONV_MODE_MASK | ADC_INPUT_CLK_MASK);
 	adc_cfg |= ADC_12BIT_MODE | ADC_IPG_CLK;
-	adc_cfg &= ~(ADC_CLK_DIV_MASK | ADC_SAMPLE_MODE_MASK);
 	adc_cfg |= ADC_CLK_DIV_8 | ADC_SHORT_SAMPLE_MODE;
-	if (tsc->average_enable) {
-		adc_cfg &= ~ADC_AVGS_MASK;
-		adc_cfg |= (tsc->average_select) << ADC_AVGS_SHIFT;
-	}
 	adc_cfg &= ~ADC_HARDWARE_TRIGGER;
 	writel(adc_cfg, tsc->adc_regs + REG_ADC_CFG);
 
@@ -130,29 +120,21 @@ static int imx6ul_adc_init(struct imx6ul_tsc *tsc)
 	/* start ADC calibration */
 	adc_gc = readl(tsc->adc_regs + REG_ADC_GC);
 	adc_gc |= ADC_CAL;
-	if (tsc->average_enable)
-		adc_gc |= ADC_AVGE;
 	writel(adc_gc, tsc->adc_regs + REG_ADC_GC);
 
 	timeout = wait_for_completion_timeout
 			(&tsc->completion, ADC_TIMEOUT);
-	if (timeout == 0) {
+	if (timeout == 0)
 		dev_err(tsc->dev, "Timeout for adc calibration\n");
-		return -ETIMEDOUT;
-	}
 
 	adc_gs = readl(tsc->adc_regs + REG_ADC_GS);
-	if (adc_gs & ADC_CALF) {
+	if (adc_gs & ADC_CALF)
 		dev_err(tsc->dev, "ADC calibration failed\n");
-		return -EINVAL;
-	}
 
 	/* TSC need the ADC work in hardware trigger */
 	adc_cfg = readl(tsc->adc_regs + REG_ADC_CFG);
 	adc_cfg |= ADC_HARDWARE_TRIGGER;
 	writel(adc_cfg, tsc->adc_regs + REG_ADC_CFG);
-
-	return 0;
 }
 
 /*
@@ -162,7 +144,7 @@ static int imx6ul_adc_init(struct imx6ul_tsc *tsc)
  */
 static void imx6ul_tsc_channel_config(struct imx6ul_tsc *tsc)
 {
-	u32 adc_hc0, adc_hc1, adc_hc2, adc_hc3, adc_hc4;
+	int adc_hc0, adc_hc1, adc_hc2, adc_hc3, adc_hc4;
 
 	adc_hc0 = DISABLE_CONVERSION_INT;
 	writel(adc_hc0, tsc->adc_regs + REG_ADC_HC0);
@@ -187,8 +169,8 @@ static void imx6ul_tsc_channel_config(struct imx6ul_tsc *tsc)
  */
 static void imx6ul_tsc_set(struct imx6ul_tsc *tsc)
 {
-	u32 basic_setting = 0;
-	u32 start;
+	int basic_setting = 0;
+	int start;
 
 	basic_setting |= tsc->measure_delay_time << 8;
 	basic_setting |= DETECT_4_WIRE_MODE | AUTO_MEASURE;
@@ -208,23 +190,17 @@ static void imx6ul_tsc_set(struct imx6ul_tsc *tsc)
 	writel(start, tsc->tsc_regs + REG_TSC_FLOW_CONTROL);
 }
 
-static int imx6ul_tsc_init(struct imx6ul_tsc *tsc)
+static void imx6ul_tsc_init(struct imx6ul_tsc *tsc)
 {
-	int err;
-
-	err = imx6ul_adc_init(tsc);
-	if (err)
-		return err;
+	imx6ul_adc_init(tsc);
 	imx6ul_tsc_channel_config(tsc);
 	imx6ul_tsc_set(tsc);
-
-	return 0;
 }
 
 static void imx6ul_tsc_disable(struct imx6ul_tsc *tsc)
 {
-	u32 tsc_flow;
-	u32 adc_cfg;
+	int tsc_flow;
+	int adc_cfg;
 
 	/* TSC controller enters to idle status */
 	tsc_flow = readl(tsc->tsc_regs + REG_TSC_FLOW_CONTROL);
@@ -241,8 +217,8 @@ static void imx6ul_tsc_disable(struct imx6ul_tsc *tsc)
 static bool tsc_wait_detect_mode(struct imx6ul_tsc *tsc)
 {
 	unsigned long timeout = jiffies + msecs_to_jiffies(2);
-	u32 state_machine;
-	u32 debug_mode2;
+	int state_machine;
+	int debug_mode2;
 
 	do {
 		if (time_after(jiffies, timeout))
@@ -257,13 +233,41 @@ static bool tsc_wait_detect_mode(struct imx6ul_tsc *tsc)
 	return true;
 }
 
+#define ADCFSM_STEPID		0x10
+#define SEQ_SETTLE		275
+#define MAX_12BIT		((1 << 12) - 1)
+
+static int titsc_cmp_coord(const void *a, const void *b)
+{
+	return *(int *)a - *(int *)b;
+}
+
+
+#define  CCREADS  6
+#define  SAMP_CNT_DIV2 2
+
+static	unsigned int yyvals[CCREADS], xxvals[CCREADS];
+static  unsigned int ccreads = 0;
+//static  unsigned int mx = 0, my = 0, mz = 0;
+static unsigned int xxsum = 0, yysum = 0;
+
+
+#define MAX_POS_X 15
+#define MAX_POS_Y 15
+
 static irqreturn_t tsc_irq_fn(int irq, void *dev_id)
 {
 	struct imx6ul_tsc *tsc = dev_id;
-	u32 status;
-	u32 value;
-	u32 x, y;
-	u32 start;
+	int status;
+	int value;
+	unsigned int x, y;
+	int start;
+	unsigned int tmpx=0;
+	unsigned int tmpy=0;
+	
+	int i;
+
+	/*2019-10-23*/
 
 	status = readl(tsc->tsc_regs + REG_TSC_INT_STATUS);
 
@@ -287,9 +291,78 @@ static irqreturn_t tsc_irq_fn(int irq, void *dev_id)
 		 */
 		if (!tsc_wait_detect_mode(tsc) ||
 		    gpiod_get_value_cansleep(tsc->xnur_gpio)) {
+#if 0
 			input_report_key(tsc->input, BTN_TOUCH, 1);
 			input_report_abs(tsc->input, ABS_X, x);
 			input_report_abs(tsc->input, ABS_Y, y);
+#endif
+
+			if((x!= 0) && (y!=0)){
+
+			/*  		
+			 * Calculate pressure using formula
+			 * Resistance(touch) = x plate resistance *
+			 * x postion/4096 * ((z2 / z1) - 1)
+			 */
+
+			/*  无法计算，压力 z1  z3 无法获取
+			    z =z1 -z2 ;
+				z *= x;
+				z *= 200;
+				z /= z2;
+				z = (z + 2047) >> 12;
+			*/				
+			
+				yyvals[ccreads] = y;
+				xxvals[ccreads] = x;
+				ccreads++;				
+				if(ccreads>=CCREADS-1){
+					
+					sort(yyvals, CCREADS, sizeof(unsigned int),
+					titsc_cmp_coord, NULL);
+					sort(xxvals, CCREADS, sizeof(unsigned int),
+					titsc_cmp_coord, NULL);
+
+					if(ccreads>CCREADS){
+						ccreads=0;
+					}
+
+					for(i=0;i<3;i++){
+						tmpx =  xxvals[2+i]-xxvals[1+i];
+						if(tmpx > MAX_POS_X){
+							ccreads=0;
+                            return 0;
+						}
+							
+						tmpy =  yyvals[2+i]-yyvals[1+i];
+						if(tmpy > MAX_POS_Y){
+							ccreads=0;
+							return 0;
+						}
+					}
+
+					for(i=1;i<=4;i++){
+						yysum += yyvals[i];
+						xxsum += xxvals[i];
+					}
+					
+					x= xxsum>>2;
+					y= yysum>>2;
+
+					input_report_key(tsc->input, BTN_TOUCH, 1);
+					input_report_abs(tsc->input, ABS_X, x);
+					input_report_abs(tsc->input, ABS_Y, y);
+
+					memset(xxvals, 0, sizeof(xxvals));
+					memset(yyvals, 0, sizeof(yyvals));
+					xxsum=0;
+					yysum=0;
+					
+					ccreads=0;
+				}
+				
+			}
+
 		} else {
 			input_report_key(tsc->input, BTN_TOUCH, 0);
 		}
@@ -303,8 +376,8 @@ static irqreturn_t tsc_irq_fn(int irq, void *dev_id)
 static irqreturn_t adc_irq_fn(int irq, void *dev_id)
 {
 	struct imx6ul_tsc *tsc = dev_id;
-	u32 coco;
-	u32 value;
+	int coco;
+	int value;
 
 	coco = readl(tsc->adc_regs + REG_ADC_HS);
 	if (coco & 0x01) {
@@ -333,20 +406,13 @@ static int imx6ul_tsc_open(struct input_dev *input_dev)
 		dev_err(tsc->dev,
 			"Could not prepare or enable the tsc clock: %d\n",
 			err);
-		goto disable_adc_clk;
+		clk_disable_unprepare(tsc->adc_clk);
+		return err;
 	}
 
-	err = imx6ul_tsc_init(tsc);
-	if (err)
-		goto disable_tsc_clk;
+	imx6ul_tsc_init(tsc);
 
 	return 0;
-
-disable_tsc_clk:
-	clk_disable_unprepare(tsc->tsc_clk);
-disable_adc_clk:
-	clk_disable_unprepare(tsc->adc_clk);
-	return err;
 }
 
 static void imx6ul_tsc_close(struct input_dev *input_dev)
@@ -364,12 +430,13 @@ static int imx6ul_tsc_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct imx6ul_tsc *tsc;
 	struct input_dev *input_dev;
+	struct resource *tsc_mem;
+	struct resource *adc_mem;
 	int err;
 	int tsc_irq;
 	int adc_irq;
-	u32 average_samples;
 
-	tsc = devm_kzalloc(&pdev->dev, sizeof(*tsc), GFP_KERNEL);
+	tsc = devm_kzalloc(&pdev->dev, sizeof(struct imx6ul_tsc), GFP_KERNEL);
 	if (!tsc)
 		return -ENOMEM;
 
@@ -377,7 +444,7 @@ static int imx6ul_tsc_probe(struct platform_device *pdev)
 	if (!input_dev)
 		return -ENOMEM;
 
-	input_dev->name = "iMX6UL Touchscreen Controller";
+	input_dev->name = "iMX6UL TouchScreen Controller";
 	input_dev->id.bustype = BUS_HOST;
 
 	input_dev->open = imx6ul_tsc_open;
@@ -401,14 +468,16 @@ static int imx6ul_tsc_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	tsc->tsc_regs = devm_platform_ioremap_resource(pdev, 0);
+	tsc_mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	tsc->tsc_regs = devm_ioremap_resource(&pdev->dev, tsc_mem);
 	if (IS_ERR(tsc->tsc_regs)) {
 		err = PTR_ERR(tsc->tsc_regs);
 		dev_err(&pdev->dev, "failed to remap tsc memory: %d\n", err);
 		return err;
 	}
 
-	tsc->adc_regs = devm_platform_ioremap_resource(pdev, 1);
+	adc_mem = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	tsc->adc_regs = devm_ioremap_resource(&pdev->dev, adc_mem);
 	if (IS_ERR(tsc->adc_regs)) {
 		err = PTR_ERR(tsc->adc_regs);
 		dev_err(&pdev->dev, "failed to remap adc memory: %d\n", err);
@@ -430,12 +499,16 @@ static int imx6ul_tsc_probe(struct platform_device *pdev)
 	}
 
 	tsc_irq = platform_get_irq(pdev, 0);
-	if (tsc_irq < 0)
+	if (tsc_irq < 0) {
+		dev_err(&pdev->dev, "no tsc irq resource?\n");
 		return tsc_irq;
+	}
 
 	adc_irq = platform_get_irq(pdev, 1);
-	if (adc_irq < 0)
+	if (adc_irq <= 0) {
+		dev_err(&pdev->dev, "no adc irq resource?\n");
 		return adc_irq;
+	}
 
 	err = devm_request_threaded_irq(tsc->dev, tsc_irq,
 					NULL, tsc_irq_fn, IRQF_ONESHOT,
@@ -465,30 +538,6 @@ static int imx6ul_tsc_probe(struct platform_device *pdev)
 				   &tsc->pre_charge_time);
 	if (err)
 		tsc->pre_charge_time = 0xfff;
-
-	err = of_property_read_u32(np, "touchscreen-average-samples",
-				   &average_samples);
-	if (err)
-		average_samples = 1;
-
-	switch (average_samples) {
-	case 1:
-		tsc->average_enable = false;
-		tsc->average_select = 0; /* value unused; initialize anyway */
-		break;
-	case 4:
-	case 8:
-	case 16:
-	case 32:
-		tsc->average_enable = true;
-		tsc->average_select = ilog2(average_samples) - 2;
-		break;
-	default:
-		dev_err(&pdev->dev,
-			"touchscreen-average-samples (%u) must be 1, 4, 8, 16 or 32\n",
-			average_samples);
-		return -EINVAL;
-	}
 
 	err = input_register_device(tsc->input);
 	if (err) {
@@ -541,7 +590,7 @@ static int __maybe_unused imx6ul_tsc_resume(struct device *dev)
 			goto out;
 		}
 
-		retval = imx6ul_tsc_init(tsc);
+		imx6ul_tsc_init(tsc);
 	}
 
 out:
@@ -571,3 +620,4 @@ module_platform_driver(imx6ul_tsc_driver);
 MODULE_AUTHOR("Haibo Chen <haibo.chen@freescale.com>");
 MODULE_DESCRIPTION("Freescale i.MX6UL Touchscreen controller driver");
 MODULE_LICENSE("GPL v2");
+

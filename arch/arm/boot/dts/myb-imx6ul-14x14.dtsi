@@ -334,7 +334,7 @@
 	xnur-gpio = <&gpio1 3 GPIO_ACTIVE_LOW>;
 	measure-delay-time = <0xffff>;
 	pre-charge-time = <0xfff>;
-	status = "disabled";
+	status = "okay";
 };
 
 &uart1 {

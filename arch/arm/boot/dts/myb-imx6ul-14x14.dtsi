@@ -231,6 +231,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_lcdif_dat
 		     &pinctrl_lcdif_ctrl>;
+	// powergpio-gpio = <&gpio3 4  GPIO_ACTIVE_HIGH>;
 	display = <&display0>;
 	status = "okay";
 
@@ -239,8 +240,8 @@
 		bus-width = <16>;
 
 		display-timings {
-			native-mode = <&timing0>;
-/*
+			native-mode = <&timing1>;
+
 			timing0: timing0 {
 				clock-frequency = <9200000>;
 				hactive = <480>;
@@ -256,23 +257,23 @@
 				de-active = <1>;
 				pixelclk-active = <0>;
 			};
-*/
-            timing0: timing0 {
-                clock-frequency = <33000000>;
-                hactive = <800>;
-                vactive = <480>;
-                hfront-porch = <210>;
-                hback-porch = <46>;
-                hsync-len = <1>;
-                vback-porch = <22>;
-                vfront-porch = <23>;
-                vsync-len = <20>;
-      
-                hsync-active = <0>;
-                vsync-active = <0>;
-                de-active = <1>;
-                pixelclk-active = <0>;
-            };
+
+			timing1: timing1 {
+				clock-frequency = <33000000>;
+				hactive = <800>;
+				vactive = <480>;
+				hfront-porch = <210>;
+				hback-porch = <46>;
+				hsync-len = <1>;
+				vback-porch = <22>;
+				vfront-porch = <23>;
+				vsync-len = <20>;
+		
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <1>;
+				pixelclk-active = <0>;
+		};
 
 		};
 	};
@@ -419,10 +420,11 @@
     pinctrl_hog_1: hoggrp-1 {
         fsl,pins = <
             MX6UL_PAD_UART1_RTS_B__GPIO1_IO19   0x17059 /* SD1 CD */
-            MX6UL_PAD_GPIO1_IO09__GPIO1_IO09    0x17059 /* SD1 RESET */
+            MX6UL_PAD_GPIO1_IO09__GPIO1_IO09    0x17059 /* LCD_DISP */
             MX6UL_PAD_NAND_CE1_B__GPIO4_IO14    0x17059 /* LTE Reset */
             MX6UL_PAD_JTAG_MOD__GPIO1_IO10      0x17059 /* WiFi module power */
-        >;
+            MX6UL_PAD_LCD_ENABLE__GPIO3_IO01    0x000010B0
+			>;
     };
 
     pinctrl_wifi: wifigrp {
@@ -545,8 +547,8 @@
 			MX6UL_PAD_LCD_ENABLE__LCDIF_ENABLE  0x79
 			MX6UL_PAD_LCD_HSYNC__LCDIF_HSYNC    0x79
 			MX6UL_PAD_LCD_VSYNC__LCDIF_VSYNC    0x79
-			/* used for lcd reset */
-			MX6UL_PAD_LCD_RESET__GPIO3_IO04     0x1b0b0
+			/* used for lcd power */
+		        MX6UL_PAD_LCD_RESET__GPIO3_IO04     0x1b0b0
 		>;
 	};
 
@@ -749,10 +751,5 @@
         >;
     };
 
-	pinctrl_wdog: wdoggrp {
-		fsl,pins = <
-			MX6UL_PAD_LCD_RESET__WDOG1_WDOG_ANY    0x30b0
-		>;
-	};
 };
 

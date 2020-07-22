@@ -469,6 +469,11 @@
 	status = "okay";
 
 
+	rtc: rtc@32 {
+		compatible = "epson,rx8025";
+		reg = <0x32>;
+	};
+
 	typec: stusb1600@28 {
 		compatible = "st,stusb1600";
 		reg = <0x28>;

@@ -268,19 +268,26 @@
 };
 
 &usbotg1 {
-	dr_mode = "otg";
+	dr_mode = "host";
 	hnp-disable;
 	srp-disable;
 	adp-disable;
 	usb-role-switch;
 	picophy,pre-emp-curr-control = <3>;
 	picophy,dc-vol-level-adjust = <7>;
-	status = "disabled";
+	status = "okay";
 
-
-
+	port {
+		usb1_drd_sw: endpoint {
+			remote-endpoint = <&typec1_dr_sw>;
+		};
+	};
 };
-
+&usbotg2 {
+	dr_mode = "host";
+	disable-over-current; 
+	status = "okay";
+};
 &usdhc1 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc1>;
@@ -458,7 +465,34 @@
 	status = "okay";
 
 
-
+	typec: stusb1600@28 {
+		compatible = "st,stusb1600";
+		reg = <0x28>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&stusb1600_pins_a>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
+		status = "okay";
+		
+		port {
+			typec1_dr_sw: endpoint {
+				remote-endpoint = <&usb1_drd_sw>;
+			};
+		};
+		
+		typec1_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			power-role = "dual";
+			data-role = "dual";
+			try-power-role = "sink";
+			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
+				     PDO_VAR(5000, 20000, 3000)>;
+			op-sink-microwatt = <15000000>;
+			self-powered;
+		};
+	};
 
 };
 

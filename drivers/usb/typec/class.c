@@ -1388,6 +1388,21 @@ void typec_set_pwr_opmode(struct typec_port *port,
 EXPORT_SYMBOL_GPL(typec_set_pwr_opmode);
 
 /**
+ * typec_find_power_opmode - Get the typec port power operation mode
+ * @name: port power operation mode string
+ *
+ * This routine is used to find the typec_pwr_opmodes by its string name.
+ *
+ * Returns typec_pwr_opmodes if success, otherwise negative error code.
+ */
+int typec_find_port_power_opmode(const char *name)
+{
+	return match_string(typec_pwr_opmodes,
+			    ARRAY_SIZE(typec_pwr_opmodes), name);
+}
+EXPORT_SYMBOL_GPL(typec_find_port_power_opmode);
+
+/**
  * typec_find_port_power_role - Get the typec port power capability
  * @name: port power capability string
  *

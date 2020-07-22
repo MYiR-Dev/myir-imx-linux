@@ -115,8 +115,8 @@
 		reg_m2_power_pad: regulator-m2-power-pad {
 			compatible = "regulator-fixed";
 			regulator-name = "M2_POWER_PAD";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
 			enable-active-high;
 			startup-delay-us = <70000>;
 			gpio = <&gpio2 11 GPIO_ACTIVE_HIGH>;
@@ -164,7 +164,11 @@
 	pinctrl-0 = <&pinctrl_pcie0>;
 	disable-gpio = <&gpio2 20 GPIO_ACTIVE_LOW>;
 	reset-gpio = <&gpio4 21 GPIO_ACTIVE_LOW>;
-
+	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
+		 <&clk IMX8MM_CLK_PCIE1_AUX>,
+		 <&clk IMX8MM_CLK_PCIE1_PHY>,
+		 <&pcie0_refclk>;
+	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
 	ext_osc = <1>;
 
 	status = "okay";
@@ -592,6 +596,8 @@
 			fsl,pins = <
 				MX8MM_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B	0x61 /* open drain, pull up */
 				MX8MM_IOMUXC_GPIO1_IO00_ANAMIX_REF_CLK_32K      0x141
+				MX8MM_IOMUXC_SD2_WP_GPIO2_IO20	0x41
+				MX8MM_IOMUXC_SAI2_RXFS_GPIO4_IO21	0x41
 			>;
 		};
 

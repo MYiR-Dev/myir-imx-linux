@@ -122,7 +122,7 @@ struct ov5640 {
 	int csi;
 
 	void (*io_init)(struct ov5640 *);
-	int pwn_gpio, rst_gpio;
+	int pwn_gpio, rst_gpio,gate_gpio;
 };
 
 struct ov5640_res {
@@ -1674,6 +1674,19 @@ static int ov5640_probe(struct i2c_client *client,
 	pinctrl = devm_pinctrl_get_select_default(dev);
 	if (IS_ERR(pinctrl))
 		dev_warn(dev, "No pin available\n");
+
+	sensor->gate_gpio= of_get_named_gpio(dev->of_node, "gate-gpios", 0);
+	if (!gpio_is_valid(sensor->gate_gpio))
+		dev_warn(dev, "no sensor gatepin available");
+	else {
+		retval = devm_gpio_request_one(dev, sensor->gate_gpio, GPIOF_OUT_INIT_HIGH,
+						"ov5640_mipi_gate");
+		if (retval < 0) {
+			dev_warn(dev, "Failed to set gate pin\n");
+			dev_warn(dev, "retval=%d\n", retval);
+			return retval;
+		}
+	}
 
 	/* request power down pin */
 	sensor->pwn_gpio = of_get_named_gpio(dev->of_node, "pwn-gpios", 0);

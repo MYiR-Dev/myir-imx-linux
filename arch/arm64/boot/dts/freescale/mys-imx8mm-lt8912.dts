@@ -1,0 +1,189 @@
+/*
+ * Copyright 2019 MYiR Devices
+ */
+ 
+#include "mys-imx8mm-evk.dts"
+
+
+
+&iomuxc {
+			imx8mm-evk {
+			    pinctrl_dsi_lvds_bridge: lvds_bridge_gpio {
+						fsl,pins = <
+							MX8MM_IOMUXC_SAI2_MCLK_GPIO4_IO27          0x00000116
+							MX8MM_IOMUXC_GPIO1_IO13_GPIO1_IO13           0x00000116
+						>;
+			    };
+			
+			};
+
+};
+
+&lcdif{
+	max-res = <1920>, <1080>;
+	status = "okay";
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	port@1 {
+		compatible = "lontium,lt8912";
+		mipi_dsi_bridge1_out: endpoint {
+			remote-endpoint = <&lt8912_1_in>;
+			attach-bridge;
+		};
+	};
+};
+
+&i2c2 {
+    pinctrl-names = "default";
+    status = "okay";
+
+
+   
+
+	/* MIPI-DSI to HDMI and LVDS adapter */
+	hdmi@48 {
+		compatible = "lontium,lt8912";
+		pinctrl-names = "default";
+		
+		ddc-i2c-bus = <&i2c2>;
+		hpd-gpios = <&gpio4 27 GPIO_ACTIVE_HIGH>;
+		dsi-lanes = <4>;
+		reg = <0x48>;
+		reset-gpios = <&gpio1 13 GPIO_ACTIVE_LOW>;
+    lvds-enabled = <1>;
+    status = "okay";
+    
+    display-timings {
+	    
+			native-mode = <&timing1>;
+			
+			timing0: timing0 {
+			     clock-frequency = <148500000>;
+			     hactive = <1920>;
+			     vactive = <1080>;
+			     hfront-porch = <88>;
+			     hsync-len = <44>;
+			     hback-porch = <148>;
+			     vfront-porch = <36>;
+			     vsync-len = <5>;
+			     vback-porch = <4>;
+			     hsync-active = <0>;
+			     vsync-active = <0>;
+			     de-active = <0>;
+			     pixelclk-active = <0>;
+			};
+	         
+			timing1: timing1 {
+				clock-frequency = <74250000>;
+				hactive = <1280>;
+				vactive = <720>;
+				hfront-porch = <110>;
+				hsync-len = <40>;
+				hback-porch = <220>;
+				vfront-porch = <5>;
+				vsync-len = <5>;
+				vback-porch = <20>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <0>;
+				pixelclk-active = <0>;
+			};
+
+			timing2: timing2 {
+				clock-frequency = <60000000>;
+				hactive = <1280>;
+				vactive = <6500>;
+				hfront-porch = <80>;
+				hsync-len = <56>;
+				hback-porch = <64>;
+				vfront-porch = <28>;
+				vsync-len = <3>;
+				vback-porch = <4>;	
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <0>;
+				pixelclk-active = <0>;
+			};
+			
+			timing6: timing6{
+				clock-frequency = <74250000>;
+				hactive = <1300>;
+				vactive = <730>;
+				hfront-porch = <70>;
+				hsync-len = <56>;
+				hback-porch = <64>;
+				vfront-porch = <28>;
+				vsync-len = <3>;
+				vback-porch = <4>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <0>;
+				pixelclk-active = <0>;
+			};
+
+			timing3: timing3{
+				clock-frequency = <74250000>;
+				hactive = <1366>;
+				vactive = <768>;
+				hfront-porch = <100>;
+				hsync-len = <56>;
+				hback-porch = <64>;
+				vfront-porch = <28>;
+				vsync-len = <3>;
+				vback-porch = <4>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <0>;
+				pixelclk-active = <0>;
+			};
+
+			/*7-inch lvds */
+			timing4:timing4{
+				clock-frequency = <70000000>;
+				hactive = <1024>;
+				hsync-len = <60>;
+				hback-porch = <130>;
+				hfront-porch = <136>;
+				vactive = <600>;
+				vsync-len = <10>;
+				vback-porch = <103>;
+				vfront-porch = <25>;
+				vsync-active = <0>;
+				hsync-active =<0>;
+				de-active =<0>;
+				pixelclk-active =<0>;
+			};
+
+			/* LVDS atk 10.1*/
+			timing5:timing5{
+				clock-frequency = <70000000>;
+				hactive = <1280>;
+				hsync-len = <17>;
+				hback-porch = <60>;
+				hfront-porch = <60>;
+				vactive = <800>;
+				vsync-len = <3>;
+				vback-porch = <10>;
+				vfront-porch = <10>;
+				vsync-active = <0>;
+				hsync-active =<0>;
+				de-active =<0>;
+				pixelclk-active =<0>;
+			};
+
+	  };	    
+
+		port {
+			lt8912_1_in: endpoint {
+				remote-endpoint = <&mipi_dsi_bridge1_out>;
+			};
+		};
+	};
+
+
+};
+
+

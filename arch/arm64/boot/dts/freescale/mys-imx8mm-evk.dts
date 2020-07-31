@@ -77,8 +77,8 @@
 	reg_sd1_vmmc: sd1_regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "WLAN_EN";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
 		gpio = <&gpio1 15 GPIO_ACTIVE_HIGH>;
 		off-on-delay-us = <20000>;
 		startup-delay-us = <100>;
@@ -90,28 +90,7 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	
-		reg_wl_regon_pad: regulator-wl-regon-pad {
-			compatible = "regulator-fixed";
-			regulator-name = "WL_REGON_PAD";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			enable-active-high;
-			startup-delay-us = <70000>;
-			gpio = <&gpio2 10 GPIO_ACTIVE_HIGH>;
-			regulator-always-on;
-			regulator-boot-on;
-		};
-		reg_wl_wakehost_pad: regulator-wl-wakehost-pad {
-			compatible = "regulator-fixed";
-			regulator-name = "WL_WAKEHOST_PAD";
-			regulator-min-microvolt = <1800000>;
-			regulator-max-microvolt = <1800000>;
-			enable-active-high;
-			startup-delay-us = <70000>;
-			gpio = <&gpio2 9 GPIO_ACTIVE_HIGH>;
-			regulator-always-on;
-			regulator-boot-on;
-		};
+
 		reg_m2_power_pad: regulator-m2-power-pad {
 			compatible = "regulator-fixed";
 			regulator-name = "M2_POWER_PAD";
@@ -309,6 +288,7 @@
 	pm-ignore-notify;
 	keep-power-in-suspend;
 	non-removable;
+	wifi-host;
 	status = "okay";
 };
 

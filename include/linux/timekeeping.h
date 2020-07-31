@@ -16,6 +16,7 @@ extern void xtime_update(unsigned long ticks);
 /*
  * Get and set timeofday
  */
+extern void do_gettimeofday(struct timeval *tv);
 extern int do_settimeofday64(const struct timespec64 *ts);
 extern int do_sys_settimeofday64(const struct timespec64 *tv,
 				 const struct timezone *tz);
@@ -178,6 +179,15 @@ extern u64 ktime_get_mono_fast_ns(void);
 extern u64 ktime_get_raw_fast_ns(void);
 extern u64 ktime_get_boot_fast_ns(void);
 extern u64 ktime_get_real_fast_ns(void);
+
+/*
+ * Timespec interfaces utilizing the ktime based ones
+ */
+static inline void get_monotonic_boottime(struct timespec *ts)
+{
+	*ts = ktime_to_timespec(ktime_get_boottime());
+}
+
 
 /*
  * timespec64/time64_t interfaces utilizing the ktime based ones

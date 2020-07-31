@@ -846,6 +846,40 @@ static int mmc_sdio_reinit_card(struct mmc_host *host)
 	return mmc_sdio_init_card(host, host->card->ocr, host->card);
 }
 
+
+
+int sdio_reset_comm(struct mmc_card *card)
+{
+	struct mmc_host *host = card->host;
+	u32 ocr;
+	u32 rocr;
+	int err;
+
+	mmc_claim_host(host);
+	mmc_go_idle(host);
+	mmc_set_clock(host, host->f_min);
+	err = mmc_send_io_op_cond(host, 0, &ocr);
+	if (err)
+		goto err;
+	rocr = mmc_select_voltage(host, ocr);
+	if (!rocr) {
+		err = -EINVAL;
+		goto err;
+	}
+	err = mmc_sdio_init_card(host, rocr, card);
+	if (err)
+		goto err;
+	mmc_release_host(host);
+	return 0;
+err:
+	pr_err("%s: Error resetting SDIO communications (%d)\n",
+		mmc_hostname(host), err);
+	mmc_release_host(host);
+	return err;
+}
+EXPORT_SYMBOL(sdio_reset_comm);
+
+
 /*
  * Host is being removed. Free up the current card.
  */
@@ -863,6 +897,16 @@ static void mmc_sdio_remove(struct mmc_host *host)
 	mmc_remove_card(host->card);
 	host->card = NULL;
 }
+void mmc_sdio_force_remove(struct mmc_host *host)
+{
+	mmc_sdio_remove(host);
+
+	mmc_claim_host(host);
+	mmc_detach_bus(host);
+	mmc_power_off(host);
+	mmc_release_host(host);
+}
+EXPORT_SYMBOL_GPL(mmc_sdio_force_remove);
 
 /*
  * Card detection - card is alive.

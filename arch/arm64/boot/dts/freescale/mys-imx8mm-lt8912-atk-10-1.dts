@@ -51,7 +51,7 @@
 	/* MIPI-DSI to HDMI and LVDS adapter */
 	hdmi@48 {
 		compatible = "lontium,lt8912";
-		pinctrl-names = "okay";
+		pinctrl-names = "default";
 		
 		ddc-i2c-bus = <&i2c2>;
 		hpd-gpios = <&gpio4 27 GPIO_ACTIVE_HIGH>;

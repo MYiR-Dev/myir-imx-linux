@@ -25,7 +25,7 @@
 };
 
 &lcdif{
-	max-res = <1920>, <1080>;
+	max-res = <1024>, <600>;
 	status = "okay";
 };
 
@@ -206,5 +206,6 @@
 			reset-gpios = <&gpio1 12  GPIO_ACTIVE_LOW>;
 			touchscreen-size-x=<1024>;
 			touchscreen-size-y=<600>;
+			status = "okay";
     };
 };

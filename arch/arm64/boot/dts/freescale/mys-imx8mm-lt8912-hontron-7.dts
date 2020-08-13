@@ -16,8 +16,8 @@
     };
 		edt_ft5x06_pins:pinctrl_ft5xgrp {
 			fsl,pins = <
-				MX8MM_IOMUXC_GPIO1_IO12_GPIO1_IO12        0x19
-				MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1           0x19
+				MX8MM_IOMUXC_GPIO1_IO12_GPIO1_IO12        0x00000116
+				MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1           0x00000116
 			>;
 		};
 
@@ -52,7 +52,7 @@
 	hdmi@48 {
 		compatible = "lontium,lt8912";
 		pinctrl-names = "default";
-		
+		pinctrl-0 = <&pinctrl_dsi_lvds_bridge>;
 		ddc-i2c-bus = <&i2c2>;
 		hpd-gpios = <&gpio4 27 GPIO_ACTIVE_HIGH>;
 		dsi-lanes = <4>;
@@ -197,7 +197,7 @@
     status = "okay";
     	/* 7-inch ,touch */
     ft5x06: ft5x06@38 {
-			compatible = "edt,edt-ft5406", "edt,edt-ft5x06";
+			compatible = "edt,edt-ft5406";
 			reg = <0x38>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&edt_ft5x06_pins>;

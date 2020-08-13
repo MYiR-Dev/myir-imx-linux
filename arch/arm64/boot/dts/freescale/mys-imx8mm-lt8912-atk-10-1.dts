@@ -52,7 +52,7 @@
 	hdmi@48 {
 		compatible = "lontium,lt8912";
 		pinctrl-names = "default";
-		
+		pinctrl-0 = <&pinctrl_dsi_lvds_bridge>;
 		ddc-i2c-bus = <&i2c2>;
 		hpd-gpios = <&gpio4 27 GPIO_ACTIVE_HIGH>;
 		dsi-lanes = <4>;

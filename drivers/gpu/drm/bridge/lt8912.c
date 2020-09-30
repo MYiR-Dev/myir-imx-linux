@@ -16,6 +16,7 @@
 #include <linux/regmap.h>
 #include <video/of_display_timing.h>
 #include <video/videomode.h>
+#include <video/of_videomode.h>
 #include <linux/regulator/consumer.h>
 #include <linux/backlight.h>
 
@@ -45,33 +46,19 @@ struct lt8912 {
 	struct gpio_desc *reset_n;
 	struct i2c_adapter *ddc;        /* optional regular DDC I2C bus */
 	u32 lvds_ctr;
+	u32 debug;
+	u32 bypass;
+	u32 hdmi_mode;
+	struct videomode lvds_vm;
 };
 
-/* 0x55 - 1280x720@60Hz */
-//#define DRM_MODE(nm, t, c, hd, hss, hse, ht, hsk, vd, vss, vse, vt, vs, f) \
-//	.name = nm, .status = 0, .type = (t), .clock = (c), \
-//	.hdisplay = (hd), .hsync_start = (hss), .hsync_end = (hse), \
-//	.htotal = (ht), .hskew = (hsk), .vdisplay = (vd), \
-//	.vsync_start = (vss), .vsync_end = (vse), .vtotal = (vt), \
-//	.vscan = (vs), .flags = (f), \
-//	.base.type = DRM_MODE_OBJECT_MODE
-//{ DRM_MODE("1280x720", DRM_MODE_TYPE_DRIVER, 74250, 1280, 1390,
-//	   1430, 1650, 0, 720, 725, 730, 750, 0,
-//	   DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC) },
-//	    /* 60 - 1280x720@24Hz */
-//	        { DRM_MODE("1280x720", DRM_MODE_TYPE_DRIVER, 59400, 1280, 3040,
-//	                   3080, 3300, 0, 720, 725, 730, 750, 0,
-//	                           DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC) }
 
 
 #define _LVDS_Output_  1 
 
 #ifdef _LVDS_Output_
 
-// 设置LVDS屏的CLK
-#define Panel_Pixel_CLK  7000   //6500    // 65MHz * 100
-//#define Panel_Pixel_CLK  7425   //6500    // 65MHz * 100
-//#define Panel_Pixel_CLK  7425
+
 
 
 //--------------------------------------------//
@@ -159,25 +146,40 @@ static int MIPI_Timing[] =
 #endif 
 
 
-static int LVDS_Panel_Timing[] =                                                                                                             
-//  H_act    V_act   H_total V_total H_BP    H_sync  V_sync  V_BP                                                                            
-// { 1024, 600, 1344, 635, 140, 20, 3, 20 };       // 1024x600 Timing                                                                           
-//{ 1024, 768, 1344, 806, 160, 136, 6, 29 };  // 1024x768 Timing                                                                             
-//{ 1024, 600, 1324, 628, 160, 116, 3, 24 };   // 1024x600 Timing  
-{ 1280, 800, 1447, 823, 60, 17, 3, 60 };	 // 1280x800 Timing 
 
-static int MIPI_Timing[] =                                                                                                                   
-//  H_act   V_act   H_total V_total H_BP    H_sync  V_sync  V_BP                                                                             
-//  {1920,  1080,   2200,   1125,   148,        44,     5,      36};// 1080P  Vesa Timing                                                    
-//    { 1280, 720,        1650,   750,        220,        40,     5,      20};// 720P                                                          
-//  {720,   480,        858,        525,        60,     62,     6,      30};// 480P                                                          
-//  {1366,  768,        1500,   800,        64,     56,     3,      28};// 1366x768 VESA Timing                                              
-//  { 1024, 768,        1344,   806,        160,        136,        6,      29};// 1024x768 Timing
-//  { 1024, 600, 1324, 628, 160, 116, 3, 24 };   // 1024x600 Timing 
-  { 1280, 800, 1447, 823, 60, 17, 3, 60 };	 // 1280x800 Timing 
-  
 #endif 
 // #endif 
+
+
+
+static const struct drm_display_mode default_mode[] = {
+	{
+		.clock = 148500,
+		.hdisplay = 1920,
+		.hsync_start = 1920 + 88,
+		.hsync_end = 1920 + 88 + 44,
+		.htotal = 1920 + 88 + 44 + 148,
+		.vdisplay = 1080,
+		.vsync_start = 1080 + 36,
+		.vsync_end = 1080 + 36 + 5,
+		.vtotal = 1080 + 36 + 5 + 4,
+		.vrefresh = 60,
+	},
+	{
+		.clock = 74250,
+		.hdisplay = 1280,
+		.hsync_start = 1280 + 110,
+		.hsync_end = 1280 + 110 + 40,
+		.htotal = 1280 + 110 + 40 + 220,
+		.vdisplay = 720,
+		.vsync_start = 720 + 5,
+		.vsync_end = 720 + 5 + 5,
+		.vtotal = 720 + 5  + 5 + 20,
+		.vrefresh = 60,
+	}
+};
+
+
 
 static int lt8912_attach_dsi(struct lt8912 *lt);
 
@@ -197,12 +199,13 @@ static void lt8912_init(struct lt8912 *lt)
 	u8 lanes = lt->dsi->lanes;
 	const struct drm_display_mode *mode = &lt->mode;
 	u32 hactive, hfp, hsync, hbp, vfp, vsync, vbp, htotal, vtotal,vactive;
-//	unsigned int hsync_activehigh, vsync_activehigh, reg;
+	u32 lvds_hactive, lvds_hfp, lvds_hsync, lvds_hbp, lvds_vfp, lvds_vsync, lvds_vbp, lvds_htotal, lvds_vtotal,lvds_vactive;
+	u32 lvds_clock ;
 	unsigned int version[2];
 
 	union Temp  Core_PLL_Ratio;
-	float       f_DIV;
-
+	int HDMI_VIC ;
+	u8 temp;
 	dev_info(lt->dev, DRM_MODE_FMT "\n", DRM_MODE_ARG(mode));
 	/* TODO: lvds output init */
 
@@ -210,16 +213,37 @@ static void lt8912_init(struct lt8912 *lt)
 	vactive = mode->vdisplay;
 	hfp = mode->hsync_start - mode->hdisplay;
 	hsync = mode->hsync_end - mode->hsync_start;
-//	hsync_activehigh = !!(mode->flags & DRM_MODE_FLAG_PHSYNC);
 	hbp = mode->htotal - mode->hsync_end;
 	vfp = mode->vsync_start - mode->vdisplay;
 	vsync = mode->vsync_end - mode->vsync_start;
-//	vsync_activehigh = !!(mode->flags & DRM_MODE_FLAG_PVSYNC);
 	vbp = mode->vtotal - mode->vsync_end;
 	htotal = mode->htotal;
 	vtotal = mode->vtotal;
 
+	lvds_hactive = lt->lvds_vm.hactive;
+	lvds_vactive = lt->lvds_vm.vactive;
+	lvds_hfp = lt->lvds_vm.hfront_porch;
+	lvds_hsync = lt->lvds_vm.hsync_len;
+	lvds_hbp = lt->lvds_vm.hback_porch;
+	lvds_vfp = lt->lvds_vm.vfront_porch;
+	lvds_vsync = lt->lvds_vm.vsync_len;
+	lvds_vbp = lt->lvds_vm.vback_porch;
+	lvds_htotal = lvds_hactive + lvds_hfp + lvds_hsync + lvds_hbp;
+	lvds_vtotal = lvds_vactive + lvds_vfp + lvds_vsync + lvds_vbp;
+	lvds_clock = lt->lvds_vm.pixelclock/1000;
 
+
+	if ( 1920 == hactive &&   1080 == vactive){
+		HDMI_VIC=0x10;
+	}else if (  1280 == hactive &&   720 == vactive){
+		HDMI_VIC=0x04;
+	}else{
+		HDMI_VIC=0;
+	}
+	if(lt->debug){
+		dev_err(lt->dev,"  hactivity[%d] htotal[%d] hbp[%d] hsync[%d] hfp[%d]\n",hactive,htotal,hbp,hsync,hfp);
+		dev_err(lt->dev,"  vactivity[%d] vtotal[%d] vbp[%d] vsync[%d] vfp[%d]\n",vactive,vtotal,vbp,vsync,vfp);
+	}
 //	dev_info(lt->dev, "mode --- : %d, %d \n",hactive,vactive);
 
 	regmap_read(lt->regmap[0], 0x00, &version[0]);
@@ -227,25 +251,55 @@ static void lt8912_init(struct lt8912 *lt)
 
 	dev_info(lt->dev, "LT8912 ID: %02x, %02x\n",version[0], version[1]);
 
+
 	/* DigitalClockEn */
-	regmap_write(lt->regmap[0], 0x08, 0xff);
-	regmap_write(lt->regmap[0], 0x09, 0xff);
-	regmap_write(lt->regmap[0], 0x0a, 0xff);
-	regmap_write(lt->regmap[0], 0x0b, 0x7c);
-	regmap_write(lt->regmap[0], 0x0c, 0xff);
+
+	if(lt->lvds_ctr){
+		regmap_write(lt->regmap[0], 0x08, 0xff);
+		regmap_write(lt->regmap[0], 0x09, 0xff);
+		regmap_write(lt->regmap[0], 0x0a, 0xff);
+		regmap_write(lt->regmap[0], 0x0b, 0x7c);
+		regmap_write(lt->regmap[0], 0x0c, 0xff);
+		
+		regmap_write(lt->regmap[0], 0x51, 0x15);
+
+	}else{
+
+		regmap_write(lt->regmap[0], 0x08, 0xff);
+		regmap_write(lt->regmap[0], 0x09, 0x81);
+		regmap_write(lt->regmap[0], 0x0a, 0xff);
+		regmap_write(lt->regmap[0], 0x0b, 0x64);
+		regmap_write(lt->regmap[0], 0x0c, 0xff);
+
+		regmap_write(lt->regmap[0], 0x44, 0x31 );   // Close LVDS ouput
+		regmap_write(lt->regmap[0], 0x51, 0x1f);
+
+
+	}
+
+
 
 	/* TxAnalog */
 	regmap_write(lt->regmap[0], 0x31, 0xa1);
-	regmap_write(lt->regmap[0], 0x32, 0xa1);
-	regmap_write(lt->regmap[0], 0x33, 0x03);
+	regmap_write(lt->regmap[0], 0x32, 0xbf);
+	regmap_write(lt->regmap[0], 0x33, 0x17);
 	regmap_write(lt->regmap[0], 0x37, 0x00);
 	regmap_write(lt->regmap[0], 0x38, 0x22);
 	regmap_write(lt->regmap[0], 0x60, 0x82);
+
+
 
 	/* CbusAnalog */
 	regmap_write(lt->regmap[0], 0x39, 0x45);
 	regmap_write(lt->regmap[0], 0x3a, 0x00);
 	regmap_write(lt->regmap[0], 0x3b, 0x00);
+
+
+	/* MIPIAnalog */
+	regmap_write(lt->regmap[0], 0x3e, 0xc6);
+	regmap_write(lt->regmap[0], 0x3f, 0xd4);
+	regmap_write(lt->regmap[0], 0x41, 0x7c);
+
 
 	/* HDMIPllAnalog */
 	regmap_write(lt->regmap[0], 0x44, 0x31);
@@ -253,12 +307,11 @@ static void lt8912_init(struct lt8912 *lt)
 	regmap_write(lt->regmap[0], 0x57, 0x01);
 	regmap_write(lt->regmap[0], 0x5a, 0x02);
 
-	/* MIPIAnalog */
-	regmap_write(lt->regmap[0], 0x3e, 0xce);
-	regmap_write(lt->regmap[0], 0x3f, 0xd4);
-	regmap_write(lt->regmap[0], 0x41, 0x3c);
+
 
 	/* MipiBasicSet */
+	regmap_write(lt->regmap[1], 0x10, 0x01);
+	regmap_write(lt->regmap[1], 0x11, 0x08);
 	regmap_write(lt->regmap[1], 0x12, 0x04);
 	regmap_write(lt->regmap[1], 0x13, lanes % 4);
 	regmap_write(lt->regmap[1], 0x14, 0x00);
@@ -267,40 +320,41 @@ static void lt8912_init(struct lt8912 *lt)
 	regmap_write(lt->regmap[1], 0x1a, 0x03);
 	regmap_write(lt->regmap[1], 0x1b, 0x03);
 
-	/* MIPIDig */
-	regmap_write(lt->regmap[1], 0x18, hsync%256);
-	regmap_write(lt->regmap[1], 0x19, vsync%256);
-	regmap_write(lt->regmap[1], 0x1c, hactive %256);
-	regmap_write(lt->regmap[1], 0x1d, hactive/256);
 
-//	regmap_write(lt->regmap[1], 0x2f, 0x0c);
+
+
+	/* MIPIDig */
+	regmap_write(lt->regmap[1], 0x18, (u8)(hsync%256));
+	regmap_write(lt->regmap[1], 0x19, (u8)(vsync%256));
+	regmap_write(lt->regmap[1], 0x1c, (u8)(hactive %256));
+	regmap_write(lt->regmap[1], 0x1d, (u8)(hactive/256));
+
 	regmap_write(lt->regmap[1], 0x1e, 0x67);
 	regmap_write(lt->regmap[1], 0x2f, 0x0c);
 
-	regmap_write(lt->regmap[1], 0x34, htotal%256);
-	regmap_write(lt->regmap[1], 0x35, htotal/256);
-	regmap_write(lt->regmap[1], 0x36, vtotal%256);
-	regmap_write(lt->regmap[1], 0x37, vtotal/256);
-	regmap_write(lt->regmap[1], 0x38, vbp%256);
-	regmap_write(lt->regmap[1], 0x39, vbp/256);
-	regmap_write(lt->regmap[1], 0x3a, vfp % 0x100);
-	regmap_write(lt->regmap[1], 0x3b, vfp >> 8);
-	regmap_write(lt->regmap[1], 0x3c, hbp % 0x100);
-	regmap_write(lt->regmap[1], 0x3d, hbp >> 8);
-	regmap_write(lt->regmap[1], 0x3e, hfp % 0x100);
-	regmap_write(lt->regmap[1], 0x3f, hfp >> 8);
-//	regmap_read(lt->regmap[0], 0xab, &reg);
-//	reg &= 0xfc;
-//	reg |= (hsync_activehigh < 1) | vsync_activehigh;
-//	regmap_write(lt->regmap[0], 0xab, reg);
+	regmap_write(lt->regmap[1], 0x34, (u8)(htotal%256));
+	regmap_write(lt->regmap[1], 0x35, (u8)(htotal/256));
+	regmap_write(lt->regmap[1], 0x36, (u8)(vtotal%256));
+	regmap_write(lt->regmap[1], 0x37, (u8)(vtotal/256));
+	regmap_write(lt->regmap[1], 0x38, (u8)(vbp%256));
+	regmap_write(lt->regmap[1], 0x39, (u8)(vbp/256));
+	regmap_write(lt->regmap[1], 0x3a, (u8)(vfp % 256));
+	regmap_write(lt->regmap[1], 0x3b, (u8)(vfp /256));
+	regmap_write(lt->regmap[1], 0x3c, (u8)(hbp % 256));
+	regmap_write(lt->regmap[1], 0x3d, (u8)(hbp /256));
+	regmap_write(lt->regmap[1], 0x3e, (u8)(hfp % 256));
+	regmap_write(lt->regmap[1], 0x3f, (u8)(hfp /256));
+
 
 	/* DDSConfig */
-	regmap_write(lt->regmap[1], 0x4e, 0x99);
-	regmap_write(lt->regmap[1], 0x4f, 0x99);
-	regmap_write(lt->regmap[1], 0x50, 0x69);
+	
+	regmap_write(lt->regmap[1], 0x4e, 0x52);
+	regmap_write(lt->regmap[1], 0x4f, 0xde);
+	regmap_write(lt->regmap[1], 0x50, 0xc0);
 	regmap_write(lt->regmap[1], 0x51, 0x80);
 	regmap_write(lt->regmap[1], 0x51, 0x00);
 
+	regmap_write(lt->regmap[1], 0x1e, 0x4f);
 	regmap_write(lt->regmap[1], 0x1f, 0x5e);
 	regmap_write(lt->regmap[1], 0x20, 0x01);
 	regmap_write(lt->regmap[1], 0x21, 0x2c);
@@ -309,6 +363,7 @@ static void lt8912_init(struct lt8912 *lt)
 	regmap_write(lt->regmap[1], 0x24, 0x00);
 	regmap_write(lt->regmap[1], 0x25, 0xc8);
 	regmap_write(lt->regmap[1], 0x26, 0x00);
+	
 	regmap_write(lt->regmap[1], 0x27, 0x5e);
 	regmap_write(lt->regmap[1], 0x28, 0x01);
 	regmap_write(lt->regmap[1], 0x29, 0x2c);
@@ -318,10 +373,7 @@ static void lt8912_init(struct lt8912 *lt)
 	regmap_write(lt->regmap[1], 0x2d, 0xc8);
 	regmap_write(lt->regmap[1], 0x2e, 0x00);
 
-	regmap_write(lt->regmap[0], 0x03, 0x7f);
-	usleep_range(10000, 20000);
-	regmap_write(lt->regmap[0], 0x03, 0xff);
-	
+
 	regmap_write(lt->regmap[1], 0x42, 0x64);
 	regmap_write(lt->regmap[1], 0x43, 0x00);
 	regmap_write(lt->regmap[1], 0x44, 0x04);
@@ -345,11 +397,10 @@ static void lt8912_init(struct lt8912 *lt)
 	regmap_write(lt->regmap[1], 0x5a, 0x8a);
 	regmap_write(lt->regmap[1], 0x5b, 0x00);
 	regmap_write(lt->regmap[1], 0x5c, 0x34);
-	regmap_write(lt->regmap[1], 0x1e, 0x4f);
+	
 	regmap_write(lt->regmap[1], 0x51, 0x00);
 
-	regmap_write(lt->regmap[0], 0xb2, lt->sink_is_hdmi);
-//	regmap_write(lt->regmap[0], 0xb2, 0x01);
+	regmap_write(lt->regmap[0], 0xb2, 0x01); // 0x01:HDMI; 0x00: DVI lt->sink_is_hdmi
 
 	/* Audio Disable */
 //	regmap_write(lt->regmap[2], 0x06, 0x00);
@@ -364,10 +415,10 @@ static void lt8912_init(struct lt8912 *lt)
 	
     /* AVI Packet Config*/
 	regmap_write(lt->regmap[2], 0x3e, 0x0A);
-	regmap_write(lt->regmap[2], 0x43, 0x46-4);
+	regmap_write(lt->regmap[2], 0x43, 0x46-HDMI_VIC);
 	regmap_write(lt->regmap[2], 0x44, 0x10);
-	regmap_write(lt->regmap[2], 0x45, 0x19);
-	regmap_write(lt->regmap[2], 0x47, 0x00+4);
+	regmap_write(lt->regmap[2], 0x45, 0x19); // 0x19 4:3 0x2A:16:9    0x43,0x44,0x45 0x47 the sum of the four register value is 0x6f
+	regmap_write(lt->regmap[2], 0x47, 0x00+HDMI_VIC);
 	
 
 	/* MIPIRxLogicRes */
@@ -381,70 +432,134 @@ static void lt8912_init(struct lt8912 *lt)
 
 #if 1
 	if(lt->lvds_ctr){
+
 		
-	Core_PLL_Ratio.Temp32 = (Panel_Pixel_CLK / 25	) * 7;
-	regmap_write(lt->regmap[0], 0x50, 0x24);
-	regmap_write(lt->regmap[0], 0x51, 0x05);
-	regmap_write(lt->regmap[0], 0x52, 0x14);
+		regmap_write(lt->regmap[0], 0x50, 0x24);
+		regmap_write(lt->regmap[0], 0x51, 0x05);
+		regmap_write(lt->regmap[0], 0x52, 0x14);
 
-	regmap_write(lt->regmap[0], 0x69, (u8)((Core_PLL_Ratio.Temp32/100) & 0x000000FF)) ;
-	regmap_write(lt->regmap[0], 0x69,  0x80 + (u8)((Core_PLL_Ratio.Temp32/100) & 0x000000FF)) ;
-	Core_PLL_Ratio.Temp32  = (Core_PLL_Ratio.Temp32 % 100) & 0x000000FF;
-	Core_PLL_Ratio.Temp32  = Core_PLL_Ratio.Temp32 * 16384;
-	Core_PLL_Ratio.Temp32  = Core_PLL_Ratio.Temp32 / 100;
-	regmap_write(lt->regmap[0], 0x6c, 0x80 + Core_PLL_Ratio.Temp8[1]) ;
-	regmap_write(lt->regmap[0], 0x6b, Core_PLL_Ratio.Temp8[0]) ;
-	regmap_write(lt->regmap[0], 0x04,  0xfb) ;
-	regmap_write(lt->regmap[0], 0x04,  0xff) ;
- 
+		if(lt->debug){
+			dev_err(lt->dev," lvds_clock [%ld]\n",lt->lvds_vm.pixelclock);
+		}
+		Core_PLL_Ratio.Temp32 = lvds_clock; //MHZ
+		Core_PLL_Ratio.Temp32 = Core_PLL_Ratio.Temp32 * 7 / 25 /1000; // c2
 
-	regmap_write(lt->regmap[0], 0x80,  0x00) ;
-	regmap_write(lt->regmap[0], 0x81,  0xff) ;
-	regmap_write(lt->regmap[0], 0x82,  0x03) ;
-	regmap_write(lt->regmap[0], 0x83,  0x00) ;
-	regmap_write(lt->regmap[0], 0x84,  0x05) ;
-	regmap_write(lt->regmap[0], 0x85,  0x80) ;
-	regmap_write(lt->regmap[0], 0x86,  0x10) ;
+		temp = Core_PLL_Ratio.Temp8[0];
 
-#if 0
-	regmap_write(lt->regmap[0], 0x87,  (u8)(LVDS_Panel_Timing[H_tol] % 256	)) ;
-	regmap_write(lt->regmap[0], 0x88,  (u8)(LVDS_Panel_Timing[H_tol] / 256	)) ;
-	regmap_write(lt->regmap[0], 0x89,  (u8)(LVDS_Panel_Timing[H_sync] % 256  )) ;
-	regmap_write(lt->regmap[0], 0x8a,  (u8)(LVDS_Panel_Timing[H_bp] % 256  ) ) ;
-	regmap_write(lt->regmap[0], 0x8b,  (u8)((LVDS_Panel_Timing[H_bp]/256)*0x80+(LVDS_Panel_Timing[V_sync]%256 ))) ;
-	regmap_write(lt->regmap[0], 0x8c,  (u8)(LVDS_Panel_Timing[H_act] % 256)) ;
-	regmap_write(lt->regmap[0], 0x8d,  (u8)(LVDS_Panel_Timing[V_act] % 256)) ;
-	regmap_write(lt->regmap[0], 0x8e,  (u8)((LVDS_Panel_Timing[V_act]/256)*0x10+(LVDS_Panel_Timing[H_act]/256 ))) ;
-#else 
-	regmap_write(lt->regmap[0], 0x87,  (u8)(htotal % 256	)) ;
-	regmap_write(lt->regmap[0], 0x88,  (u8)(htotal / 256	)) ;
-	regmap_write(lt->regmap[0], 0x89,  (u8)(hsync % 256  )) ;
-	regmap_write(lt->regmap[0], 0x8a,  (u8)(hbp % 256  ) ) ;
-	regmap_write(lt->regmap[0], 0x8b,  (u8)((hbp/256)*0x80+(vsync%256 ))) ;
-	regmap_write(lt->regmap[0], 0x8c,  (u8)( hactive % 256)) ;
-	regmap_write(lt->regmap[0], 0x8d,  (u8)( vactive % 256)) ;
-	regmap_write(lt->regmap[0], 0x8e,  (u8)((vactive/256)*0x10+(hactive/256 ))) ;
-#endif 
+		regmap_write(lt->regmap[0], 0x69, temp) ;
+		regmap_write(lt->regmap[0], 0x69,  0x80 + temp) ;
+		if(lt->debug){
+			dev_err(lt->dev,"LT8912 0x69 [%x] [%x]\n",temp,0x80 + temp);
+		}
+		Core_PLL_Ratio.Temp32 = lvds_clock *7/25;
+		Core_PLL_Ratio.Temp32 = (Core_PLL_Ratio.Temp32 - (Core_PLL_Ratio.Temp32/1000)*1000 ) *16384; //E2*1000
 
-//	f_DIV				   = ( ( (float)( MIPI_Timing[H_act] - 1 ) ) / (float)( LVDS_Panel_Timing[H_act] - 1 ) ) * 4096;
-//	Core_PLL_Ratio.Temp32  = (u32)f_DIV;
-    Core_PLL_Ratio.Temp32  = (hactive-1)*4096/(hactive - 1);
-	regmap_write(lt->regmap[0], 0x8f, Core_PLL_Ratio.Temp8[0]) ;
-	regmap_write(lt->regmap[0], 0x90, Core_PLL_Ratio.Temp8[1]) ;
+		Core_PLL_Ratio.Temp32 = Core_PLL_Ratio.Temp32 /1000;// E2
+		temp = Core_PLL_Ratio.Temp32 /256 + 128;
 
-//	f_DIV				   = ( ( (float)( MIPI_Timing[V_act] - 1 ) ) / (float)( LVDS_Panel_Timing[V_act] - 1 ) ) * 4096;
-//	Core_PLL_Ratio.Temp32  = (u32)f_DIV;
-	Core_PLL_Ratio.Temp32  = (vactive-1)*4096/(vactive - 1);
-	regmap_write(lt->regmap[0], 0x91, Core_PLL_Ratio.Temp8[0]) ;
-	regmap_write(lt->regmap[0], 0x92, Core_PLL_Ratio.Temp8[1]) ;
+		regmap_write(lt->regmap[0], 0x6c, temp) ;
+		if(lt->debug){
+			dev_err(lt->dev,"LT8912 0x6c [%x] \n",temp);
+		}
+		temp = Core_PLL_Ratio.Temp32 - (Core_PLL_Ratio.Temp32 /256)*256;
+		regmap_write(lt->regmap[0], 0x6b, temp) ;
+		if(lt->debug){
+			dev_err(lt->dev,"LT8912 6b[%x]\n",temp);
+		}
+		regmap_write(lt->regmap[0], 0x04,  0xfb) ;
+		regmap_write(lt->regmap[0], 0x04,  0xff) ;
+		 
+		if(lt->bypass){
 
 
-	regmap_write(lt->regmap[0], 0x7f, 0x9c) ;
-//    regmap_write(lt->regmap[0], 0xa8, _VesaJeidaMode + _DE_Sync_mode + _ColorDeepth);
-    regmap_write(lt->regmap[0], 0xa8, 0x1b);
+			regmap_write(lt->regmap[0], 0x7f, 0x00) ;//disable scaler
+			regmap_write(lt->regmap[0], 0xa8, _VesaJeidaMode + _DE_Sync_mode + _ColorDeepth);
+			regmap_write(lt->regmap[0], 0x02, 0xf7);
+			regmap_write(lt->regmap[0], 0x02, 0xff);
+			regmap_write(lt->regmap[0], 0x03, 0xcb);
+			regmap_write(lt->regmap[0], 0x03, 0xfb);
+			regmap_write(lt->regmap[0], 0x03, 0xff);
+		}else{
 
-	usleep_range(300000, 400000);
-	regmap_write(lt->regmap[0], 0x44, 0x30);
+			regmap_write(lt->regmap[0], 0x80,  0x00) ;
+			regmap_write(lt->regmap[0], 0x81,  0xff) ;
+			regmap_write(lt->regmap[0], 0x82,  0x03) ;
+			regmap_write(lt->regmap[0], 0x83,  hactive%256) ;
+			regmap_write(lt->regmap[0], 0x84,  hactive/256) ;
+			regmap_write(lt->regmap[0], 0x85,  0x80) ;
+			regmap_write(lt->regmap[0], 0x86,  0x10) ;
+
+
+			regmap_write(lt->regmap[0], 0x87,  (u8)(lvds_htotal % 256	)) ;
+			regmap_write(lt->regmap[0], 0x88,  (u8)(lvds_htotal / 256	)) ;
+			regmap_write(lt->regmap[0], 0x89,  (u8)(lvds_hsync % 256  )) ;
+			regmap_write(lt->regmap[0], 0x8a,  (u8)(lvds_hbp % 256  ) ) ;
+			regmap_write(lt->regmap[0], 0x8b,  (u8)((lvds_hbp/256)*0x80+(lvds_vsync%256 ))) ;
+			regmap_write(lt->regmap[0], 0x8c,  (u8)( lvds_hactive % 256)) ;
+			regmap_write(lt->regmap[0], 0x8d,  (u8)( lvds_vactive % 256)) ;
+			regmap_write(lt->regmap[0], 0x8e,  (u8)((lvds_vactive/256)*0x10+(lvds_hactive/256 ))) ;
+
+
+			if(lt->debug){
+				dev_err(lt->dev,"LT8912 0x87 [%x] 0x88[%x]\n",(u8)(lvds_htotal % 256	), (u8)(lvds_htotal / 256	));
+				dev_err(lt->dev,"LT8912 0x89 [%x] 0x8a[%x]\n",(u8)(lvds_hsync % 256  ),(u8)(lvds_hbp % 256  ));
+				dev_err(lt->dev,"LT8912 0x8b [%x] 0x8c[%x]\n",(u8)((lvds_hbp/256)*0x80+(lvds_vsync%256 )), (u8)( lvds_hactive % 256));
+				dev_err(lt->dev,"LT8912 0x8d [%x] 0x8e[%x]\n", (u8)( lvds_vactive % 256),(u8)((lvds_vactive/256)*0x10+(lvds_hactive/256 )));
+			}
+
+
+
+			Core_PLL_Ratio.Temp32 =  ( ( 100000*( hactive - 1 ) ) / ( lvds_hactive - 1 ) ) * 4096;
+			if(lt->debug){
+				dev_err(lt->dev,"Lt8912 value [%d]\n",Core_PLL_Ratio.Temp32);
+			}
+
+			Core_PLL_Ratio.Temp32  = (Core_PLL_Ratio.Temp32 + 50000)/100000;
+
+
+
+
+			temp = (u8)(Core_PLL_Ratio.Temp32&0xff);
+
+			regmap_write(lt->regmap[0], 0x8f, temp) ;
+			if(lt->debug){
+				dev_err(lt->dev,"LT8912 0x8f [%x] \n",temp);
+			}
+			temp = (u8)((Core_PLL_Ratio.Temp32>>8) & 0xff);
+			regmap_write(lt->regmap[0], 0x90, temp) ;
+			if(lt->debug){
+				dev_err(lt->dev,"LT8912 0x90 [%x] \n",temp);
+			}
+
+
+
+
+			Core_PLL_Ratio.Temp32 =  ( ( 100000*( vactive - 1 ) ) / ( lvds_vactive - 1 ) ) * 4096;
+			if(lt->debug){
+				dev_err(lt->dev,"Lt8912 value [%d]\n",Core_PLL_Ratio.Temp32);
+			}
+			Core_PLL_Ratio.Temp32  = (Core_PLL_Ratio.Temp32 + 50000)/100000;
+
+
+			temp = (u8)(Core_PLL_Ratio.Temp32&0xff);
+			regmap_write(lt->regmap[0], 0x91, temp) ;
+			if(lt->debug){
+				dev_err(lt->dev,"LT8912 0x91 [%x] \n",temp);
+			}
+			temp = (u8)((Core_PLL_Ratio.Temp32>>8) & 0xff);
+			regmap_write(lt->regmap[0], 0x92, temp) ;
+			if(lt->debug){
+				dev_err(lt->dev,"LT8912 0x92 [%x] \n",temp);
+			}
+
+
+			regmap_write(lt->regmap[0], 0x7f, 0x9c) ;//0x9c enable 0x00 disable
+			regmap_write(lt->regmap[0], 0xa8, _VesaJeidaMode + _DE_Sync_mode + _ColorDeepth);
+
+			usleep_range(300000, 400000);
+		}
+	    
+		regmap_write(lt->regmap[0], 0x44, 0x30); // Turn on LVDS output
 
 	}
 
@@ -531,9 +646,8 @@ static int lt8912_connector_get_modes(struct drm_connector *connector)
 {
 	struct lt8912 *lt = connector_to_lt8912(connector);
 	struct edid *edid;
-	struct display_timings *timings;
 	u32 bus_format = MEDIA_BUS_FMT_RGB888_1X24;
-	int i, ret, num_modes = 0;
+	int  ret, num_modes = 0;
 
 	/* Check if optional DDC I2C bus should be used. */
 	if (lt->ddc) {
@@ -547,68 +661,27 @@ static int lt8912_connector_get_modes(struct drm_connector *connector)
 		}
 		if (num_modes == 0) {
 			dev_warn(lt->dev, "failed to get display timings from EDID\n");
-//			return 0;
-		}
-
-		 printk(" alex get display timings from dtb"); 
-		timings = of_get_display_timings(lt->dev->of_node);
-		
-		if (timings->num_timings == 0) {
-			dev_err(lt->dev, "failed to get display timings from dtb\n");
-			return 0;
-		}
-		
-		for (i = 0; i < timings->num_timings; i++) {
-			struct drm_display_mode *mode;
-			struct videomode vm;
-		
-			if (videomode_from_timings(timings, &vm, i)) {
-				continue;
-			}
-			mode = drm_mode_create(connector->dev);
-			drm_display_mode_from_videomode(&vm, mode);
-			mode->type = DRM_MODE_TYPE_DRIVER;
-		
-			if (timings->native_mode == i)
-				mode->type |= DRM_MODE_TYPE_PREFERRED;
-		
-			drm_mode_set_name(mode);
-			drm_mode_probed_add(connector, mode);
-			num_modes++;
-		}
-		if (num_modes == 0) {
-			dev_err(lt->dev, "failed to get display modes from dtb\n");
-			return 0;
 		}
 
 		
-	} else { /* if not EDID, use dtb timings */
-		timings = of_get_display_timings(lt->dev->of_node);
+	} 
+	
+	if( num_modes == 0) { /* if not EDID, use dtb timings */
 
-		if (timings->num_timings == 0) {
-			dev_err(lt->dev, "failed to get display timings from dtb\n");
-			return 0;
-		}
 
-		for (i = 0; i < timings->num_timings; i++) {
-			struct drm_display_mode *mode;
-			struct videomode vm;
+		struct drm_display_mode *mode;
+		mode = drm_mode_create(connector->dev);
+		if (lt->hdmi_mode > sizeof(default_mode)-1){
+			drm_mode_copy(mode,default_mode+0);  //invalid use 1080p
+		}else
+			drm_mode_copy(mode,default_mode+lt->hdmi_mode);
 
-			if (videomode_from_timings(timings, &vm, i)) {
-				continue;
-			}
+		mode->type |= DRM_MODE_TYPE_PREFERRED;
+		
+		drm_mode_set_name(mode);
+		drm_mode_probed_add(connector, mode);
+		num_modes++;
 
-			mode = drm_mode_create(connector->dev);
-			drm_display_mode_from_videomode(&vm, mode);
-			mode->type = DRM_MODE_TYPE_DRIVER;
-
-			if (timings->native_mode == i)
-				mode->type |= DRM_MODE_TYPE_PREFERRED;
-
-			drm_mode_set_name(mode);
-			drm_mode_probed_add(connector, mode);
-			num_modes++;
-		}
 		if (num_modes == 0) {
 			dev_err(lt->dev, "failed to get display modes from dtb\n");
 			return 0;
@@ -807,10 +880,12 @@ static int lt8912_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	struct lt8912 *lt;
 	struct device_node *ddc_phandle;
 	struct device_node *endpoint;
+	struct device_node *time_display;
+	
 	unsigned int irq_flags;
-	int ret,dsi_lanes;
+	int ret,dsi_lanes,debug=0,bypass =0;
 	u32 lvds_ctr=0;
-
+	u32 hdmi_mode = 0;
 	static int initialize_it = 1;
 
 	if(!initialize_it) {
@@ -828,6 +903,9 @@ static int lt8912_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 
 	of_property_read_u32(dev->of_node, "dsi-lanes", &dsi_lanes);
 	of_property_read_u32(dev->of_node, "lvds-enabled", &lvds_ctr);
+	of_property_read_u32(dev->of_node, "debug", &debug);
+	of_property_read_u32(dev->of_node, "bypass", &bypass);
+	of_property_read_u32(dev->of_node, "hdmi_mode", &hdmi_mode);
 
 
 	/* get optional regular DDC I2C bus */
@@ -837,6 +915,18 @@ static int lt8912_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 		if (!(lt->ddc))
 			ret = -EPROBE_DEFER;
 		of_node_put(ddc_phandle);
+	}
+
+	if (lvds_ctr){
+		time_display = of_get_child_by_name(dev->of_node, "display-timings");
+		if (time_display) {
+			of_node_put(time_display);
+			ret = of_get_videomode(dev->of_node, &lt->lvds_vm, 0);
+		} 
+		if (ret < 0){
+			dev_err(dev, "can not found lvds display-timings\n");
+			return ret;
+		}
 	}
 
 	lt->hpd_gpio = devm_gpiod_get(dev, "hpd", GPIOD_IN);
@@ -891,7 +981,11 @@ static int lt8912_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 	lt->num_dsi_lanes = dsi_lanes;
 	lt->channel_id = 1;
 	lt->lvds_ctr =  lvds_ctr;
+	lt->debug = debug;
+	lt->bypass = bypass;
+	lt->hdmi_mode = hdmi_mode;
 
+	printk("hdmi_mode[%d]\n",hdmi_mode);
 	endpoint = of_graph_get_next_endpoint(dev->of_node, NULL);
 	if (!endpoint)
 		return -ENODEV;

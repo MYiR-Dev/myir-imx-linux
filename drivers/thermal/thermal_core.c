@@ -48,7 +48,8 @@ static atomic_t in_suspend;
 static bool power_off_triggered;
 
 static struct thermal_governor *def_governor;
-
+extern char * saved_command_line;
+static bool ignore_tmp = false;
 /*
  * Governor section: set of functions to handle thermal governors
  *
@@ -391,7 +392,7 @@ static void handle_critical_trips(struct thermal_zone_device *tz,
 	if (tz->ops->notify)
 		tz->ops->notify(tz, trip, trip_type);
 
-	if (trip_type == THERMAL_TRIP_CRITICAL) {
+	if (trip_type == THERMAL_TRIP_CRITICAL && !ignore_tmp) {
 		dev_emerg(&tz->device,
 			  "critical temperature reached (%d C), shutting down\n",
 			  tz->temperature / 1000);
@@ -1620,6 +1621,11 @@ static int __init thermal_init(void)
 		pr_warn("Thermal: Can not register suspend notifier, return %d\n",
 			result);
 
+	if (strstr(saved_command_line, "ignore_tmp")){
+		ignore_tmp=true;
+		pr_warn("Thermal: ignore temp\n");
+			
+	}
 	return 0;
 
 exit_netlink:

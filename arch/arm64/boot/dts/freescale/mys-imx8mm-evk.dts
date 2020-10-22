@@ -258,7 +258,7 @@
 };
 
 &usbotg1 {
-	dr_mode = "host";
+	dr_mode = "otg";
 	hnp-disable;
 	srp-disable;
 	adp-disable;
@@ -268,8 +268,8 @@
 	status = "okay";
 
 	port {
-		usb1_drd_sw: endpoint {
-			remote-endpoint = <&typec1_dr_sw>;
+		usbotg_hs_ep: endpoint {
+			remote-endpoint = <&con_usbotg_hs_ep>;
 		};
 	};
 };
@@ -470,23 +470,21 @@
 		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
 		status = "okay";
 		
-		port {
-			typec1_dr_sw: endpoint {
-				remote-endpoint = <&usb1_drd_sw>;
-			};
-		};
+
 		
 		typec1_con: connector {
 			compatible = "usb-c-connector";
 			label = "USB-C";
 			power-role = "dual";
+			power-opmode = "1.5A";
 			data-role = "dual";
-			try-power-role = "sink";
-			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
-			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
-				     PDO_VAR(5000, 20000, 3000)>;
-			op-sink-microwatt = <15000000>;
-			self-powered;
+
+			port {
+				con_usbotg_hs_ep: endpoint {
+					remote-endpoint = <&usbotg_hs_ep>;
+				};
+			};
+			
 		};
 	};
 
@@ -516,7 +514,7 @@
 };
 
 &i2c3 {
-	clock-frequency = <100000>;
+	clock-frequency = <400000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
@@ -832,11 +830,11 @@
 			MX8MM_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B	0xc6
 		>;
 	};
-		stusb1600_pins_a:studb1600grp{
-			fsl,pins = <
-				MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x19
-			>;
-		};
+	stusb1600_pins_a:studb1600grp{
+		fsl,pins = <
+			MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0		0x1d6
+		>;
+	};
 };
 
 &lcdif {

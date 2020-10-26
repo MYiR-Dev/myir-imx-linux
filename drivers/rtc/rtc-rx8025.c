@@ -101,30 +101,6 @@ static s32 rx8025_write_regs(const struct i2c_client *client,
 					      length, values);
 }
 
-static int rx8025_check_validity(struct device *dev)
-{
-	struct rx8025_data *rx8025 = dev_get_drvdata(dev);
-	int ctrl2;
-
-	ctrl2 = rx8025_read_reg(rx8025->client, RX8025_REG_CTRL2);
-	if (ctrl2 < 0)
-		return ctrl2;
-
-	if (ctrl2 & RX8025_BIT_CTRL2_VDET)
-		dev_warn(dev, "power voltage drop detected\n");
-
-	if (ctrl2 & RX8025_BIT_CTRL2_PON) {
-		dev_warn(dev, "power-on reset detected, date is invalid\n");
-		return -EINVAL;
-	}
-
-	if (!(ctrl2 & RX8025_BIT_CTRL2_XST)) {
-		dev_warn(dev, "crystal stopped, date is invalid\n");
-		return -EINVAL;
-	}
-
-	return 0;
-}
 
 static int rx8025_reset_validity(struct i2c_client *client)
 {
@@ -182,9 +158,6 @@ static int rx8025_get_time(struct device *dev, struct rtc_time *dt)
 	u8 date[7];
 	int err;
 
-	err = rx8025_check_validity(dev);
-	if (err)
-		return err;
 
 	err = rx8025_read_regs(rx8025->client, RX8025_REG_SEC, 7, date);
 	if (err)

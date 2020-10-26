@@ -881,3 +881,6 @@
 &gpu {
 	status = "okay";
 };
+&snvs_rtc{
+        status= "disabled";
+};

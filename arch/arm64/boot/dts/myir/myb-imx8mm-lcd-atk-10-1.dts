@@ -1,0 +1,20 @@
+/*
+ * Copyright 2020 MYiR
+ */
+ 
+#include "myb-imx8mm-base.dts"
+#include "panel-atk-10-1.dtsi"
+
+&lcdif{
+	max-res = <1280>, <800>;
+	status = "okay";
+	// status = "disabled";
+};
+
+&i2c2 {
+	tc358775:tc358775@f{
+		compatible = "toshiba,tc358775";
+		reg  = <0x0f>;
+		status = "okay";
+	};
+};

@@ -355,4 +355,14 @@ config DRM_PANEL_TRULY_NT35597_WQXGA
 	help
 	  Say Y here if you want to enable support for Truly NT35597 WQXGA Dual DSI
 	  Video Mode panel
+
+config DRM_PANEL_TC358775
+        tristate "TC358775 FHD panel"
+        depends on OF
+        depends on DRM_MIPI_DSI
+        depends on BACKLIGHT_CLASS_DEVICE
+        help
+          Say Y here if you want to enable support for  TC358775 FHD
+          DSI panel.
+
 endmenu

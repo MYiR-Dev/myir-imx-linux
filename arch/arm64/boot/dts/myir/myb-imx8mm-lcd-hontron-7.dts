@@ -1,0 +1,56 @@
+/*
+ * Copyright 2019 MYiR Devices
+ */
+
+#include "myb-imx8mm-base.dts"
+#include "panel-hontron-7.dtsi"
+
+/{
+     display-subsystem {                                                                                
+         status = "okay";
+	};
+};
+
+&lcdif{
+	max-res = <1024>, <600>;
+	status = "okay";
+};
+
+&iomuxc {
+	imx8mm-evk {
+                edt_ft5x06_pins:pinctrl_ft5xgrp {
+                        fsl,pins = <
+                                MX8MM_IOMUXC_GPIO1_IO12_GPIO1_IO12   0x19
+                                MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1      0x19
+                        >;
+                };
+	};
+};
+
+/* touch */
+&i2c3 {
+        clock_frequency = <100000>;
+        pinctrl-names = "default";
+        status = "okay";
+        ft5x06: ft5x06@38 {
+	        compatible = "edt,edt-ft5406", "edt,edt-ft5x06";
+                reg = <0x38>;
+                pinctrl-names = "default";
+                pinctrl-0 = <&edt_ft5x06_pins>;
+                interrupt-parent = <&gpio4>;
+                interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
+                reset-gpios = <&gpio1 12  GPIO_ACTIVE_LOW>;
+	        touchscreen-size-x=<1024>;
+	        touchscreen-size-y=<600>;
+        };
+
+};
+
+&i2c2 {
+        tc358775:tc358775@f{
+                compatible = "toshiba,tc358775";
+                reg  = <0x0f>;
+                status = "okay";
+        };
+};
+

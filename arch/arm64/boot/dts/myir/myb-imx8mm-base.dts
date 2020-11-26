@@ -82,6 +82,17 @@
 		clock-frequency = <100000000>;
 	};
 
+	reg_vmmc: _regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "WLAN_EN";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+		// off-on-delay-us = <20000>;
+		startup-delay-us = <100>;
+		enable-active-high;
+	};
+
 	regulators {
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -94,6 +105,7 @@
             regulator-max-microvolt = <3300000>;
             gpios = <&gpio4 0 GPIO_ACTIVE_LOW>;
             regulator-boot-on;
+            enable-active-low;
 		};
 
 		reg_usb_ltemodule: regulator@2 {
@@ -342,7 +354,7 @@
 	pinctrl-0 = <&pinctrl_usdhc1>;
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
-	// vmmc-supply = <&reg_sd1_vmmc>;
+	vmmc-supply = <&reg_vmmc>;
 	bus-width = <4>;
     // cd-post;
     // no-1-8-v;

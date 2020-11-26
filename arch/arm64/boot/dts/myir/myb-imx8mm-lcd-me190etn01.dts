@@ -1,0 +1,25 @@
+/*
+ * Copyright 2020 MYiR Devices
+ */
+ 
+#include "myb-imx8mm-base.dts"
+#include "panel-me190etn01.dtsi"
+
+/{
+     display-subsystem {                                                                                
+         status = "okay";
+	};
+};
+
+&lcdif{
+	max-res = <1280>, <1024>;
+	status = "okay";
+};
+
+&i2c2 {
+	tc358775:tc358775@f{
+		compatible = "toshiba,tc358775";
+		reg  = <0x0f>;
+		status = "okay";
+	};
+};

@@ -6,7 +6,7 @@
 /dts-v1/;
 
 #include <dt-bindings/usb/pd.h>
-#include "myir-imx8mm.dtsi"
+#include "myb-imx8mm.dtsi"
 
 / {
 	model = "MYS i.MX8MM EVK board";

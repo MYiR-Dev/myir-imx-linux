@@ -34,7 +34,7 @@
 
 		led0: cpu {
 			label = "cpu";
-			gpios = <&gpio3 16 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio3 16 GPIO_ACTIVE_HIGH>;
 			default-state = "on";
 			linux,default-trigger = "heartbeat";
 		};

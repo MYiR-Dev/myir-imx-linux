@@ -179,7 +179,7 @@
         cs-gpios = <&gpio5 13 0 > ;
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_ecspi2>;
-        status = "disabled";
+        status = "okay";
         #address-cells=<1>;
         #size-cells=<0>;
 
@@ -342,10 +342,6 @@
 
 &usbotg1 {
 	dr_mode = "otg";
-	hnp-disable;
-	srp-disable;
-	adp-disable;
-	usb-role-switch;
 	picophy,pre-emp-curr-control = <3>;
 	picophy,dc-vol-level-adjust = <7>;
 	status = "okay";
@@ -406,7 +402,7 @@
 &flexspi {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexspi0>;
-	status = "disabled";
+	status = "okay";
 
 	flash0: mt25qu256aba@0 {
 		reg = <0>;

@@ -20,6 +20,7 @@
 		linux,cma {
 			compatible = "shared-dma-pool";
 			reusable;
+			//size = <0x14000000>;
 			size = <0x8000000>;
 			linux,cma-default;
 		};
@@ -246,7 +247,7 @@
 		bus-width = <16>;
 
 		display-timings {
-			native-mode = <&timing1>;
+			native-mode = <&timing0>;
 
 
 			/*4.3-inch*/
@@ -433,7 +434,6 @@
             MX6UL_PAD_UART1_RTS_B__GPIO1_IO19   0x17059 /* SD1 CD */
             MX6UL_PAD_GPIO1_IO09__GPIO1_IO09    0x17059 /* LCD_DISP */
             MX6UL_PAD_NAND_CE1_B__GPIO4_IO14    0x17059 /* LTE Reset */
-            MX6UL_PAD_JTAG_MOD__GPIO1_IO10      0x17059 /* WiFi module power */
             //MX6UL_PAD_LCD_ENABLE__GPIO3_IO01    0x000010B0
             MX6UL_PAD_UART3_TX_DATA__GPIO1_IO24        0x000030B0
 	    	MX6UL_PAD_UART3_RX_DATA__GPIO1_IO25        0x000010B0

@@ -1,0 +1,127 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2021 MYIR
+ */
+
+#include "myd-jx8mp-base.dts"
+
+/ {
+	display-subsystem {
+		compatible = "fsl,imx-display-subsystem";
+		ports = <&lcdif2_disp>;
+	};
+	
+	
+  panel: panel-lvds0 {
+    compatible = "panel-lvds";
+    backlight = <&lvds_backlight>;
+    
+		width-mm = <154>;
+		height-mm = <85>;
+    data-mapping = "vesa-24";
+		panel-timing {
+				clock-frequency = <38000000>;
+				hactive = <1024>;
+				hfront-porch = <88>;
+				hsync-len = <6>;
+				hback-porch = <176>;
+				 
+				vactive = <600>;
+				vfront-porch = <25>; 
+				vsync-len = <5>;
+				vback-porch = <20>;
+				
+				
+	  };
+
+    port {
+        panel_in_lvds0: endpoint {
+            remote-endpoint = <&lvds_out>;
+        };
+    };
+	};
+	
+	lvds_backlight: lvds_backlight {
+		compatible = "pwm-backlight";
+		pwms = <&pwm2 0 100000>;
+		status = "okay";
+
+		brightness-levels = < 0  1  2  3  4  5  6  7  8  9
+				     10 11 12 13 14 15 16 17 18 19
+				     20 21 22 23 24 25 26 27 28 29
+				     30 31 32 33 34 35 36 37 38 39
+				     40 41 42 43 44 45 46 47 48 49
+				     50 51 52 53 54 55 56 57 58 59
+				     60 61 62 63 64 65 66 67 68 69
+				     70 71 72 73 74 75 76 77 78 79
+				     80 81 82 83 84 85 86 87 88 89
+				     90 91 92 93 94 95 96 97 98 99
+				    100>;
+		default-brightness-level = <80>;
+	};
+	
+};
+
+&i2c2 {
+
+    ft5x06: ft5x06@38 {
+			compatible = "edt,edt-ft5406";
+			reg = <0x38>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&edt_ft5x06_pins>;
+			interrupt-parent = <&gpio1>;
+			interrupts = <13 IRQ_TYPE_EDGE_FALLING>;
+			reset-gpios = <&gpio1 10  GPIO_ACTIVE_LOW>;
+			touchscreen-size-x=<1024>;
+			touchscreen-size-y=<600>;
+			status = "okay";
+    };
+};
+
+&lcdif2 {
+	status = "okay";
+};
+
+&ldb {
+	status = "okay";
+
+	lvds-channel@0 {
+		fsl,data-mapping = "spwg";
+		fsl,data-width = <24>;
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			lvds_out: endpoint {
+				remote-endpoint = <&panel_in_lvds0>;
+			};
+		};
+	};
+};
+
+&ldb_phy {
+	status = "okay";
+};
+
+
+&pwm2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm2>;
+	status = "okay";
+};
+
+&iomuxc {
+		edt_ft5x06_pins:pinctrl_ft5xgrp {
+			fsl,pins = <
+				MX8MP_IOMUXC_GPIO1_IO13__GPIO1_IO13        0x19
+				MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10        0x19
+			>;
+		};
+
+		pinctrl_pwm2: lvds0pwm2grp {
+			fsl,pins = <
+				MX8MP_IOMUXC_GPIO1_IO11__PWM2_OUT	0x116
+			>;
+		};		
+};

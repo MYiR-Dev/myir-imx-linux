@@ -583,7 +583,7 @@ static int tc358775_panel_unprepare(struct drm_panel *panel)
 {
 	struct tc358775_panel *tc358775 = to_tc358775_panel(panel);
 	struct mipi_dsi_device *dsi = tc358775->dsi;
-	struct device *dev = &dsi->dev;
+//	struct device *dev = &dsi->dev;
 	int ret = 0;
 
 	if (!tc358775->prepared)
@@ -594,13 +594,13 @@ static int tc358775_panel_unprepare(struct drm_panel *panel)
 
 	ret = mipi_dsi_dcs_set_display_off(dsi);
 	if (ret < 0)
-		DRM_DEV_ERROR(dev, "Failed to set display OFF (%d)\n", ret);
+		DRM_WARN("Failed to set display OFF (%d)\n", ret);
 
 	usleep_range(5000, 10000);
 
 	ret = mipi_dsi_dcs_enter_sleep_mode(dsi);
 	if (ret < 0)
-		DRM_DEV_ERROR(dev, "Failed to enter sleep mode (%d)\n", ret);
+		DRM_WARN("Failed to enter sleep mode (%d)\n", ret);
 
 	usleep_range(10000, 15000);
 
@@ -756,32 +756,14 @@ fail:
 static int tc358775_panel_disable(struct drm_panel *panel)
 {
 	struct tc358775_panel *tc358775 = to_tc358775_panel(panel);
-	struct device *dev = &tc358775->dsi->dev;
-	struct mipi_dsi_device *dsi = tc358775->dsi;
+//	struct device *dev = &tc358775->dsi->dev;
+//	struct mipi_dsi_device *dsi = tc358775->dsi;
 	int ret=0;
 
 	if (!tc358775->enabled)
 		return 0;
 
-	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
-
 	backlight_disable(tc358775->backlight);
-
-	usleep_range(10000, 12000);
-
-	ret = mipi_dsi_dcs_set_display_off(dsi);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to set display OFF (%d)\n", ret);
-		return ret;
-	}
-
-	usleep_range(5000, 10000);
-
-	ret = mipi_dsi_dcs_enter_sleep_mode(dsi);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to enter sleep mode (%d)\n", ret);
-		return ret;
-	}
 
 	tc358775->enabled = false;
 

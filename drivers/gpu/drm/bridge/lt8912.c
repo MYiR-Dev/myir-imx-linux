@@ -403,15 +403,15 @@ static void lt8912_init(struct lt8912 *lt)
 	regmap_write(lt->regmap[0], 0xb2, 0x01); // 0x01:HDMI; 0x00: DVI lt->sink_is_hdmi
 
 	/* Audio Disable */
-//	regmap_write(lt->regmap[2], 0x06, 0x00);
-//	regmap_write(lt->regmap[2], 0x07, 0x00);
-//	regmap_write(lt->regmap[2], 0x34, 0xd2);
-//	regmap_write(lt->regmap[2], 0x3c, 0x41);
-	/* AudioIIsEn */
-	regmap_write(lt->regmap[2], 0x06, 0x08);
-	regmap_write(lt->regmap[2], 0x07, 0xf0);
+	regmap_write(lt->regmap[2], 0x06, 0x0e);
+	regmap_write(lt->regmap[2], 0x07, 0x00);
 	regmap_write(lt->regmap[2], 0x34, 0xd2);
 	regmap_write(lt->regmap[2], 0x3c, 0x41);
+	/* AudioIIsEn */
+//	regmap_write(lt->regmap[2], 0x06, 0x08);
+//	regmap_write(lt->regmap[2], 0x07, 0xf0);
+//	regmap_write(lt->regmap[2], 0x34, 0xd2);
+//	regmap_write(lt->regmap[2], 0x3c, 0x41);
 	
     /* AVI Packet Config*/
 	regmap_write(lt->regmap[2], 0x3e, 0x0A);

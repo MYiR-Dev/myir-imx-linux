@@ -2029,6 +2029,7 @@ static int flexcan_probe(struct platform_device *pdev)
 	dev->flags |= IFF_ECHO;
 
 	priv = netdev_priv(dev);
+	priv->can.restart_ms = 10 ;
 
 	if (of_property_read_bool(pdev->dev.of_node, "big-endian") ||
 	    devtype_data->quirks & FLEXCAN_QUIRK_DEFAULT_BIG_ENDIAN) {

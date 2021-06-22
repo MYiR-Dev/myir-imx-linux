@@ -1,0 +1,90 @@
+
+#include "myd-jx8mx-base.dts"
+#include "myd-jx8mx-panel-atk-10-1.dtsi"
+/ {
+	model = "MYIR MYD-JX8MX LCDIF ATK-10";
+	sound-hdmi {
+		status = "disabled";
+	};
+};
+
+&irqsteer {
+	status = "okay";
+};
+
+&hdmi {
+	status = "disabled";
+};
+
+&dcss {
+	status = "disabled";
+};
+
+&lcdif {
+	status = "okay";
+	
+
+	assigned-clocks = <&clk IMX8MQ_CLK_LCDIF_PIXEL>,
+			  <&clk IMX8MQ_VIDEO_PLL1_BYPASS>,
+			  <&clk IMX8MQ_VIDEO_PLL1_REF_SEL>,
+			  <&clk IMX8MQ_VIDEO_PLL1>;
+	assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>,
+				 <&clk IMX8MQ_VIDEO_PLL1>,
+				 <&clk IMX8MQ_CLK_27M>;
+	assigned-clock-rate = <126000000>, <0>, <0>, <1134000000>;
+
+	port@0 {
+		lcdif_out: endpoint {
+			remote-endpoint = <&mipi_dsi_in>;
+		};
+	};
+};
+
+
+
+&mipi_dsi {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			mipi_dsi_in: endpoint {
+				remote-endpoint = <&lcdif_out>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			mipi_dsi_out: endpoint {
+				remote-endpoint = <&panel1_in>;
+			};
+		};
+	};
+};
+
+&dphy {
+	status = "okay";
+};
+
+&iomuxc {
+
+		pinctrl_mipi_dsi_en: mipi_dsi_en {
+			fsl,pins = <
+				MX8MQ_IOMUXC_SAI5_RXD3_GPIO3_IO24 0x16
+				MX8MQ_IOMUXC_SAI3_RXC_GPIO4_IO29	0x16
+				
+			>;
+		};
+
+};
+
+&i2c1 {
+	tc358775:tc358775@f{
+		compatible = "toshiba,tc358775";
+		reg  = <0x0f>;
+		status = "okay";
+	};
+};

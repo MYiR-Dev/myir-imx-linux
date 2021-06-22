@@ -1,0 +1,145 @@
+/{
+	lvds_backlight0: lvds_backlight@0 {
+		compatible = "pwm-backlight";
+		pwms = <&pwm1 0 5000000 >;
+
+		brightness-levels = < 0  1  2  3  4  5  6  7  8  9
+				     10 11 12 13 14 15 16 17 18 19
+				     20 21 22 23 24 25 26 27 28 29
+				     30 31 32 33 34 35 36 37 38 39
+				     40 41 42 43 44 45 46 47 48 49
+				     50 51 52 53 54 55 56 57 58 59
+				     60 61 62 63 64 65 66 67 68 69
+				     70 71 72 73 74 75 76 77 78 79
+				     80 81 82 83 84 85 86 87 88 89
+				     90 91 92 93 94 95 96 97 98 99
+				    100>;
+		default-brightness-level = <80>;
+	};
+};
+
+
+&lcdif{
+
+	max-memory-bandwidth = <245760000>; /* 1280x800-32@60 */
+};
+&mipi_dsi{
+	panel@0 {
+		compatible = "toshiba,panel-tc358775";
+		reg = <0>;
+		pinctrl-0 = <&pinctrl_mipi_dsi_en>;
+		stby-gpio = <&gpio3 24 GPIO_ACTIVE_HIGH>;
+		reset-gpio = <&gpio4 29 GPIO_ACTIVE_HIGH>;
+		dsi-lanes = <4>;
+		video-mode = <0>;
+		panel-width-mm = <154>;
+		panel-height-mm = <85>;
+		
+		toshiba,debug = <0>;
+		toshiba,ppi_tx_rx_ta =         <0x00020005>;
+		toshiba,ppi_lptxtimecnt =      <0x00000002>;
+		toshiba,ppi_d0s_clrsipocount = <0x00000002>;
+		toshiba,ppi_d1s_clrsipocount = <0x00000002>;
+		toshiba,ppi_d2s_clrsipocount = <0x00000002>;
+		toshiba,ppi_d3s_clrsipocount = <0x00000002>;
+		toshiba,ppi_laneenable =       <0x0000001f>; 
+		toshiba,dsi_laneenable =       <0x0000001f>; 
+		toshiba,ppi_sartppi =          <0x00000001>; 
+		toshiba,dsi_sartppi =          <0x00000001>;
+		
+		toshiba,vpctrl =               <0x03F00100>; 
+		toshiba,htim1 =                <0x009C0008>;
+		toshiba,htim2 =                <0x009C0400>;
+		toshiba,vtim1 =                <0x00100006>;
+		toshiba,vtim2 =                <0x00100258>;
+		toshiba,vfuen =                <0x00000001>;
+		toshiba,lvphy0 =               <0x0044802d>;
+		toshiba,lvphy0_1 =             <0x0004802d>;
+		toshiba,sysrst =               <0x00000004>; 
+
+		
+		toshiba,lvmx0003 =             <0x03020100>;
+		toshiba,lvmx0407 = 						 <0x08050704>;
+		toshiba,lvmx0811 = 						 <0x0f0e0a09>;
+		toshiba,lvmx1215 = 						 <0x100d0c0b>;
+		toshiba,lvmx1619 = 						 <0x12111716>;
+		toshiba,lvmx2023 = 						 <0x1b151413>;
+		toshiba,lvmx2427 = 						 <0x061a1918>;
+		
+		toshiba,lvcfg =                <0x00000031>;
+		
+		backlight = <&lvds_backlight0>;
+		client-device  = <&tc358775>;
+		
+		display-timings {
+				native-mode = <&timing0>;
+				timing0:timing0{
+					clock-frequency = <51450000>;
+					hactive = <1024>;
+					hsync-len = <8>;
+					hback-porch = <156>;
+					hfront-porch = <156>; 
+					vactive = <599>;
+					vsync-len = <6>;
+					vback-porch = <16>;
+					vfront-porch = <16>;
+					
+					vsync-active = <0>;
+					hsync-active =<0>;
+					de-active =<0>;
+					pixelclk-active =<0>;
+				};
+		};
+		port {
+			panel1_in: endpoint {
+				remote-endpoint = <&mipi_dsi_out>;
+			};
+		};
+	};
+
+};
+&iomuxc {
+	
+	pinctrl_pwm1: lvds0pwm1grp {
+		fsl,pins = <
+			MX8MQ_IOMUXC_GPIO1_IO01_PWM1_OUT 0x19
+		>;
+	};
+	
+  pinctrl_edt_ft5x06: edt-ft5x06grp {
+		fsl,pins = <
+			MX8MQ_IOMUXC_GPIO1_IO08_GPIO1_IO8      0x19
+			MX8MQ_IOMUXC_SAI3_RXD_GPIO4_IO30      0x19
+		>;
+  };
+
+
+};
+
+
+&i2c1 {
+	polytouch: edt-ft5x06@38 {
+		compatible = "edt,edt-ft5x06";
+		reg = <0x38>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_edt_ft5x06>;
+		
+		interrupt-parent = <&gpio1>;
+		interrupts = <8  IRQ_TYPE_EDGE_FALLING>;
+		
+
+		irq-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;	
+		reset-gpios = <&gpio4 30 GPIO_ACTIVE_LOW>;
+		linux,wakeup;
+		
+		touchscreen-size-x= <1024>;
+		touchscreen-size-y= <600>;
+	};
+
+};
+
+&pwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm1>;
+	status = "okay";
+};

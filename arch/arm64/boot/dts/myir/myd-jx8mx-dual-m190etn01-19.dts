@@ -1,0 +1,21 @@
+
+#include "myd-jx8mx-lcdif-m190etn01-19.dts"
+
+/ {
+	model = "MYIR MYD-JX8MX DUAL  M190ETN01";
+	sound-hdmi {
+		status = "okay";
+	};
+};
+
+&irqsteer {
+	status = "okay";
+};
+
+&hdmi {
+	status = "okay";
+};
+
+&dcss {
+	status = "okay";
+};

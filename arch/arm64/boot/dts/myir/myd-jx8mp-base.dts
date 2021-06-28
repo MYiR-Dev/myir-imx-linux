@@ -132,24 +132,7 @@
 		compatible = "linux,bt-sco";
 	};
 
-	sound-bt-sco {
-		compatible = "simple-audio-card";
-		simple-audio-card,name = "bt-sco-audio";
-		simple-audio-card,format = "dsp_a";
-		simple-audio-card,bitclock-inversion;
-		simple-audio-card,frame-master = <&btcpu>;
-		simple-audio-card,bitclock-master = <&btcpu>;
 
-		btcpu: simple-audio-card,cpu {
-			sound-dai = <&sai2>;
-			dai-tdm-slot-num = <2>;
-			dai-tdm-slot-width = <16>;
-		};
-
-		simple-audio-card,codec {
-			sound-dai = <&bt_sco_codec 1>;
-		};
-	};
 
 	sound-hdmi {
 		compatible = "fsl,imx-audio-cdnhdmi";
@@ -173,6 +156,7 @@
 		audio-codec = <&codec>;
 		audio-asrc = <&easrc>;
 		hp-det-gpio = <&gpio4 28 0>;
+		mic-det-gpios = <&gpio4 28 0>;
 		audio-routing =
 			"Headphone Jack", "HP_L",
 			"Headphone Jack", "HP_R",
@@ -182,7 +166,11 @@
 			"Ext Spk", "SPK_RN",
 			"LINPUT1", "Mic Jack",
 			"LINPUT3", "Mic Jack",
-			"Mic Jack", "MICB";
+			"Mic Jack", "MICB",
+			"CPU-Playback", "ASRC-Playback",
+			"Playback", "CPU-Playback",
+			"ASRC-Capture", "CPU-Capture",
+			"CPU-Capture",  "Capture";
 	};
 
 	sound-micfil {
@@ -200,7 +188,7 @@
 	lvds_backlight: lvds_backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm2 0 100000>;
-		status = "okay";
+		status = "disabled";
 
 		brightness-levels = < 0  1  2  3  4  5  6  7  8  9
 				     10 11 12 13 14 15 16 17 18 19
@@ -498,7 +486,7 @@
 		mclk = <24000000>;
 		mclk_source = <0>;
 		mipi_csi;
-		status = "okay";
+		status = "disabled";
 
 		port {
 			ov5640_mipi_0_ep: endpoint {
@@ -688,7 +676,7 @@
 	assigned-clocks = <&clk IMX8MP_CLK_PDM>;
 	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
 	assigned-clock-rates = <196608000>;
-	status = "okay";
+	status = "disabled";
 };
 
 &pcie{
@@ -739,7 +727,7 @@
 	assigned-clocks = <&clk IMX8MP_CLK_SAI2>;
 	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
 	assigned-clock-rates = <12288000>;
-	status = "okay";
+	status = "disabled";
 };
 
 &sai3 {
@@ -772,7 +760,7 @@
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
 	fsl,uart-has-rtscts;
 	resets = <&modem_reset>;
-	status = "okay";
+	status = "disabled";
 };
 
 &uart2 {
@@ -1149,7 +1137,6 @@
 	pinctrl_usdhc2_gpio: usdhc2grp-gpio {
 		fsl,pins = <
 			MX8MP_IOMUXC_SD2_CD_B__GPIO2_IO12 	0x1c4
-			MX8MP_IOMUXC_SD2_RESET_B__GPIO2_IO19	0x41
 		>;
 	};
 
@@ -1321,7 +1308,7 @@
 &mipi_csi_0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	status = "okay";
+	status = "disabled";
 
 	port@0 {
 		reg = <0>;
@@ -1340,6 +1327,7 @@
 	#size-cells = <0>;
 	status = "okay";
 
+
 	port@1 {
 		reg = <1>;
 		mipi_csi1_ep: endpoint {
@@ -1357,7 +1345,7 @@
 };
 
 &isi_0 {
-	status = "okay";
+	status = "disabled";
 
 	cap_device {
 		status = "okay";

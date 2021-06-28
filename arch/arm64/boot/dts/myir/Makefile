@@ -3,5 +3,5 @@
 # required for overlay support
 
 dtb-$(CONFIG_ARCH_MXC) += \
-			   myd-jx8mx-base.dtb 
+			   myd-jx8mp-base.dtb 
 			   

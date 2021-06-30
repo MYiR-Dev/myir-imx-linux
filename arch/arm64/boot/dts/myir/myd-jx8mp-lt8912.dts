@@ -1,0 +1,91 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2021 NXP
+ */
+
+#include "myd-jx8mp-base.dts"
+
+
+
+&lcdif1{
+	status = "okay";
+};
+&mipi_dsi {
+	status = "okay";
+	port@1 {
+		compatible = "lontium,lt8912";
+		
+		pinctrl-0 = <&pinctrl_mipi_dsi_en>;
+		pinctrl-names = "default";
+
+		powergpio-gpio = <&gpio3 23 GPIO_ACTIVE_HIGH>;
+		
+		mipi_dsi_bridge1_out: endpoint {
+			remote-endpoint = <&lt8912_1_in>;
+			attach-bridge;
+		};
+	};
+};
+
+&i2c2 {
+	/* MIPI-DSI to HDMI and LVDS adapter */
+	hdmi@48 {
+		compatible = "lontium,lt8912";
+		pinctrl-0 = <&pinctrl_lt9182_hdmi>;
+		pinctrl-names = "default";
+		
+		ddc-i2c-bus = <&i2c2>;
+		hpd-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+		dsi-lanes = <4>;
+		reg = <0x48>;
+		reset-gpios = <&gpio3 22 GPIO_ACTIVE_LOW>;
+    lvds-enabled = <0>;
+    status = "okay";
+    
+    display-timings {
+	    
+			native-mode = <&timing0>;
+			
+			timing0: timing0 {
+			     clock-frequency = <148500000>;
+			     hactive = <1920>;
+			     vactive = <1080>;
+			     hfront-porch = <88>;
+			     hsync-len = <44>;
+			     hback-porch = <148>;
+			     vfront-porch = <36>;
+			     vsync-len = <5>;
+			     vback-porch = <4>;
+			     hsync-active = <0>;
+			     vsync-active = <0>;
+			     de-active = <0>;
+			     pixelclk-active = <0>;
+			};
+	         
+		
+
+	  };	    
+
+		port {
+			lt8912_1_in: endpoint {
+				remote-endpoint = <&mipi_dsi_bridge1_out>;
+			};
+		};
+	};
+};
+
+&iomuxc{
+
+	pinctrl_mipi_dsi_en: mipi_dsi_en {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI5_RXD2__GPIO3_IO23	0x19
+		>;
+	};
+	
+	pinctrl_lt9182_hdmi: lt8912_int_iogrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO08__GPIO1_IO08		0x1d6
+			MX8MP_IOMUXC_SAI5_RXD1__GPIO3_IO22 0x19
+		>;
+	};
+};

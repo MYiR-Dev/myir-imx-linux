@@ -1,0 +1,129 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2021 MYIR
+ */
+
+#include "myd-jx8mp-base.dts"
+
+/ {
+
+	
+	
+  panel: panel-lvds0 {
+    compatible = "panel-lvds";
+    backlight = <&lvds_backlight>;
+    
+		width-mm = <396>;
+		height-mm = <324>;
+    data-mapping = "vesa-24";
+		panel-timing {
+				clock-frequency = <90000000>;
+				hactive = <1280>;
+				hfront-porch = <180>;
+				hsync-len = <28>;
+				hback-porch = <200>;
+				 
+				vactive = <1024>;
+				vfront-porch = <5>; 
+				vsync-len = <6>;
+				vback-porch = <39>;
+				
+				
+	  };
+
+    port {
+        panel_in_lvds0: endpoint {
+            remote-endpoint = <&lvds_out>;
+        };
+    };
+	};
+	
+	lvds_backlight: lvds_backlight {
+
+		status = "okay";
+		enable-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+
+	};
+	
+};
+
+
+
+&lcdif2 {
+	status = "okay";
+};
+
+&ldb {
+	status = "okay";
+	fsl,dual-channel;
+	lvds-channel@0 {
+		fsl,data-mapping = "spwg";
+		fsl,data-width = <24>;
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			lvds_out: endpoint {
+				remote-endpoint = <&panel_in_lvds0>;
+			};
+		};
+	};
+};
+
+&ldb_phy {
+	status = "okay";
+};
+
+
+&pwm2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm2>;
+	status = "okay";
+};
+
+&iomuxc {
+
+
+		pinctrl_pwm2: lvds0pwm2grp {
+			fsl,pins = <
+				MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14 0x19
+				MX8MP_IOMUXC_GPIO1_IO11__PWM2_OUT	0x116
+			>;
+		};		
+};
+
+
+&lcdif1{
+
+	status = "disabled";
+};
+
+&mipi_dsi{
+	status = "disabled";
+};
+
+&lcdif3{
+
+	status = "disabled";
+};
+
+&irqsteer_hdmi {
+	status = "disabled";
+};
+
+&hdmi_blk_ctrl {
+	status = "disabled";
+};
+
+&hdmi_pavi {
+	status = "disabled";
+};
+
+&hdmi {
+	status = "disabled";
+};
+
+&hdmiphy {
+	status = "disabled";
+};

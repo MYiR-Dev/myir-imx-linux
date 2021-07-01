@@ -1,0 +1,144 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2021 MYIR
+ */
+
+#include "myd-jx8mp-base.dts"
+
+/ {
+
+	
+	
+  panel: panel-lvds0 {
+    compatible = "panel-lvds";
+    backlight = <&lvds_backlight>;
+    
+		width-mm = <154>;
+		height-mm = <85>;
+    data-mapping = "vesa-24";
+		panel-timing {
+				clock-frequency = <38000000>;
+				hactive = <1024>;
+				hfront-porch = <88>;
+				hsync-len = <6>;
+				hback-porch = <176>;
+				 
+				vactive = <600>;
+				vfront-porch = <25>; 
+				vsync-len = <5>;
+				vback-porch = <20>;
+				
+				
+	  };
+
+    port {
+        panel_in_lvds0: endpoint {
+            remote-endpoint = <&lvds_out>;
+        };
+    };
+	};
+	
+	lvds_backlight: lvds_backlight {
+		status = "okay";
+	};
+	
+};
+
+&i2c2 {
+
+    ft5x06: ft5x06@38 {
+			compatible = "edt,edt-ft5406";
+			reg = <0x38>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&edt_ft5x06_pins>;
+			interrupt-parent = <&gpio1>;
+			interrupts = <13 IRQ_TYPE_EDGE_FALLING>;
+			reset-gpios = <&gpio1 10  GPIO_ACTIVE_LOW>;
+			touchscreen-size-x=<1024>;
+			touchscreen-size-y=<600>;
+			status = "okay";
+    };
+};
+
+&lcdif2 {
+	status = "okay";
+};
+
+&ldb {
+	status = "okay";
+
+	lvds-channel@0 {
+		fsl,data-mapping = "spwg";
+		fsl,data-width = <24>;
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			lvds_out: endpoint {
+				remote-endpoint = <&panel_in_lvds0>;
+			};
+		};
+	};
+};
+
+&ldb_phy {
+	status = "okay";
+};
+
+
+&pwm2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm2>;
+	status = "okay";
+};
+
+&iomuxc {
+		edt_ft5x06_pins:pinctrl_ft5xgrp {
+			fsl,pins = <
+				MX8MP_IOMUXC_GPIO1_IO13__GPIO1_IO13        0x19
+				MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10        0x19
+			>;
+		};
+
+		pinctrl_pwm2: lvds0pwm2grp {
+			fsl,pins = <
+				MX8MP_IOMUXC_GPIO1_IO11__PWM2_OUT	0x116
+			>;
+		};		
+};
+
+
+&lcdif1{
+
+	status = "disabled";
+};
+
+&mipi_dsi{
+	status = "disabled";
+};
+
+&lcdif3{
+
+	status = "disabled";
+};
+
+&irqsteer_hdmi {
+	status = "disabled";
+};
+
+&hdmi_blk_ctrl {
+	status = "disabled";
+};
+
+&hdmi_pavi {
+	status = "disabled";
+};
+
+&hdmi {
+	status = "disabled";
+};
+
+&hdmiphy {
+	status = "disabled";
+};

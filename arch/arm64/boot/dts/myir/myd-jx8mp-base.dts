@@ -128,7 +128,12 @@
 		#reset-cells = <0>;
 	};
 
-
+	usdhc1_pwrseq: usdhc1_pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usdhc1_gpio>;
+		reset-gpios = <&gpio4 24 GPIO_ACTIVE_LOW>;
+	};
 
 
 	sound-hdmi {
@@ -764,6 +769,8 @@
 };
 
 &usdhc1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	assigned-clocks = <&clk IMX8MP_CLK_USDHC1>;
 	assigned-clock-rates = <400000000>;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
@@ -774,8 +781,14 @@
 	pm-ignore-notify;
 	keep-power-in-suspend;
 	non-removable;
-	wifi-host;
+	cap-power-off-card;
+	mmc-pwrseq = <&usdhc1_pwrseq>;
 	status = "okay";
+  brcmf: wifi@1 {
+          reg = <1>;
+          compatible = "brcm,bcm4329-fmac";
+
+  };
 };
 
 &usdhc2 {
@@ -820,9 +833,7 @@
 			MX8MP_IOMUXC_HDMI_DDC_SDA__HDMIMIX_HDMI_SDA	0x400001c3
 			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_HDMI_HPD		0x40000019
 			MX8MP_IOMUXC_HDMI_CEC__HDMIMIX_HDMI_CEC		0x40000019
-			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24 0x19     /*WIFI_EN */
 			MX8MP_IOMUXC_SAI2_TXC__GPIO4_IO25 0x19      /*BT_EN*/
-			/*MX8MP_IOMUXC_SAI2_TXD0__GPIO4_IO26 0x19*/ /*WIFI_WKE*/
 			MX8MP_IOMUXC_SAI5_RXD0__GPIO3_IO21 0x19   
 			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00 0x19     /*5G_RST*/
 			MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2	0x59
@@ -1210,6 +1221,14 @@
 		fsl,pins = <
 			MX8MP_IOMUXC_GPIO1_IO12__GPIO1_IO12		0x1d6
 		>;
+	};
+	
+	pinctrl_usdhc1_gpio:wifi_en_grp{
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24 0x19     /*WIFI_EN */
+			MX8MP_IOMUXC_SAI2_TXD0__GPIO4_IO26 0x19 /*WIFI_WKE*/
+		>;
+	
 	};
 };
 

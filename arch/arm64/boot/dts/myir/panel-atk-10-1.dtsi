@@ -67,7 +67,7 @@
 		toshiba,lvmx1619 = 			   <0x12111716>;
 		toshiba,lvcfg =                <0x00000031>;
 		
-		 backlight = <&lvds_backlight0>;
+		//backlight = <&lvds_backlight0>;
 		client-device  = <&tc358775>;
 		display-timings {
 				native-mode = <&timing0>;

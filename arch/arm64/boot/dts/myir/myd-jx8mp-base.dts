@@ -742,7 +742,6 @@
 	srp-disable;
 	adp-disable;
 	usb-role-switch;
-	role-switch-default-mode = "none";
 	status = "okay";
 
 	port {

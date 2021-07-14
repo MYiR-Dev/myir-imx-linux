@@ -1604,7 +1604,7 @@ static int ov5640_set_virtual_channel(struct ov5640_dev *sensor)
 	dev_err(&client->dev,
 			"%s:0x4829 %x\n",
 			__func__, temp);
-	ov5640_write_reg(sensor, 0x4829, 0);
+	ov5640_write_reg(sensor, 0x4829, 0x94);
 	ov5640_read_reg(sensor, 0x4829, &temp);
 	dev_err(&client->dev,
 			"%s:0x4829 %x\n",
@@ -1615,7 +1615,7 @@ static int ov5640_set_virtual_channel(struct ov5640_dev *sensor)
 	dev_err(&client->dev,
 			"%s:0x4827 %x\n",
 			__func__, temp);
-	ov5640_write_reg(sensor, 0x4827, 0);
+	ov5640_write_reg(sensor, 0x4827, 0x62);
 	ov5640_read_reg(sensor, 0x4827, &temp);
 	dev_err(&client->dev,
 			"%s:0x4827 %x\n",

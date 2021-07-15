@@ -508,7 +508,7 @@
 		mclk = <24000000>;
 		mclk_source = <0>;
 		mipi_csi;
-		status = "disabled";
+		status = "okay";
 
 		port {
 			ov5640_mipi_1_ep: endpoint {
@@ -1263,7 +1263,8 @@
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "okay";
-
+	no-reset-control;
+	
 	port@0 {
 		reg = <0>;
 		mipi_csi0_ep: endpoint {
@@ -1279,8 +1280,8 @@
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	status = "disabled";
-
+	status = "okay";
+	no-reset-control;
 
 	port@1 {
 		reg = <1>;
@@ -1300,19 +1301,17 @@
 
 &isi_0 {
 	status = "okay";
-
+	no-reset-control;
 	cap_device {
 		status = "okay";
 	};
 
-	m2m_device {
-		status = "okay";
-	};
+
 };
 
 &isi_1 {
-	status = "disabled";
-
+	status = "okay";
+	
 	cap_device {
 		status = "okay";
 	};

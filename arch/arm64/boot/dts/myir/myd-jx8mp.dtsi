@@ -496,7 +496,7 @@
 				};
 
 				cpu_crit0: trip1 {
-					temperature = <95000>;
+					temperature = <105000>;
 					hysteresis = <2000>;
 					type = "critical";
 				};
@@ -526,7 +526,7 @@
 				};
 
 				soc_crit0: trip1 {
-					temperature = <95000>;
+					temperature = <105000>;
 					hysteresis = <2000>;
 					type = "critical";
 				};

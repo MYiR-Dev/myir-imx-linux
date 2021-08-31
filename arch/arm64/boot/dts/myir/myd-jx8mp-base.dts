@@ -79,16 +79,6 @@
 		enable-active-high;
 		regulator-always-on;
 	};
-	reg_m2_en_vmmc: regulator-m2_en {
-		compatible = "regulator-fixed";
-		regulator-name = "m2_en_pwr";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio3 21 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		startup-delay-us = <100>;
-		off-on-delay-us = <12000>;
-	};
 
 	reg_m2_keyb_en_vmmc: regulator-m2_keyb_en {
 		compatible = "regulator-fixed";
@@ -631,6 +621,7 @@
 &pcie{
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
+	clkreq-gpio = <&gpio3 21 GPIO_ACTIVE_LOW>;
 	disable-gpio = <&gpio5 8 GPIO_ACTIVE_LOW>;
 	reset-gpio = <&gpio4 1 GPIO_ACTIVE_LOW>;
 	ext_osc = <1>;
@@ -833,7 +824,6 @@
 			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_HDMI_HPD		0x40000019
 			MX8MP_IOMUXC_HDMI_CEC__HDMIMIX_HDMI_CEC		0x40000019
 			MX8MP_IOMUXC_SAI2_TXC__GPIO4_IO25 0x19      /*BT_EN*/
-			MX8MP_IOMUXC_SAI5_RXD0__GPIO3_IO21 0x19   
 			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00 0x19     /*5G_RST*/
 			MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2	0x59
 			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19	0x1c4 /*VFAN_EN*/
@@ -977,6 +967,7 @@
 
 	pinctrl_pcie: pciegrp {
 		fsl,pins = <
+			MX8MP_IOMUXC_SAI5_RXD0__GPIO3_IO21 0x19   /*pcie_clk*/
 			MX8MP_IOMUXC_ECSPI1_MISO__GPIO5_IO08		0x41 /*PCIe_nWake */
 			MX8MP_IOMUXC_SAI1_RXC__GPIO4_IO01		0x41     /*PCie_nRST */
 		>;

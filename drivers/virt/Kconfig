@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Virtualization support drivers
+#
+
+menuconfig VIRT_DRIVERS
+	bool "Virtualization drivers"
+	help
+	  Say Y here to get to see options for device drivers that support
+	  virtualization environments.
+
+	  If you say N, all options in this submenu will be skipped and disabled.
+
+if VIRT_DRIVERS
+
+config FSL_HV_MANAGER
+	tristate "Freescale hypervisor management driver"
+	depends on FSL_SOC
+	select EPAPR_PARAVIRT
+	help
+          The Freescale hypervisor management driver provides several services
+	  to drivers and applications related to the Freescale hypervisor:
+
+          1) An ioctl interface for querying and managing partitions.
+
+          2) A file interface to reading incoming doorbells.
+
+          3) An interrupt handler for shutting down the partition upon
+	     receiving the shutdown doorbell from a manager partition.
+
+          4) A kernel interface for receiving callbacks when a managed
+	     partition shuts down.
+
+config JAILHOUSE_DBGCON
+	tristate "Jailhouse console driver"
+	depends on X86 || ARM || ARM64
+	help
+	  The Jailhouse hypervisor provides a simple write-only console for
+	  debugging the bootstrap process of its cells. This driver registers
+	  a console with the kernel to make use of it.
+
+	  Note that Jailhouse has to be configured to permit a cell the usage
+	  of the console interface.
+
+source "drivers/virt/vboxguest/Kconfig"
+
+source "drivers/virt/nitro_enclaves/Kconfig"
+endif

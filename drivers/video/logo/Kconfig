@@ -10,7 +10,10 @@ menuconfig LOGO
 	  Enable and select frame buffer bootup logos.
 
 if LOGO
-
+config CUSTOMER_LOGO
+	bool "customer logo"
+	default n
+	
 config FB_LOGO_EXTRA
 	bool
 	depends on FB=y
@@ -26,8 +29,14 @@ config LOGO_LINUX_VGA16
 
 config LOGO_LINUX_CLUT224
 	bool "Standard 224-color Linux logo"
+	depends on !CUSTOMER_LOGO_LINUX_CLUT224
 	default y
-
+	
+config CUSTOMER_LOGO_LINUX_CLUT224
+	bool "Customer  224-color Linux logo"
+	select CUSTOMER_LOGO
+	default n
+	
 config LOGO_DEC_CLUT224
 	bool "224-color Digital Equipment Corporation Linux logo"
 	depends on MACH_DECSTATION || ALPHA

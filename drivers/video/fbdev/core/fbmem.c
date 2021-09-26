@@ -516,22 +516,32 @@ static int fb_show_logo_line(struct fb_info *info, int rotate,
 		image.dx = (xres - n * (logo->width + 8) - 8) / 2;
 		image.dy = y ?: (yres - logo->height) / 2;
 	} else {
+	#ifdef CONFIG_CUSTOMER_LOGO
+		;
+	#else
 		image.dx = 0;
 		image.dy = y;
+	#endif
+		
 	}
 
 	image.width = logo->width;
 	image.height = logo->height;
-
+#ifdef CONFIG_CUSTOMER_LOGO
+	image.dx=(info->var.xres/2)-(image.width/2);
+	image.dy=(info->var.yres/2)-(image.height/2);
+#endif
 	if (rotate) {
 		logo_rotate = kmalloc_array(logo->width, logo->height,
 					    GFP_KERNEL);
 		if (logo_rotate)
 			fb_rotate_logo(info, logo_rotate, &image, rotate);
 	}
-
+#ifdef CONFIG_CUSTOMER_LOGO
+	fb_do_show_logo(info, &image, rotate, 1);
+#else
 	fb_do_show_logo(info, &image, rotate, n);
-
+#endif
 	kfree(palette);
 	if (saved_pseudo_palette != NULL)
 		info->pseudo_palette = saved_pseudo_palette;
@@ -694,7 +704,12 @@ int fb_show_logo(struct fb_info *info, int rotate)
 		return 0;
 
 	count = fb_logo_count < 0 ? num_online_cpus() : fb_logo_count;
-	y = fb_show_logo_line(info, rotate, fb_logo.logo, 0, count);
+	y = fb_show_logo_line(info, rotate, fb_logo.logo, 0,
+#ifdef CONFIG_CUSTOMER_LOGO
+				1);
+#else
+		      count);
+#endif
 	y = fb_show_extra_logos(info, y, rotate);
 
 	return y;

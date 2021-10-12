@@ -733,6 +733,7 @@
 	srp-disable;
 	adp-disable;
 	usb-role-switch;
+	role-switch-default-mode = "host";
 	status = "okay";
 
 	port {

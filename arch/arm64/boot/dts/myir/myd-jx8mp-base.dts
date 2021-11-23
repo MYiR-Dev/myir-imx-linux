@@ -266,6 +266,8 @@
 			reset-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
 			reset-deassert-us = <30000>;
 			eee-broken-1000t;
+			at803x,vddio-1p8v;
+			at803x,vddio-disable;
 		};
 	};
 };
@@ -288,6 +290,8 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <1>;
 			eee-broken-1000t;
+			at803x,vddio-1p8v;
+			at803x,vddio-disable;
 		};
 	};
 };

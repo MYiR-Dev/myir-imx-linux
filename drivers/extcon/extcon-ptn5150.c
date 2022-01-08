@@ -1,10 +1,21 @@
-// SPDX-License-Identifier: GPL-2.0+
-//
-// extcon-ptn5150.c - PTN5150 CC logic extcon driver to support USB detection
-//
-// Based on extcon-sm5502.c driver
-// Copyright (c) 2018-2019 by Vijai Kumar K
-// Author: Vijai Kumar K <vijaikumar.kanagarajan@gmail.com>
+/*
+ * extcon-ptn5150.c - NXP CC logic for USB Type-C applications
+ *
+ * Copyright 2017 NXP
+ * Author: Peter Chen <peter.chen@nxp.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2  of
+ * the License as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <linux/err.h>
 #include <linux/i2c.h>
@@ -12,62 +23,31 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
+#include <linux/extcon.h>
 #include <linux/extcon-provider.h>
 #include <linux/gpio/consumer.h>
+#include <linux/usb/role.h>
+#include <linux/usb/typec.h>
 
-/* PTN5150 registers */
-enum ptn5150_reg {
-	PTN5150_REG_DEVICE_ID = 0x01,
-	PTN5150_REG_CONTROL,
-	PTN5150_REG_INT_STATUS,
-	PTN5150_REG_CC_STATUS,
-	PTN5150_REG_CON_DET = 0x09,
-	PTN5150_REG_VCONN_STATUS,
-	PTN5150_REG_RESET,
-	PTN5150_REG_INT_MASK = 0x18,
-	PTN5150_REG_INT_REG_STATUS,
-	PTN5150_REG_END,
-};
-
-#define PTN5150_DFP_ATTACHED			0x1
-#define PTN5150_UFP_ATTACHED			0x2
-
-/* Define PTN5150 MASK/SHIFT constant */
-#define PTN5150_REG_DEVICE_ID_VENDOR_SHIFT	0
-#define PTN5150_REG_DEVICE_ID_VENDOR_MASK	\
-	(0x3 << PTN5150_REG_DEVICE_ID_VENDOR_SHIFT)
-
-#define PTN5150_REG_DEVICE_ID_VERSION_SHIFT	3
-#define PTN5150_REG_DEVICE_ID_VERSION_MASK	\
-	(0x1f << PTN5150_REG_DEVICE_ID_VERSION_SHIFT)
-
-#define PTN5150_REG_CC_PORT_ATTACHMENT_SHIFT	2
-#define PTN5150_REG_CC_PORT_ATTACHMENT_MASK	\
-	(0x7 << PTN5150_REG_CC_PORT_ATTACHMENT_SHIFT)
-
-#define PTN5150_REG_CC_VBUS_DETECTION_SHIFT	7
-#define PTN5150_REG_CC_VBUS_DETECTION_MASK	\
-	(0x1 << PTN5150_REG_CC_VBUS_DETECTION_SHIFT)
-
-#define PTN5150_REG_INT_CABLE_ATTACH_SHIFT	0
-#define PTN5150_REG_INT_CABLE_ATTACH_MASK	\
-	(0x1 << PTN5150_REG_INT_CABLE_ATTACH_SHIFT)
-
-#define PTN5150_REG_INT_CABLE_DETACH_SHIFT	1
-#define PTN5150_REG_INT_CABLE_DETACH_MASK	\
-	(0x1 << PTN5150_REG_CC_CABLE_DETACH_SHIFT)
+/* PTN5150_REG_INT_STATUS */
+#define CABLE_ATTACHED		(1 << 0)
+#define CABLE_DETACHED		(1 << 1)
+/* PTN5150_REG_CC_STATUS */
+#define IS_DFP_ATTATCHED(val)	(((val) & 0x1c) == 0x4)
+#define IS_UFP_ATTATCHED(val)	(((val) & 0x1c) == 0x8)
+#define IS_NOT_CONNECTED(val)	(((val) & 0x1c) == 0x0)
+/* PTN5150_REG_CON_DET */
+#define DISABLE_CON_DET		(1 << 0)
 
 struct ptn5150_info {
 	struct device *dev;
 	struct extcon_dev *edev;
-	struct i2c_client *i2c;
+
+	struct work_struct wq_detect_cable;
 	struct regmap *regmap;
-	struct gpio_desc *int_gpiod;
-	struct gpio_desc *vbus_gpiod;
-	int irq;
-	struct work_struct irq_work;
-	struct mutex mutex;
+
+
+	struct usb_role_switch	*role_sw;
 };
 
 /* List of detectable cables */
@@ -77,212 +57,110 @@ static const unsigned int ptn5150_extcon_cable[] = {
 	EXTCON_NONE,
 };
 
+enum ptn5150_reg {
+	PTN5150_REG_DEVICE_ID = 0x1,
+	PTN5150_REG_CONTROL,
+	PTN5150_REG_INT_STATUS,
+	PTN5150_REG_CC_STATUS,
+	PTN5150_REG_RSVD_5,
+	PTN5150_REG_RSVD_6,
+	PTN5150_REG_RSVD_7,
+	PTN5150_REG_RSVD_8,
+	PTN5150_REG_CON_DET,
+	PTN5150_REG_VCONN_STATUS,
+	PTN5150_REG_RESET = 0x10,
+	PTN5150_REG_RSVD_11,
+	PTN5150_REG_RSVD_12,
+	PTN5150_REG_RSVD_13,
+	PTN5150_REG_RSVD_14,
+	PTN5150_REG_RSVD_15,
+	PTN5150_REG_RSVD_16,
+	PTN5150_REG_RSVD_17,
+	PTN5150_REG_INT_MASK,
+	PTN5150_REG_INT_REG_STATUS,
+
+	PTN5150_REG_END,
+};
 static const struct regmap_config ptn5150_regmap_config = {
 	.reg_bits	= 8,
 	.val_bits	= 8,
 	.max_register	= PTN5150_REG_END,
 };
 
-static void ptn5150_irq_work(struct work_struct *work)
+static void ptn5150_detect_cable(struct work_struct *work)
 {
-	struct ptn5150_info *info = container_of(work,
-			struct ptn5150_info, irq_work);
-	int ret = 0;
-	unsigned int reg_data;
-	unsigned int int_status;
+	struct ptn5150_info *info = container_of(work, struct ptn5150_info,
+			wq_detect_cable);
+	int ret;
+	unsigned int val;
 
-	if (!info->edev)
-		return;
+	ret = regmap_read(info->regmap, PTN5150_REG_CC_STATUS, &val);
+	if (ret)
+		dev_err(info->dev, "failed to get CC status:%d\n", ret);
 
-	mutex_lock(&info->mutex);
-
-	ret = regmap_read(info->regmap, PTN5150_REG_CC_STATUS, &reg_data);
-	if (ret) {
-		dev_err(info->dev, "failed to read CC STATUS %d\n", ret);
-		mutex_unlock(&info->mutex);
-		return;
+	if (IS_UFP_ATTATCHED(val)) {
+		usb_role_switch_set_role(info->role_sw, USB_ROLE_HOST);
+	} else if (IS_DFP_ATTATCHED(val)) {
+		usb_role_switch_set_role(info->role_sw, USB_ROLE_DEVICE);
+	} else if (IS_NOT_CONNECTED(val)) {
+		usb_role_switch_set_role(info->role_sw, USB_ROLE_DEVICE);
+	} else {
+		dev_dbg(info->dev, "other CC status is :0x%x", val);
 	}
-
-	/* Clear interrupt. Read would clear the register */
-	ret = regmap_read(info->regmap, PTN5150_REG_INT_STATUS, &int_status);
-	if (ret) {
-		dev_err(info->dev, "failed to read INT STATUS %d\n", ret);
-		mutex_unlock(&info->mutex);
-		return;
-	}
-
-	if (int_status) {
-		unsigned int cable_attach;
-
-		cable_attach = int_status & PTN5150_REG_INT_CABLE_ATTACH_MASK;
-		if (cable_attach) {
-			unsigned int port_status;
-			unsigned int vbus;
-
-			port_status = ((reg_data &
-					PTN5150_REG_CC_PORT_ATTACHMENT_MASK) >>
-					PTN5150_REG_CC_PORT_ATTACHMENT_SHIFT);
-
-			switch (port_status) {
-			case PTN5150_DFP_ATTACHED:
-				extcon_set_state_sync(info->edev,
-						EXTCON_USB_HOST, false);
-				gpiod_set_value(info->vbus_gpiod, 0);
-				extcon_set_state_sync(info->edev, EXTCON_USB,
-						true);
-				break;
-			case PTN5150_UFP_ATTACHED:
-				extcon_set_state_sync(info->edev, EXTCON_USB,
-						false);
-				vbus = ((reg_data &
-					PTN5150_REG_CC_VBUS_DETECTION_MASK) >>
-					PTN5150_REG_CC_VBUS_DETECTION_SHIFT);
-				if (vbus)
-					gpiod_set_value(info->vbus_gpiod, 0);
-				else
-					gpiod_set_value(info->vbus_gpiod, 1);
-
-				extcon_set_state_sync(info->edev,
-						EXTCON_USB_HOST, true);
-				break;
-			default:
-				dev_err(info->dev,
-					"Unknown Port status : %x\n",
-					port_status);
-				break;
-			}
-		} else {
-			extcon_set_state_sync(info->edev,
-					EXTCON_USB_HOST, false);
-			extcon_set_state_sync(info->edev,
-					EXTCON_USB, false);
-			gpiod_set_value(info->vbus_gpiod, 0);
-		}
-	}
-
-	/* Clear interrupt. Read would clear the register */
-	ret = regmap_read(info->regmap, PTN5150_REG_INT_REG_STATUS,
-			&int_status);
-	if (ret) {
-		dev_err(info->dev,
-			"failed to read INT REG STATUS %d\n", ret);
-		mutex_unlock(&info->mutex);
-		return;
-	}
-
-	mutex_unlock(&info->mutex);
 }
 
 
-static irqreturn_t ptn5150_irq_handler(int irq, void *data)
-{
-	struct ptn5150_info *info = data;
 
-	schedule_work(&info->irq_work);
+static int ptn5150_clear_interrupt(struct ptn5150_info *info)
+{
+	unsigned int val;
+	int ret;
+
+	ret = regmap_read(info->regmap, PTN5150_REG_INT_STATUS, &val);
+	if (ret)
+		dev_err(info->dev,
+			"failed to clear interrupt status:%d\n",
+			ret);
+
+	return (ret < 0) ? ret : (int)val;
+}
+
+static irqreturn_t ptn5150_connect_irq_handler(int irq, void *dev_id)
+{
+	struct ptn5150_info *info = dev_id;
+
+	if (ptn5150_clear_interrupt(info) > 0)
+		queue_work(system_power_efficient_wq, &info->wq_detect_cable);
 
 	return IRQ_HANDLED;
 }
 
-static int ptn5150_init_dev_type(struct ptn5150_info *info)
-{
-	unsigned int reg_data, vendor_id, version_id;
-	int ret;
-
-	ret = regmap_read(info->regmap, PTN5150_REG_DEVICE_ID, &reg_data);
-	if (ret) {
-		dev_err(info->dev, "failed to read DEVICE_ID %d\n", ret);
-		return -EINVAL;
-	}
-
-	vendor_id = ((reg_data & PTN5150_REG_DEVICE_ID_VENDOR_MASK) >>
-				PTN5150_REG_DEVICE_ID_VENDOR_SHIFT);
-	version_id = ((reg_data & PTN5150_REG_DEVICE_ID_VERSION_MASK) >>
-				PTN5150_REG_DEVICE_ID_VERSION_SHIFT);
-
-	dev_info(info->dev, "Device type: version: 0x%x, vendor: 0x%x\n",
-			    version_id, vendor_id);
-
-	/* Clear any existing interrupts */
-	ret = regmap_read(info->regmap, PTN5150_REG_INT_STATUS, &reg_data);
-	if (ret) {
-		dev_err(info->dev,
-			"failed to read PTN5150_REG_INT_STATUS %d\n",
-			ret);
-		return -EINVAL;
-	}
-
-	ret = regmap_read(info->regmap, PTN5150_REG_INT_REG_STATUS, &reg_data);
-	if (ret) {
-		dev_err(info->dev,
-			"failed to read PTN5150_REG_INT_REG_STATUS %d\n", ret);
-		return -EINVAL;
-	}
-
-	return 0;
-}
 
 static int ptn5150_i2c_probe(struct i2c_client *i2c,
 				 const struct i2c_device_id *id)
 {
-	struct device *dev = &i2c->dev;
 	struct device_node *np = i2c->dev.of_node;
 	struct ptn5150_info *info;
-	int ret;
-
+	int ret, connect_irq, gpio_val, count = 1000;
+	unsigned int dev_id;
+	struct gpio_desc *connect_gpiod;
+	struct fwnode_handle *fwnode;
+	
 	if (!np)
 		return -EINVAL;
 
 	info = devm_kzalloc(&i2c->dev, sizeof(*info), GFP_KERNEL);
 	if (!info)
 		return -ENOMEM;
+
 	i2c_set_clientdata(i2c, info);
-
 	info->dev = &i2c->dev;
-	info->i2c = i2c;
-	info->int_gpiod = devm_gpiod_get(&i2c->dev, "int", GPIOD_IN);
-	if (IS_ERR(info->int_gpiod)) {
-		dev_err(dev, "failed to get INT GPIO\n");
-		return PTR_ERR(info->int_gpiod);
-	}
-	info->vbus_gpiod = devm_gpiod_get(&i2c->dev, "vbus", GPIOD_IN);
-	if (IS_ERR(info->vbus_gpiod)) {
-		dev_err(dev, "failed to get VBUS GPIO\n");
-		return PTR_ERR(info->vbus_gpiod);
-	}
-	ret = gpiod_direction_output(info->vbus_gpiod, 0);
-	if (ret) {
-		dev_err(dev, "failed to set VBUS GPIO direction\n");
-		return -EINVAL;
-	}
-
-	mutex_init(&info->mutex);
-
-	INIT_WORK(&info->irq_work, ptn5150_irq_work);
-
 	info->regmap = devm_regmap_init_i2c(i2c, &ptn5150_regmap_config);
 	if (IS_ERR(info->regmap)) {
 		ret = PTR_ERR(info->regmap);
 		dev_err(info->dev, "failed to allocate register map: %d\n",
 				   ret);
 		return ret;
-	}
-
-	if (info->int_gpiod) {
-		info->irq = gpiod_to_irq(info->int_gpiod);
-		if (info->irq < 0) {
-			dev_err(dev, "failed to get INTB IRQ\n");
-			return info->irq;
-		}
-
-		ret = devm_request_threaded_irq(dev, info->irq, NULL,
-						ptn5150_irq_handler,
-						IRQF_TRIGGER_FALLING |
-						IRQF_ONESHOT,
-						i2c->name, info);
-		if (ret < 0) {
-			dev_err(dev, "failed to request handler for INTB IRQ\n");
-			return ret;
-		}
 	}
 
 	/* Allocate extcon device */
@@ -299,41 +177,112 @@ static int ptn5150_i2c_probe(struct i2c_client *i2c,
 		return ret;
 	}
 
-	/* Initialize PTN5150 device and print vendor id and version id */
-	ret = ptn5150_init_dev_type(info);
-	if (ret)
-		return -EINVAL;
+	connect_gpiod = devm_gpiod_get(info->dev, "connect", GPIOD_IN);
+	if (IS_ERR(connect_gpiod)) {
+		dev_err(info->dev, "failed to get connect GPIO\n");
+		return PTR_ERR(connect_gpiod);
+	}
 
+	connect_irq = gpiod_to_irq(connect_gpiod);
+	if (connect_irq < 0) {
+		dev_err(info->dev, "failed to get connect IRQ\n");
+		return connect_irq;
+	}
+
+	fwnode = device_get_named_child_node(info->dev, "connector");
+	info->role_sw = fwnode_usb_role_switch_get(fwnode);
+	if (IS_ERR(info->role_sw)) {
+			ret = PTR_ERR(info->role_sw);
+			if (ret != -EPROBE_DEFER)
+				dev_err(info->dev,
+					"Failed to get usb role switch: %d\n", ret);
+			return ret;
+		}
+	
+
+	
+	
+	/* Clear the pending interrupts */
+	ret = ptn5150_clear_interrupt(info);
+	if (ret < 0)
+		return ret;
+	gpio_val = gpiod_get_value(connect_gpiod);
+	/* Delay until the GPIO goes to high if it is low before */
+	while (gpio_val == 0 && count >= 0) {
+		gpio_val = gpiod_get_value(connect_gpiod);
+		usleep_range(10, 20);
+		count--;
+	}
+
+	if (count < 0)
+		dev_err(info->dev, "timeout for waiting gpio becoming high\n");
+
+	ret = regmap_read(info->regmap, PTN5150_REG_DEVICE_ID, &dev_id);
+	if (ret) {
+		dev_err(info->dev, "failed to read device id:%d\n", ret);
+		return ret;
+	}
+
+	dev_err(info->dev, "NXP PTN5150: Version ID:0x%x, Vendor ID:0x%x\n",
+			(dev_id >> 3), (dev_id & 0x3));
+
+	ret = regmap_update_bits(info->regmap, PTN5150_REG_CON_DET,
+			DISABLE_CON_DET, ~DISABLE_CON_DET);
+	if (ret) {
+		dev_err(info->dev,
+			"failed to enable CON_DET output on pin 5:%d\n",
+			ret);
+		return ret;
+	}
+
+	INIT_WORK(&info->wq_detect_cable, ptn5150_detect_cable);
+
+	ret = devm_request_threaded_irq(info->dev, connect_irq, NULL,
+					ptn5150_connect_irq_handler,
+					IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+					dev_name(info->dev), info);
+	if (ret < 0) {
+		dev_err(info->dev, "failed to request connect IRQ\n");
+		return ret;
+	}
+
+	/* Do cable detect now */
+	ptn5150_detect_cable(&info->wq_detect_cable);
+
+	return ret;
+}
+
+static int ptn5150_i2c_remove(struct i2c_client *i2c)
+{
 	return 0;
 }
 
-static const struct of_device_id ptn5150_dt_match[] = {
-	{ .compatible = "nxp,ptn5150" },
+static const struct i2c_device_id ptn5150_id[] = {
+	{ "ptn5150", 0 },
 	{ },
 };
-MODULE_DEVICE_TABLE(of, ptn5150_dt_match);
+MODULE_DEVICE_TABLE(i2c, ptn5150_id);
 
-static const struct i2c_device_id ptn5150_i2c_id[] = {
-	{ "ptn5150", 0 },
-	{ }
+#ifdef CONFIG_OF
+static const struct of_device_id ptn5150_of_match[] = {
+	{ .compatible = "nxp,ptn5150", },
+	{ .compatible = "nxp,ptn5150a", },
+	{},
 };
-MODULE_DEVICE_TABLE(i2c, ptn5150_i2c_id);
+MODULE_DEVICE_TABLE(of, ptn5150_of_match);
+#endif
 
 static struct i2c_driver ptn5150_i2c_driver = {
-	.driver		= {
-		.name	= "ptn5150",
-		.of_match_table = ptn5150_dt_match,
+	.driver = {
+		.name = "ptn5150",
+		.of_match_table = of_match_ptr(ptn5150_of_match),
 	},
-	.probe	= ptn5150_i2c_probe,
-	.id_table = ptn5150_i2c_id,
+	.probe		= ptn5150_i2c_probe,
+	.remove		= ptn5150_i2c_remove,
+	.id_table	= ptn5150_id,
 };
+module_i2c_driver(ptn5150_i2c_driver);
 
-static int __init ptn5150_i2c_init(void)
-{
-	return i2c_add_driver(&ptn5150_i2c_driver);
-}
-subsys_initcall(ptn5150_i2c_init);
-
-MODULE_DESCRIPTION("NXP PTN5150 CC logic Extcon driver");
-MODULE_AUTHOR("Vijai Kumar K <vijaikumar.kanagarajan@gmail.com>");
+MODULE_DESCRIPTION("NXP PTN5150 CC logic driver for USB Type-C");
+MODULE_AUTHOR("Peter Chen <peter.chen@nxp.com>");
 MODULE_LICENSE("GPL v2");

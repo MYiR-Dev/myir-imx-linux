@@ -199,6 +199,42 @@ static int yt8512_led_init(struct phy_device *phydev)
 
 	return ret;
 }
+static int yt8521_led_init(struct phy_device *phydev)
+{
+    int ret;
+    int val;
+    int mask;
+
+    val = ytphy_read_ext(phydev, YT8521_EXTREG_LED1);
+    printk("val=%x\n",val);
+    if (val < 0)
+        return val;
+
+    val |= YT8521_LED1_ACT_BLK_IND;
+
+    /*mask = YT8521_LED1_DIS_LED_AN_TRY |
+           YT8521_LED1_HT_BLK_EN | YT8521_LED1_COL_BLK_EN |
+           YT8521_LED1_GT_BLK_EN;
+    val &= ~mask;*/
+
+    ret = ytphy_write_ext(phydev, YT8521_EXTREG_LED1, val);
+    if (ret < 0)
+        return ret;
+
+    val = ytphy_read_ext(phydev, YT8521_EXTREG_LED2);
+    if (val < 0)
+        return val;
+
+    val |= YT8521_LED2_GT_ON_EN;
+
+    mask = YT8521_LED2_TXACT_BLK_EN | YT8521_LED2_RXACT_BLK_EN | YT8521_LED2_HT_ON_EN;
+    val &= ~mask;
+    printk(KERN_INFO "led2 %x.\n",val);
+
+    ret = ytphy_write_ext(phydev, YT8521_EXTREG_LED2, val);
+
+    return ret;
+}
 
 static int yt8512_config_init(struct phy_device *phydev)
 {
@@ -593,6 +629,7 @@ static int yt8521_config_init(struct phy_device *phydev)
 #endif
 	if (ret < 0)
 		return ret;
+    ret = yt8521_led_init(phydev);
 
 	/* disable auto sleep */
 	val = ytphy_read_ext(phydev, YT8521_EXTREG_SLEEP_CONTROL1);
@@ -618,6 +655,8 @@ static int yt8521_config_init(struct phy_device *phydev)
 	if (ret < 0)
 		return ret;
 
+
+		
 	printk (KERN_INFO "yt8521_config_init, 8521 init call out.\n");
 	return ret;
 }

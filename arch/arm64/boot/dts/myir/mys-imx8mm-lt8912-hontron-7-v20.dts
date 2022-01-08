@@ -1,0 +1,152 @@
+/*
+ * Copyright 2019 MYiR Devices
+ */
+ 
+#include "mys-imx8mm-evk-v20.dts"
+/{
+	lvds_backlight0: lvds_backlight@0 {
+		compatible = "pwm-backlight";
+		pwms = <&pwm1 0 5000000 0>;
+
+		brightness-levels = < 0  1  2  3  4  5  6  7  8  9
+				     10 11 12 13 14 15 16 17 18 19
+				     20 21 22 23 24 25 26 27 28 29
+				     30 31 32 33 34 35 36 37 38 39
+				     40 41 42 43 44 45 46 47 48 49
+				     50 51 52 53 54 55 56 57 58 59
+				     60 61 62 63 64 65 66 67 68 69
+				     70 71 72 73 74 75 76 77 78 79
+				     80 81 82 83 84 85 86 87 88 89
+				     90 91 92 93 94 95 96 97 98 99
+				    100>;
+		default-brightness-level = <80>;
+	};
+};
+&iomuxc {
+			
+    pinctrl_dsi_lvds_bridge: lvds_bridge_gpio {
+			fsl,pins = <
+				MX8MM_IOMUXC_SAI2_MCLK_GPIO4_IO27          0x00000116
+				MX8MM_IOMUXC_GPIO1_IO13_GPIO1_IO13           0x00000116
+			>;
+    };
+		edt_ft5x06_pins:pinctrl_ft5xgrp {
+			fsl,pins = <
+				MX8MM_IOMUXC_GPIO1_IO12_GPIO1_IO12        0x00000116
+				MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1           0x00000116
+			>;
+		};
+
+		pinctrl_pwm1: lvds0pwm1grp {
+			fsl,pins = <
+				MX8MM_IOMUXC_GPIO1_IO01_PWM1_OUT 0x19
+			>;
+		};
+};
+
+&lcdif{
+	max-res = <1024>, <600>;
+	status = "okay";
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	port@1 {
+		compatible = "lontium,lt8912";
+		mipi_dsi_bridge1_out: endpoint {
+			remote-endpoint = <&lt8912_1_in>;
+			attach-bridge;
+		};
+	};
+};
+
+&i2c2 {
+    pinctrl-names = "default";
+    status = "okay";
+
+
+   
+
+	/* MIPI-DSI to HDMI and LVDS adapter */
+	hdmi@48 {
+		compatible = "lontium,lt8912";
+		reg = <0x48>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_dsi_lvds_bridge>;
+		ddc-i2c-bus = <&i2c2>;
+		hpd-gpios = <&gpio4 27 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio1 13 GPIO_ACTIVE_LOW>;
+    status = "okay";
+    
+    dsi-lanes = <4>;
+    hdmi_mode = <0>;
+    lvds-enabled = <1>;
+    debug =<1>;
+    bypass=<0>;
+
+    
+    
+    display-timings {
+	    
+			native-mode = <&timing0>;
+			
+
+
+			/*7-inch lvds */
+			timing0:timing0{
+				clock-frequency = <51200000>;
+				
+				hactive = <1024>;
+				hsync-len = <20>;
+				hback-porch = <162>;
+				hfront-porch = <140>; 
+				vactive = <600>;
+				vsync-len = <3>;
+				vback-porch = <20>;
+				vfront-porch = <12>; 
+				
+				vsync-active = <0>;
+				hsync-active =<0>;
+				de-active =<0>;
+				pixelclk-active =<0>;
+			};
+
+
+
+	  };	    
+
+		port {
+			lt8912_1_in: endpoint {
+				remote-endpoint = <&mipi_dsi_bridge1_out>;
+			};
+		};
+	};
+
+
+};
+
+
+&i2c3 {
+    clock-frequency = <400000>;
+    status = "okay";
+    	/* 7-inch ,touch */
+    ft5x06: ft5x06@38 {
+			compatible = "edt,edt-ft5406";
+			reg = <0x38>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&edt_ft5x06_pins>;
+			interrupt-parent = <&gpio4>;
+			interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
+			reset-gpios = <&gpio1 12  GPIO_ACTIVE_LOW>;
+			touchscreen-size-x=<1024>;
+			touchscreen-size-y=<600>;
+			status = "okay";
+    };
+};
+
+&pwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm1>;
+	status = "okay";
+};

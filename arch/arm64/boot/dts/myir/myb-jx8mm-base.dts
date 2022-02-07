@@ -156,6 +156,33 @@
 		};
 	};
 
+    /*spi-gpio*/
+    spi4 {
+		compatible = "spi-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_spi4>;
+		status = "okay";
+		gpio-sck = <&gpio1 1 0>;
+		gpio-miso = <&gpio1 10 0>;
+		gpio-mosi = <&gpio1 8 0>;
+		cs-gpios = <&gpio4 11 0>;
+
+		num-chipselects = <1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		spi_gpio: spi_gpio@0 {
+			//compatible = "spidev";
+			compatible = "rohm,dh2228fv";
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0>;
+			registers-number = <1>;
+			registers-default = /bits/ 8 <0x57>;
+			spi-max-frequency = <200000>;
+		};
+    };
+
 };
 
 &A53_0 {
@@ -804,6 +831,17 @@
 				MX8MM_IOMUXC_GPIO1_IO05_GPIO1_IO5			0x19
 			>;
 		};
+
+		pinctrl_spi4: spi4grp {
+			fsl,pins = <
+				MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8			0x19        //MOSI
+				MX8MM_IOMUXC_GPIO1_IO10_GPIO1_IO10			0x19        //MISO
+				MX8MM_IOMUXC_GPIO1_IO01_GPIO1_IO1			0x19        //CLK
+				MX8MM_IOMUXC_SAI1_TXC_GPIO4_IO11            0x00000116  //CS0
+				MX8MM_IOMUXC_SAI5_RXD1_GPIO3_IO22           0x00001916  //CS1
+			>;
+		};
+
 
 		pinctrl_flexspi0: flexspi0grp {
 			fsl,pins = <

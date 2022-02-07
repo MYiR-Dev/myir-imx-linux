@@ -13,6 +13,7 @@ dtb-$(CONFIG_ARCH_MXC) +=  myb-imx8mm-base.dtb \
 			   mys-imx8mm-evk-rpmsg-v20.dtb \
 			   mys-imx8mm-lt8912-atk-10-1-v20.dtb \
 			   mys-imx8mm-lt8912-hontron-7-v20.dtb \
+			   myb-jx8mm-base.dtb \
 			   myd-jx8mp-base.dtb \
 			   myd-jx8mp-rpmsg.dtb \
 			   myd-jx8mp-hdmi.dtb \

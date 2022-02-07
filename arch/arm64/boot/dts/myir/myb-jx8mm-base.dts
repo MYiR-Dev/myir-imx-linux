@@ -122,37 +122,27 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-	    reg_gpio_wifi: regulator@1 {
+		// SAI1_RXFS
+		reg_gpio_saigpio1: regulator@1 {
             compatible = "regulator-fixed";
-            regulator-name = "wifi-pwr";
+            regulator-name = "saigpio";
             regulator-min-microvolt = <3300000>;
             regulator-max-microvolt = <3300000>;
             gpios = <&gpio4 0 GPIO_ACTIVE_LOW>;
-            regulator-boot-on;
-            enable-active-low;
-		};
-
-		reg_usb_ltemodule: regulator@2 {
-			compatible = "regulator-fixed";
-			regulator-name = "ltemodule-pwr";
-			regulator-min-microvolt = <3800000>;
-			regulator-max-microvolt = <3800000>;
-			gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>;
-			enable-active-high;
+			regulator-always-on;
 			regulator-boot-on;
 		};
 
-		/*
-		reg_lte_rst: regulator@3 {
-			compatible = "regulator-fixed";
-			regulator-name = "ltemodule-rst";
-			regulator-min-microvolt = <3800000>;
-			regulator-max-microvolt = <3800000>;
-			gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;
-			enable-active-low;
+		// SAI1_RXC
+		reg_gpio_saigpio2: regulator@2 {
+            compatible = "regulator-fixed";
+            regulator-name = "saigpio";
+            regulator-min-microvolt = <3300000>;
+            regulator-max-microvolt = <3300000>;
+            gpios = <&gpio4 1 GPIO_ACTIVE_LOW>;
+			regulator-always-on;
 			regulator-boot-on;
 		};
-		*/
 
 		reg_m2_power_pad: regulator-m2-power-pad {
 			compatible = "regulator-fixed";
@@ -160,8 +150,8 @@
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 			enable-active-high;
-			startup-delay-us = <70000>;
-			gpio = <&gpio3 25 GPIO_ACTIVE_HIGH>;
+			startup-delay-us = <30000>;
+			gpio = <&gpio4 4 GPIO_ACTIVE_HIGH>;
 			regulator-always-on;
 			regulator-boot-on;
 		};
@@ -249,8 +239,8 @@
 
 &sai1 {
 	pinctrl-names = "default", "dsd";
-	pinctrl-0 = <&pinctrl_sai1>;
-	pinctrl-1 = <&pinctrl_sai1_dsd>;
+	// pinctrl-0 = <&pinctrl_sai1>;
+	// pinctrl-1 = <&pinctrl_sai1_dsd>;
 	assigned-clocks = <&clk IMX8MM_CLK_SAI1>;
 	assigned-clock-parents = <&clk IMX8MM_AUDIO_PLL1_OUT>;
 	assigned-clock-rates = <49152000>;
@@ -345,12 +335,16 @@
         status = "disabled";
 };
 
-
 &usbotg1 {
 	dr_mode = "otg";
 	picophy,pre-emp-curr-control = <3>;
 	picophy,dc-vol-level-adjust = <7>;
 	status = "okay";
+	port {
+		usbotg_hs_ep: endpoint {
+				remote-endpoint = <&con_usbotg_hs_ep>;
+		};
+	};
 };
 
 &usbotg2 {
@@ -683,6 +677,26 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
+
+	ptn5150: ptn5150@3d {
+		compatible = "nxp,ptn5150";
+		reg = <0x3d>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ptn5150>;
+		connect-gpios = <&gpio3 25 GPIO_ACTIVE_HIGH>;
+		status = "okay";
+		connector {
+				compatible = "usb-c-connector";
+				label = "USB-C";
+				port {
+						con_usbotg_hs_ep: endpoint {
+								remote-endpoint = <&usbotg_hs_ep>;
+						};
+				};
+
+		};
+	};
+
 };
 
 &i2c4 {
@@ -726,8 +740,17 @@
 		pinctrl_hog: hoggrp {
 			fsl,pins = <
 				MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9 0x19
+				MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0           0x00000116
+				MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1            0x00000116
+				MX8MM_IOMUXC_SAI1_RXD2_GPIO4_IO4           0x00000116
 			>;
 		};
+
+        pinctrl_ptn5150: ptncgrp{
+			fsl,pins = <
+				MX8MM_IOMUXC_SAI5_MCLK_GPIO3_IO25       0x00000116
+			>;
+        };
 
 		pinctrl_mipi_dsi_en: mipi_dsi_en {
 			fsl,pins = <

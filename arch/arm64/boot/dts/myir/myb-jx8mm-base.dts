@@ -299,14 +299,16 @@
 	status = "okay";
 };
 
-/* BT */
+/* Raspberry Pi -> RS485 */
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
 	assigned-clocks = <&clk IMX8MM_CLK_UART1>;
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
-	fsl,uart-has-rtscts;
-	resets = <&modem_reset>;
+	linux,rs485-enabled-at-boot-time;
+	rs485-rts-active-high;
+	rs485-rts-delay = <4 4>;
+	rts-gpios = <&gpio5 27 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
@@ -317,21 +319,24 @@
 	status = "okay";
 };
 
+/*BT*/
 &uart3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
 	assigned-clocks = <&clk IMX8MM_CLK_UART3>;
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
-	// fsl,uart-has-rtscts;
+	fsl,uart-has-rtscts;
+	resets = <&modem_reset>;
 	status = "okay";
 };
 
+/* Raspberry Pi -> RS232 */
 &uart4 {
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_uart4>;
         assigned-clocks = <&clk IMX8MM_CLK_UART4>;
         assigned-clock-parents = <&clk IMX8MM_CLK_24M>;
-        status = "disabled";
+        status = "okay";
 };
 
 &usbotg1 {
@@ -949,9 +954,10 @@
 			fsl,pins = <
 				MX8MM_IOMUXC_UART1_RXD_UART1_DCE_RX		0x140
 				MX8MM_IOMUXC_UART1_TXD_UART1_DCE_TX		0x140
-				MX8MM_IOMUXC_UART3_RXD_UART1_DCE_CTS_B		0x140
-				MX8MM_IOMUXC_UART3_TXD_UART1_DCE_RTS_B		0x140
-				MX8MM_IOMUXC_SD1_DATA4_GPIO2_IO6		0x19
+				// MX8MM_IOMUXC_UART3_RXD_UART1_DCE_CTS_B		0x140
+				// MX8MM_IOMUXC_UART3_TXD_UART1_DCE_RTS_B		0x140
+
+				MX8MM_IOMUXC_UART3_TXD_GPIO5_IO27          0x00000116 /*RS485 EN*/
 			>;
 		};
 
@@ -966,8 +972,8 @@
 			fsl,pins = <
 				MX8MM_IOMUXC_ECSPI1_SCLK_UART3_DCE_RX		0x140
 				MX8MM_IOMUXC_ECSPI1_MOSI_UART3_DCE_TX		0x140
-				/* MX8MM_IOMUXC_ECSPI1_SS0_UART3_DCE_RTS_B	0x140
-				MX8MM_IOMUXC_ECSPI1_MISO_UART3_DCE_CTS_B	0x140 */
+				MX8MM_IOMUXC_ECSPI1_SS0_UART3_DCE_RTS_B  	0x140
+				MX8MM_IOMUXC_ECSPI1_MISO_UART3_DCE_CTS_B	0x140
 			>;
 		};
 

@@ -38,6 +38,8 @@
 #include <linux/pm_qos.h>
 #include <linux/platform_data/serial-imx.h>
 #include <linux/platform_data/dma-imx.h>
+#include <linux/gpio.h>
+#include <linux/of_gpio.h>
 
 #include "serial_mctrl_gpio.h"
 
@@ -451,6 +453,10 @@ static void imx_uart_stop_tx(struct uart_port *port)
 	if (port->rs485.flags & SER_RS485_ENABLED &&
 	    imx_uart_readl(sport, USR2) & USR2_TXDC) {
 		u32 ucr2 = imx_uart_readl(sport, UCR2), ucr4;
+        /* Delay after send */
+        if (port->rs485.delay_rts_after_send)
+            mdelay(port->rs485.delay_rts_after_send);
+
 		if (port->rs485.flags & SER_RS485_RTS_AFTER_SEND)
 			imx_uart_rts_active(sport, &ucr2);
 		else
@@ -674,6 +680,10 @@ static void imx_uart_start_tx(struct uart_port *port)
 
 		if (!(port->rs485.flags & SER_RS485_RX_DURING_TX))
 			imx_uart_stop_rx(port);
+
+        /* Delay before send */
+        if (port->rs485.delay_rts_before_send)
+            mdelay(port->rs485.delay_rts_before_send);
 
 		/*
 		 * Enable transmitter and shifter empty irq only if DMA is off.
@@ -1856,8 +1866,8 @@ static int imx_uart_rs485_config(struct uart_port *port,
 	u32 ucr2;
 
 	/* unimplemented */
-	rs485conf->delay_rts_before_send = 0;
-	rs485conf->delay_rts_after_send = 0;
+	//rs485conf->delay_rts_before_send = 0;
+	//rs485conf->delay_rts_after_send = 0;
 
 	/* RTS is required to control the transmitter */
 	if (!sport->have_rtscts && !sport->have_rtsgpio)
@@ -2167,6 +2177,8 @@ static int imx_uart_probe_dt(struct imx_port *sport,
 {
 	struct device_node *np = pdev->dev.of_node;
 	int ret;
+    struct serial_rs485 *rs485conf = &sport->port.rs485;
+    u32 rs485_delay[2];
 
 	sport->devdata = of_device_get_match_data(&pdev->dev);
 	if (!sport->devdata)
@@ -2189,6 +2201,30 @@ static int imx_uart_probe_dt(struct imx_port *sport,
 
 	if (of_get_property(np, "rts-gpios", NULL))
 		sport->have_rtsgpio = 1;
+
+    /* RS-485 properties */
+    rs485conf->flags = 0;
+
+    if (of_property_read_bool(np, "rs485-rts-active-high"))
+    	rs485conf->flags |= SER_RS485_RTS_ON_SEND;
+    else
+        rs485conf->flags |= SER_RS485_RTS_AFTER_SEND;
+
+    if (of_property_read_u32_array(np, "rs485-rts-delay",
+                                    rs485_delay, 2) == 0) {
+        rs485conf->delay_rts_before_send = rs485_delay[0];
+        rs485conf->delay_rts_after_send = rs485_delay[1];
+    } else {
+        rs485conf->delay_rts_before_send = 0;
+        rs485conf->delay_rts_after_send = 0;
+    }
+
+    if (of_property_read_bool(np, "rs485-rx-during-tx")){
+        rs485conf->flags |= SER_RS485_RX_DURING_TX;
+	}
+    if (of_property_read_bool(np, "linux,rs485-enabled-at-boot-time")){
+		rs485conf->flags |= SER_RS485_ENABLED;
+	}
 
 	return 0;
 }

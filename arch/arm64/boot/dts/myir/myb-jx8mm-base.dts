@@ -678,6 +678,11 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
+	rx8025t: rx8025t@32 {
+		compatible = "epson,rx8025t";
+		reg = <0x32>;
+	};
+
 	ptn5150: ptn5150@3d {
 		compatible = "nxp,ptn5150";
 		reg = <0x3d>;

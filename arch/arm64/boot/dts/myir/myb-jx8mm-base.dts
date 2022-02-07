@@ -111,7 +111,6 @@
 		regulator-name = "WLAN_EN";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio1 15 GPIO_ACTIVE_HIGH>;
 		// off-on-delay-us = <20000>;
 		startup-delay-us = <100>;
 		enable-active-high;
@@ -368,7 +367,7 @@
     keep-power-in-suspend;
     // enable-sdio-wakeup;
 	non-removable;
-	status = "disabled";
+	status = "okay";
 };
 
 /* SD */

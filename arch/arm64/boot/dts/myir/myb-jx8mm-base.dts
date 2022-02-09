@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
- * Copyright 2020 MYiR
+ * Copyright 2022 MYiR
  */
 
 /dts-v1/;
@@ -9,7 +9,7 @@
 #include "myb-imx8mm.dtsi"
 
 / {
-	model = "MYD-JX8MM board";
+	model = "MYD-JX8MM Board";
 	compatible = "fsl,imx8mm-evk", "fsl,imx8mm";
 
 	reserved-memory {
@@ -41,17 +41,11 @@
 
 		led1: user1 {
 			label = "user1";
-			gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
+			gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
 			default-state = "on";
 			linux,default-trigger = "heartbeat";
 		};
 	
-		led2: user2 {
-			label = "user2";
-			gpios = <&gpio5 4 GPIO_ACTIVE_LOW>;
-			default-state = "on";
-		};
-
 		led3: user3 {
 			label = "pwr_en";
 			gpios = <&gpio4 27 GPIO_ACTIVE_LOW>;
@@ -143,6 +137,7 @@
 			regulator-boot-on;
 		};
 
+		// RESET-PIN --->M.2
 		reg_m2_power_pad: regulator-m2-power-pad {
 			compatible = "regulator-fixed";
 			regulator-name = "M2_POWER_PAD";
@@ -154,6 +149,20 @@
 			regulator-always-on;
 			regulator-boot-on;
 		};
+
+		// RESET --- reset
+		reg_mmcrst_pad: regulator-mmcrst-pad {
+			compatible = "regulator-fixed";
+			regulator-name = "mmc-reset";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			enable-active-high;
+			// startup-delay-us = <10000>;
+			gpio = <&gpio4 21 GPIO_ACTIVE_HIGH>;
+			regulator-always-on;
+			regulator-boot-on;
+		};
+
 	};
 
     /*spi-gpio*/
@@ -243,8 +252,8 @@
 &pcie0{
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
-	disable-gpio = <&gpio2 20 GPIO_ACTIVE_LOW>;
-	reset-gpio = <&gpio4 21 GPIO_ACTIVE_LOW>;
+	// disable-gpio = <&gpio2 20 GPIO_ACTIVE_LOW>;
+	// reset-gpio = <&gpio4 21 GPIO_ACTIVE_LOW>;
 	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
 		 <&clk IMX8MM_CLK_PCIE1_AUX>,
 		 <&clk IMX8MM_CLK_PCIE1_PHY>,
@@ -423,7 +432,7 @@
 	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
 	bus-width = <8>;
 	non-removable;
-	status = "disabled";
+	status = "okay";
 };
 
 &wdog1 {
@@ -781,6 +790,7 @@
 				MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0           0x00000116
 				MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1            0x00000116
 				MX8MM_IOMUXC_SAI1_RXD2_GPIO4_IO4           0x00000116
+				MX8MM_IOMUXC_SAI2_RXFS_GPIO4_IO21          0x00000116
 			>;
 		};
 
@@ -790,12 +800,6 @@
 			>;
         };
 
-		pinctrl_mipi_dsi_reset: mipi_dsi_reset {
-			fsl,pins = <
-				MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1			0x00000116
-			>;
-		};
-		
 		pinctrl_ecspi2: ecspi2grp {
 			fsl,pins = <
 				MX8MM_IOMUXC_ECSPI2_SS0_GPIO5_IO13   	0x16
@@ -856,16 +860,9 @@
 			>;
 		};
 
-		//		MX8MM_IOMUXC_SAI3_TXFS_GPIO4_IO31          0x00000116
-		//		MX8MM_IOMUXC_SAI3_TXC_GPIO5_IO0            0x00000116
-		//		MX8MM_IOMUXC_SAI3_TXD_GPIO5_IO1            0x00000116
-		//		MX8MM_IOMUXC_GPIO1_IO05_GPIO1_IO5          0x00000116
-
 		pinctrl_gpio_led: gpioledgrp {
 			fsl,pins = <
 			    MX8MM_IOMUXC_NAND_READY_B_GPIO3_IO16       0x00000116
-				MX8MM_IOMUXC_SPDIF_RX_GPIO5_IO4            0x00000116
-				MX8MM_IOMUXC_SPDIF_TX_GPIO5_IO3            0x00000116
 				MX8MM_IOMUXC_SAI2_MCLK_GPIO4_IO27          0x00000116
 				MX8MM_IOMUXC_SAI2_TXFS_GPIO4_IO24          0x00000116
 				MX8MM_IOMUXC_SAI2_TXC_GPIO4_IO25           0x00000116
@@ -911,8 +908,6 @@
 			fsl,pins = <
 				MX8MM_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B	        0x61          /* open drain, pull up */
 				MX8MM_IOMUXC_GPIO1_IO00_ANAMIX_REF_CLK_32K      0x141
-				// MX8MM_IOMUXC_SD2_WP_GPIO2_IO20	            0x41
-				// MX8MM_IOMUXC_SAI2_RXFS_GPIO4_IO21	            0x41
 			>;
 		};
 
@@ -1027,8 +1022,7 @@
 
 		pinctrl_spdif1: spdif1grp {
 			fsl,pins = <
-				MX8MM_IOMUXC_SPDIF_TX_SPDIF1_OUT	0xd6
-				MX8MM_IOMUXC_SPDIF_RX_SPDIF1_IN		0xd6
+                               MX8MM_IOMUXC_SPDIF_TX_SPDIF1_OUT        0xd6
 			>;
 		};
 
@@ -1208,7 +1202,6 @@
 		dsi-lanes = <4>;
 	};
 	*/
-
 };
 
 &vpu_g1 {
@@ -1224,7 +1217,7 @@
 };
 
 &gpu {
-	status = "disabled";
+	status = "okay";
 };
 
 &snvs_rtc{

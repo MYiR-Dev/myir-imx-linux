@@ -800,6 +800,12 @@
 			>;
         };
 
+		pinctrl_mipi_dsi_reset: mipi_dsi_reset {
+			fsl,pins = <
+				MX8MM_IOMUXC_GPIO1_IO13_GPIO1_IO13         0x00000116
+			>;
+		};
+
 		pinctrl_ecspi2: ecspi2grp {
 			fsl,pins = <
 				MX8MM_IOMUXC_ECSPI2_SS0_GPIO5_IO13   	0x16
@@ -1190,18 +1196,14 @@
 };
 
 &mipi_dsi {
-	status = "disabled";
-
-	/*
+	status = "okay";
 	panel@0 {
-		compatible = "toshiba,panel-tc358775";
-		pinctrl-0 = <&pinctrl_mipi_dsi_en>;
-		stby-gpio = <&gpio4 27 GPIO_ACTIVE_HIGH>;
-		reset-gpio = <&gpio1 13 GPIO_ACTIVE_HIGH>;
-		powergpio-gpio = <&gpio1 9 GPIO_ACTIVE_HIGH>;
+		compatible = "lontium,lt8912";
+		pinctrl-0 = <&pinctrl_mipi_dsi_reset>;
+		reset-gpios = <&gpio1 13 GPIO_ACTIVE_LOW>;
 		dsi-lanes = <4>;
 	};
-	*/
+
 };
 
 &vpu_g1 {

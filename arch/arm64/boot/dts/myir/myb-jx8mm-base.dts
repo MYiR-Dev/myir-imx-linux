@@ -132,9 +132,9 @@
 		#size-cells = <0>;
 
 		// SAI1_RXFS
-		reg_gpio_saigpio1: regulator@1 {
+		reg_exten_gpio1: regulator-gpio1@1 {
             compatible = "regulator-fixed";
-            regulator-name = "saigpio";
+            regulator-name = "exten_gpio1";
             regulator-min-microvolt = <3300000>;
             regulator-max-microvolt = <3300000>;
             gpios = <&gpio4 0 GPIO_ACTIVE_LOW>;
@@ -143,9 +143,9 @@
 		};
 
 		// SAI1_RXC
-		reg_gpio_saigpio2: regulator@2 {
+		reg_exten_gpio2: regulator-gpio2@2 {
             compatible = "regulator-fixed";
-            regulator-name = "saigpio";
+            regulator-name = "exten_gpio2";
             regulator-min-microvolt = <3300000>;
             regulator-max-microvolt = <3300000>;
             gpios = <&gpio4 1 GPIO_ACTIVE_LOW>;
@@ -845,7 +845,6 @@
 
 		pinctrl_hog: hoggrp {
 			fsl,pins = <
-				MX8MM_IOMUXC_GPIO1_IO09_GPIO1_IO9 0x19
 				MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0           0x00000116
 				MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1            0x00000116
 				MX8MM_IOMUXC_SAI1_RXD2_GPIO4_IO4           0x00000116

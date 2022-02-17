@@ -404,12 +404,10 @@
 	pinctrl-0 = <&pinctrl_uart3>;
 	assigned-clocks = <&clk IMX8MM_CLK_UART3>;
 	assigned-clock-parents = <&clk IMX8MM_SYS_PLL1_80M>;
-
 	linux,rs485-enabled-at-boot-time;
 	rs485-rts-active-high;
-	rs485-rts-delay = <4 4>;
-	rts-gpios = <&gpio5 27 GPIO_ACTIVE_HIGH>;
-
+	rs485-rts-delay = <5 5>;
+	rts-gpios = <&gpio5 4 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
@@ -1073,7 +1071,7 @@
 			fsl,pins = <
 				MX8MM_IOMUXC_ECSPI1_SCLK_UART3_DCE_RX		0x140
 				MX8MM_IOMUXC_ECSPI1_MOSI_UART3_DCE_TX		0x140
-				MX8MM_IOMUXC_ECSPI1_MISO_GPIO5_IO8          0x00000116 /*RS485 EN*/
+				MX8MM_IOMUXC_SPDIF_RX_GPIO5_IO4             0x00000116 /*RS485 EN*/
 			>;
 		};
 

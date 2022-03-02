@@ -283,14 +283,13 @@
 	pinctrl-0 = <&pinctrl_pcie0>;
 	// disable-gpio = <&gpio2 20 GPIO_ACTIVE_LOW>;
 	reset-gpio = <&gpio4 22 GPIO_ACTIVE_LOW>;
-	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
 	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
 		 <&clk IMX8MM_CLK_PCIE1_AUX>,
 		 <&clk IMX8MM_CLK_PCIE1_PHY>,
 		 <&pcie0_refclk>;
 	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
-	ext_osc = <1>;
-	status = "disabled";
+	ext_osc = <0>;
+	status = "okay";
 };
 
 &sai3 {
@@ -926,8 +925,9 @@
 
 		pinctrl_pcie0: pcie0grp {
 			fsl,pins = <
-				MX8MM_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B	        0x61          /* open drain, pull up */
-				MX8MM_IOMUXC_GPIO1_IO00_ANAMIX_REF_CLK_32K      0x141
+				// MX8MM_IOMUXC_I2C4_SCL_PCIE1_CLKREQ_B	        0x61          /* open drain, pull up */
+				// MX8MM_IOMUXC_GPIO1_IO00_ANAMIX_REF_CLK_32K      0x141
+				MX8MM_IOMUXC_SAI2_RXC_GPIO4_IO22           0x00000116
 			>;
 		};
 

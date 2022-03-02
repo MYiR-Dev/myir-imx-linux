@@ -4,7 +4,6 @@
  */
 
 /dts-v1/;
-
 #include <dt-bindings/usb/pd.h>
 #include "myb-imx8mm.dtsi"
 
@@ -46,32 +45,17 @@
 			linux,default-trigger = "heartbeat";
 		};
 	
-		led3: user3 {
-			label = "pwr_en";
-			gpios = <&gpio4 27 GPIO_ACTIVE_LOW>;
-			default-state = "on";
-		};
-		led4: user4 {
+		led2: user2 {
 			label = "pwr_stby";
 			gpios = <&gpio4 24 GPIO_ACTIVE_LOW>;
 			default-state = "on";
 		};
-		led5: user5 {
-			label = "wdog_b";
-			gpios = <&gpio4 25 GPIO_ACTIVE_LOW>;
-			default-state = "on";
-		};
-		led6: user6 {
+
+		led3: user3 {
 			label = "pwr_pg";
 			gpios = <&gpio4 26 GPIO_ACTIVE_LOW>;
 			default-state = "on";
 		};
-		/*
-		led7: user7 {
-			label = "net_reset";
-			gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;
-			default-state = "on";
-		};*/
 	};
 
 	gpio-keys {
@@ -298,7 +282,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie0>;
 	// disable-gpio = <&gpio2 20 GPIO_ACTIVE_LOW>;
-	// reset-gpio = <&gpio4 21 GPIO_ACTIVE_LOW>;
+	reset-gpio = <&gpio4 22 GPIO_ACTIVE_LOW>;
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_OUTPUT>;
 	clocks = <&clk IMX8MM_CLK_PCIE1_ROOT>,
 		 <&clk IMX8MM_CLK_PCIE1_AUX>,
 		 <&clk IMX8MM_CLK_PCIE1_PHY>,
@@ -511,11 +496,8 @@
 		compatible = "rohm,bd71847";
 		reg = <0x4b>;
 		pinctrl-0 = <&pinctrl_pmic>;
-		//pinctrl-0 = <>;
 		interrupt-parent = <&gpio1>;
-		//interrupt-parent = <>;
 		interrupts = <3 GPIO_ACTIVE_LOW>;
-		//interrupts = <>;
 		rohm,reset-snvs-powered;
 
 		regulators {
@@ -623,13 +605,10 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
-
+	/*
 	pmic2@4b {
 		compatible = "rohm,bd71847";
 		reg = <0x4b>;
-		//pinctrl-0 = <>;
-		//interrupt-parent = <>;
-		//interrupts = <>;
 		pinctrl-0 = <&pinctrl_pmic>;
 		interrupt-parent = <&gpio1>;
 		interrupts = <4 GPIO_ACTIVE_LOW>;
@@ -640,8 +619,6 @@
 				regulator-name = "BUCK1T";
 				regulator-min-microvolt = <1000000>;
 				regulator-max-microvolt = <1000000>;
-				//regulator-min-microvolt = <700000>;
-				//regulator-max-microvolt = <1300000>;
 				regulator-boot-on;
 				regulator-always-on;
 				regulator-ramp-delay = <1250>;
@@ -651,8 +628,6 @@
 				regulator-name = "BUCK2T";
 				regulator-min-microvolt = <750000>;
 				regulator-max-microvolt = <750000>;
-				//regulator-min-microvolt = <700000>;
-				//regulator-max-microvolt = <1300000>;
 				regulator-boot-on;
 				regulator-always-on;
 				regulator-ramp-delay = <1250>;
@@ -665,8 +640,6 @@
 				regulator-name = "BUCK3T";
 				regulator-min-microvolt = <1000000>;
 				regulator-max-microvolt = <1000000>;
-				//regulator-min-microvolt = <700000>;
-				//regulator-max-microvolt = <1350000>;
 				regulator-boot-on;
 				regulator-always-on;
 			};
@@ -676,8 +649,6 @@
 				regulator-name = "BUCK4T";
 				regulator-min-microvolt = <3300000>;
 				regulator-max-microvolt = <3300000>;
-				//regulator-min-microvolt = <3000000>;
-				//regulator-max-microvolt = <3300000>;
 				regulator-boot-on;
 				regulator-always-on;
 			};
@@ -687,8 +658,6 @@
 				regulator-name = "BUCK5T";
 				regulator-min-microvolt = <1800000>;
 				regulator-max-microvolt = <1800000>;
-				//regulator-min-microvolt = <1605000>;
-				//regulator-max-microvolt = <1995000>;
 				regulator-boot-on;
 				regulator-always-on;
 			};
@@ -698,8 +667,6 @@
 				regulator-name = "BUCK6T";
 				regulator-min-microvolt = <1350000>;
 				regulator-max-microvolt = <1350000>;
-				//regulator-min-microvolt = <800000>;
-				//regulator-max-microvolt = <1400000>;
 				regulator-boot-on;
 				regulator-always-on;
 			};
@@ -708,8 +675,6 @@
 				regulator-name = "LDO1T";
 				regulator-min-microvolt = <1800000>;
 				regulator-max-microvolt = <1800000>;
-				//regulator-min-microvolt = <1600000>;
-				//regulator-max-microvolt = <1900000>;
 				regulator-boot-on;
 				regulator-always-on;
 			};
@@ -718,8 +683,6 @@
 				regulator-name = "LDO2T";
 				regulator-min-microvolt = <800000>;
 				regulator-max-microvolt = <800000>;
-				//regulator-min-microvolt = <900000>;
-				//regulator-max-microvolt = <900000>;
 				regulator-boot-on;
 				regulator-always-on;
 			};
@@ -728,8 +691,6 @@
 				regulator-name = "LDO3T";
 				regulator-min-microvolt = <1800000>;
 				regulator-max-microvolt = <1800000>;
-				//regulator-min-microvolt = <1800000>;
-				//regulator-max-microvolt = <3300000>;
 				regulator-boot-on;
 				regulator-always-on;
 			};
@@ -738,8 +699,6 @@
 				regulator-name = "LDO4T";
 				regulator-min-microvolt = <1000000>;
 				regulator-max-microvolt = <1000000>;
-				//regulator-min-microvolt = <900000>;
-				//regulator-max-microvolt = <1800000>;
 				regulator-boot-on;
 				regulator-always-on;
 			};
@@ -748,13 +707,12 @@
 				regulator-name = "LDO6T";
 				regulator-min-microvolt = <1200000>;
 				regulator-max-microvolt = <1200000>;
-				//regulator-min-microvolt = <900000>;
-				//regulator-max-microvolt = <1800000>;
 				regulator-boot-on;
 				regulator-always-on;
 			};
 		};
 	};
+	*/
 };
 
 &i2c3 {

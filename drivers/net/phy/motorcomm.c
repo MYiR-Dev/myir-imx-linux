@@ -228,6 +228,37 @@ static int yt8521_led_init(struct phy_device *phydev)
     return ret;
 }
 
+
+static int yt8531_led_init(struct phy_device *phydev)
+{
+    int ret;
+    int val;
+    int mask;
+
+    val = ytphy_read_ext(phydev, YT8521_EXTREG_LED1);
+    printk("val=%x\n",val);
+    if (val < 0)
+        return val;
+
+  	/* set when link up and speed is 10/100/1000 make led on  as link led */
+	val = 0x180;
+    ret = ytphy_write_ext(phydev, YT8521_EXTREG_LED1, val);
+    if (ret < 0)
+        return ret;
+
+    val = ytphy_read_ext(phydev, YT8521_EXTREG_LED2);
+    if (val < 0)
+        return val;
+
+	/* when rx and tx send or recive msg make led link  as stats led*/
+    val = 0x70;
+
+    ret = ytphy_write_ext(phydev, YT8521_EXTREG_LED2, val);
+
+    return ret;
+}
+
+
 static int yt8512_config_init(struct phy_device *phydev)
 {
 	int ret;
@@ -621,7 +652,10 @@ static int yt8521_config_init(struct phy_device *phydev)
 #endif
 	if (ret < 0)
 		return ret;
-    ret = yt8521_led_init(phydev);
+	if(phydev->phy_id == PHY_ID_YT8531S)
+		ret = yt8531_led_init(phydev);
+	else
+    	ret = yt8521_led_init(phydev);
 
 	/* disable auto sleep */
 	val = ytphy_read_ext(phydev, YT8521_EXTREG_SLEEP_CONTROL1);

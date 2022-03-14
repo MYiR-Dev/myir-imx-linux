@@ -572,6 +572,14 @@ void __init __weak arch_call_rest_init(void)
 	rest_init();
 }
 
+static void __init setup_slient_log(char *command_line)
+{
+       if( !command_line )
+               return ;
+       if (strstr(command_line , "quiet")){
+               console_silent();
+       }
+}
 asmlinkage __visible void __init start_kernel(void)
 {
 	char *command_line;
@@ -596,6 +604,7 @@ asmlinkage __visible void __init start_kernel(void)
 	early_security_init();
 	setup_arch(&command_line);
 	setup_command_line(command_line);
+	setup_slient_log(command_line);
 	setup_nr_cpu_ids();
 	setup_per_cpu_areas();
 	smp_prepare_boot_cpu();	/* arch-specific boot-cpu hooks */

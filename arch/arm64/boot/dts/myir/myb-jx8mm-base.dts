@@ -1087,7 +1087,7 @@
 
 		pinctrl_usdhc2_gpio: usdhc2grpgpio {
 			fsl,pins = <
-				MX8MM_IOMUXC_SD2_RESET_B_GPIO2_IO19	0x1c4
+				MX8MM_IOMUXC_SD2_CD_B_GPIO2_IO12           0x00000116
 			>;
 		};
 

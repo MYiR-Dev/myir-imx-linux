@@ -652,7 +652,7 @@ static int yt8521_config_init(struct phy_device *phydev)
 #endif
 	if (ret < 0)
 		return ret;
-	if(phydev->phy_id == PHY_ID_YT8531S)
+	if((phydev->phy_id&0xfff) == PHY_ID_YT8531S)
 		ret = yt8531_led_init(phydev);
 	else
     	ret = yt8521_led_init(phydev);

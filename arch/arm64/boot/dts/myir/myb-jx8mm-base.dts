@@ -115,28 +115,6 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		// SAI1_RXFS
-		reg_exten_gpio1: regulator-gpio1@1 {
-            compatible = "regulator-fixed";
-            regulator-name = "exten_gpio1";
-            regulator-min-microvolt = <3300000>;
-            regulator-max-microvolt = <3300000>;
-            gpios = <&gpio4 0 GPIO_ACTIVE_LOW>;
-			regulator-always-on;
-			regulator-boot-on;
-		};
-
-		// SAI1_RXC
-		reg_exten_gpio2: regulator-gpio2@2 {
-            compatible = "regulator-fixed";
-            regulator-name = "exten_gpio2";
-            regulator-min-microvolt = <3300000>;
-            regulator-max-microvolt = <3300000>;
-            gpios = <&gpio4 1 GPIO_ACTIVE_LOW>;
-			regulator-always-on;
-			regulator-boot-on;
-		};
-
 		// RESET-PIN --->M.2
 		reg_m2_power_pad: regulator-m2-power-pad {
 			compatible = "regulator-fixed";
@@ -145,7 +123,7 @@
 			regulator-max-microvolt = <3300000>;
 			enable-active-high;
 			startup-delay-us = <30000>;
-			gpio = <&gpio4 4 GPIO_ACTIVE_HIGH>;
+			gpio = <&gpio4 1 GPIO_ACTIVE_HIGH>;
 			regulator-always-on;
 			regulator-boot-on;
 		};
@@ -779,8 +757,8 @@
 		assigned-clock-rates = <24000000>;
 		csi_id = <0>;
 		gate-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
-		pwn-gpios = <&gpio4 6 GPIO_ACTIVE_HIGH>;
-		rst-gpios = <&gpio4 7 GPIO_ACTIVE_LOW>;
+		pwn-gpios = <&gpio1 7 GPIO_ACTIVE_HIGH>;
+		rst-gpios = <&gpio4 0 GPIO_ACTIVE_LOW>;
 		mclk = <24000000>;
 		mclk_source = <0>;
 		port {
@@ -800,7 +778,6 @@
 
 		pinctrl_hog: hoggrp {
 			fsl,pins = <
-				MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0           0x00000116
 				MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1            0x00000116
 				MX8MM_IOMUXC_SAI1_RXD2_GPIO4_IO4           0x00000116
 				MX8MM_IOMUXC_SAI2_RXFS_GPIO4_IO21          0x00000116
@@ -830,10 +807,10 @@
 
 		pinctrl_csi_pd: csi_pwn_grp {
 			fsl,pins = <
-				MX8MM_IOMUXC_SAI1_RXD4_GPIO4_IO6            0x19
-				MX8MM_IOMUXC_SAI1_RXD5_GPIO4_IO7            0x19
-				MX8MM_IOMUXC_GPIO1_IO11_GPIO1_IO11		    0x19
+				MX8MM_IOMUXC_GPIO1_IO11_GPIO1_IO11		0x19
 				MX8MM_IOMUXC_GPIO1_IO14_CCMSRCGPCMIX_CLKO1	0x59
+				MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0           0x00000116
+				MX8MM_IOMUXC_GPIO1_IO07_GPIO1_IO7          	0x00001916
 			>;
 		};
 

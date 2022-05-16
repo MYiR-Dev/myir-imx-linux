@@ -57,7 +57,7 @@
 		
 		pinctrl_dsi_pd: dsi_gpio {
 			fsl,pins = <
-				MX8MM_IOMUXC_SAI1_RXD1_GPIO4_IO3           0x00000116
+				MX8MM_IOMUXC_SAI5_RXC_GPIO3_IO20           0x00000116
 			>;
         };
 
@@ -83,6 +83,7 @@
 };
 
 &i2c4 {
+    clock-frequency = <100000>;
     pinctrl-names = "default";
     status = "okay";
 
@@ -93,7 +94,7 @@
 		pinctrl-0 = <&pinctrl_dsi_pd>;
 		reg = <0x48>;
 		ddc-i2c-bus = <&i2c4>;
-		hpd-gpios = <&gpio4 3 GPIO_ACTIVE_HIGH>;
+		hpd-gpios = <&gpio3 20 GPIO_ACTIVE_HIGH>;
 		// reset-gpios = <&gpio1 13 GPIO_ACTIVE_LOW>;
 		status = "okay";
 

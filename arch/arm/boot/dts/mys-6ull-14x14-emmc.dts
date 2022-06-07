@@ -9,6 +9,10 @@
 
 #include "mys-6ull-14x14.dts"
 
+&usdhc1 {
+	status = "okay";
+};
+
 &usdhc2 {
 	//pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-names = "default";

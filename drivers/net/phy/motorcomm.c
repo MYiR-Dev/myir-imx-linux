@@ -139,7 +139,7 @@ static int yt8521_delaysel_init(struct phy_device *phydev) {
     return val;
 
   // modify tx delay sel
-  tmp = (val & 0xF0) | 0x09;
+  tmp = (val & 0xF0) | 0x03;
   ret = ytphy_write_ext(phydev, YT8521_EXTREG_RGMII_CONFIG1, tmp);
   return ret;
 }

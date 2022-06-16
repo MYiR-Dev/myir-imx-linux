@@ -5,7 +5,7 @@
 /dts-v1/;
 
 #include "imx6ull.dtsi"
-#include "mys-6ul-14x14-evk.dtsi"
+#include "mys-6ul-14x14-evk.dtsi-mys"
 
 / {
 	model = "MYiR MYS-6ULL Board";

@@ -263,7 +263,6 @@
 
 	port {
 		csi1_ep: endpoint {
-			//remote-endpoint = <&ov5640_ep>;
 			remote-endpoint = <&ov2659_ep>;
 		};
 	};
@@ -644,7 +643,7 @@
 
 &wdog1 {
 	pinctrl-names = "default";
-	//pinctrl-0 = <&pinctrl_wdog>;
+	pinctrl-0 = <&pinctrl_wdog>;
 	//fsl,ext-reset-output;
 };
 
@@ -665,6 +664,8 @@
 			MX6UL_PAD_CSI_DATA05__CSI_DATA07	0x1b088
 			MX6UL_PAD_CSI_DATA06__CSI_DATA08	0x1b088
 			MX6UL_PAD_CSI_DATA07__CSI_DATA09	0x1b088
+			MX6UL_PAD_GPIO1_IO05__GPIO1_IO05	0x1b0b0
+			MX6UL_PAD_GPIO1_IO09__GPIO1_IO09	0x1b0b0
 		>;
 	};
 
@@ -900,8 +901,8 @@
 			MX6UL_PAD_SD1_DATA2__USDHC1_DATA2 	0x17059
 			MX6UL_PAD_SD1_DATA3__USDHC1_DATA3 	0x17059
 			MX6UL_PAD_UART1_RTS_B__GPIO1_IO19       0x17059 /* SD1 CD */
-			MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT    0x17059 /* SD1 VSELECT */
-			MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
+			//MX6UL_PAD_GPIO1_IO05__USDHC1_VSELECT    0x17059 /* SD1 VSELECT */
+			//MX6UL_PAD_GPIO1_IO09__GPIO1_IO09        0x17059 /* SD1 RESET */
 		>;
 	};
 

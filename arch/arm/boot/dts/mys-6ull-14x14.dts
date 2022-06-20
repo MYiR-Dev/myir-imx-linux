@@ -5,7 +5,7 @@
 /dts-v1/;
 
 #include "imx6ull.dtsi"
-#include "mys-6ul-14x14-evk.dtsi-mys"
+#include "mys-6ul-14x14-evk.dtsi"
 
 / {
 	model = "MYiR MYS-6ULL Board";
@@ -26,6 +26,5 @@
 &ov5640 {
 	status = "okay";
 };
-
-/delete-node/ &sim2;
 */
+/delete-node/ &sim2;

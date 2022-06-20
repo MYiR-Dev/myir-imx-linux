@@ -38,6 +38,10 @@
 	status = "disabled";
 };
 
+&usdhc1 {
+	status = "okay";
+};
+
 &usdhc2 {
 	status = "disabled";
 };

@@ -22,7 +22,7 @@
 #include <media/v4l2-fwnode.h>
 #include <media/v4l2-image-sizes.h>
 #include <media/v4l2-subdev.h>
-
+#include <linux/of_gpio.h>
 #define DRIVER_NAME "ov2659"
 
 /*
@@ -218,6 +218,7 @@ static const struct sensor_register ov2659_init_regs[] = {
 	{ REG_IO_CTRL00, 0x03 },
 	{ REG_IO_CTRL01, 0xff },
 	{ REG_IO_CTRL02, 0xe0 },
+	{ 0x0100, 0x01 },
 	{ 0x3633, 0x3d },
 	{ 0x3620, 0x02 },
 	{ 0x3631, 0x11 },
@@ -813,6 +814,8 @@ static const struct ov2659_pixfmt ov2659_formats[] = {
 	},
 };
 
+static int rst_gpio, pwn_gpio;
+
 static inline struct ov2659 *to_ov2659(struct v4l2_subdev *sd)
 {
 	return container_of(sd, struct ov2659, sd);
@@ -893,6 +896,7 @@ static void ov2659_pll_calc_params(struct ov2659 *ov2659)
 	u8 ctrl1_reg = 0, ctrl2_reg = 0, ctrl3_reg = 0;
 	struct i2c_client *client = ov2659->client;
 	unsigned int desired = pdata->link_frequency;
+	u32 s_prediv = 1, s_postdiv = 1, s_mult = 1;
 	u32 prediv, postdiv, mult;
 	u32 bestdelta = -1;
 	u32 delta, actual;
@@ -912,6 +916,9 @@ static void ov2659_pll_calc_params(struct ov2659 *ov2659)
 
 				if ((delta < bestdelta) || (bestdelta == -1)) {
 					bestdelta = delta;
+					s_mult    = mult;
+					s_prediv  = prediv;
+					s_postdiv = postdiv;
 					ctrl1_reg = ctrl1[i].reg;
 					ctrl2_reg = mult;
 					ctrl3_reg = ctrl3[j].reg;
@@ -1341,6 +1348,22 @@ static const struct v4l2_subdev_internal_ops ov2659_subdev_internal_ops = {
 };
 #endif
 
+static void ov2659_reset(void)
+{
+	gpio_set_value(rst_gpio, 1);
+
+	gpio_set_value(pwn_gpio, 1);
+	msleep(5);
+	gpio_set_value(pwn_gpio, 0);
+	msleep(5);
+
+	gpio_set_value(rst_gpio, 0);
+	msleep(1);
+	gpio_set_value(rst_gpio, 1);
+	msleep(5);
+	gpio_set_value(pwn_gpio, 1);
+}
+
 static int ov2659_detect(struct v4l2_subdev *sd)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1349,6 +1372,8 @@ static int ov2659_detect(struct v4l2_subdev *sd)
 	int ret;
 
 	dev_dbg(&client->dev, "%s:\n", __func__);
+
+	ov2659_reset();
 
 	ret = ov2659_write(client, REG_SOFTWARE_RESET, 0x01);
 	if (ret != 0) {
@@ -1413,6 +1438,42 @@ ov2659_get_pdata(struct i2c_client *client)
 	}
 
 	pdata->link_frequency = bus_cfg.link_frequencies[0];
+
+//     of_get_property(client->dev.of_node, "rst-gpios", NULL);
+
+#if 1
+if (of_get_property(client->dev.of_node, "rst-gpios", NULL)){
+	rst_gpio = of_get_named_gpio(client->dev.of_node, "rst-gpios", 0);
+	if (gpio_is_valid(rst_gpio)){
+		ret = devm_gpio_request_one(&client->dev, rst_gpio,
+		GPIOF_OUT_INIT_HIGH,"ov2659_reset");
+	if (ret < 0){
+		dev_err(&client->dev, "init reset pin error %d\n", ret);
+		//return ret;
+	}
+	}else{
+	dev_err(&client->dev, "no sensor reset pin available\n");
+	//return -EINVAL;
+	}
+}
+
+if (of_get_property(client->dev.of_node, "pwn-gpios", NULL)){
+	pwn_gpio = of_get_named_gpio(client->dev.of_node, "pwn-gpios", 0);
+	if (gpio_is_valid(pwn_gpio)){
+		ret = devm_gpio_request_one(&client->dev, pwn_gpio,
+		GPIOF_OUT_INIT_HIGH,
+		"ov2659_pwdn");
+		if (ret < 0){
+			dev_err(&client->dev, "init powerdown pin error %d\n",
+			ret);
+			//return ret;
+		}
+	}else{
+		dev_err(&client->dev, "no sensor powerdown pin available\n");
+		//return -EINVAL;
+	}
+}
+#endif
 
 done:
 	v4l2_fwnode_endpoint_free(&bus_cfg);

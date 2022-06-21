@@ -594,8 +594,7 @@
 &uart3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
-	fsl,rs485-gpio-txen = <&gpio1 18 GPIO_ACTIVE_HIGH>;
-    linux,rs485-enabled-at-boot-time;
+	rts-gpios = <&gpio1 18 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 

@@ -441,14 +441,16 @@
 	};
 
 	ft5x06: ft5x06@38 {
-		compatible = "ft5x06_ts";
+		compatible = "edt,edt-ft5406", "edt,edt-ft5x06";
 		reg = <0x38>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&edt_ft5x06_pins>;
-		tp_int = <&gpio5 4 0>;
-		tp_resetn = <&gpio5 3 0>;
-        polling_mode = /bits/ 8 <1>;
-        multi_touch = /bits/ 8 <0>;
+		interrupt-parent = <&gpio5>;
+		interrupts = <4 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&gpio5 3  GPIO_ACTIVE_LOW>;
+		touchscreen-size-x=<800>;
+		touchscreen-size-y=<480>;
+		status = "okay";
 	};
 };
 

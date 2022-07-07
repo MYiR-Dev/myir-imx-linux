@@ -547,9 +547,9 @@ static void imx_init_temp_grade(struct platform_device *pdev, u32 ocotp_mem0)
 		data->temp_grade = "Extended Commercial";
 		data->temp_max = 105000;
 		break;
-	case 2: /* Industrial (-40 °C to 105 °C) */
+	case 2: /* Industrial (-40 °C to 115 °C) */
 		data->temp_grade = "Industrial";
-		data->temp_max = 105000;
+		data->temp_max = 115000;
 		break;
 	case 3: /* Automotive (-40 °C to 125 °C) */
 		data->temp_grade = "Automotive";

@@ -363,8 +363,9 @@
 					interrupts = <GIC_SPI 98 IRQ_TYPE_LEVEL_HIGH>;
 					clocks = <&clks IMX6UL_CLK_SAI2_IPG>,
 						 <&clks IMX6UL_CLK_SAI2>,
-						 <&clks IMX6UL_CLK_DUMMY>, <&clks IMX6UL_CLK_DUMMY>;
-					clock-names = "bus", "mclk1", "mclk2", "mclk3";
+						 <&clks IMX6UL_CLK_DUMMY>, <&clks IMX6UL_CLK_DUMMY>, <&clks 0>;
+					//clock-names = "bus", "mclk1", "mclk2", "mclk3";
+					clock-names = "bus", "mclk0", "mclk1", "mclk2", "mclk3";
 					dmas = <&sdma 37 24 0>,
 					       <&sdma 38 24 0>;
 					dma-names = "rx", "tx";

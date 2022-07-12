@@ -68,7 +68,7 @@ void __init imx6_enet_mac_init(const char *enet_compat, const char *ocotp_compat
 
 		ocotp_np = of_find_compatible_node(NULL, NULL, ocotp_compat);
 		if (!ocotp_np) {
-			pr_warn("failed to find ocotp node\n");
+			//pr_warn("failed to find ocotp node\n");
 			goto put_enet_node;
 		}
 

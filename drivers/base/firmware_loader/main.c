@@ -824,9 +824,9 @@ _request_firmware(const struct firmware **firmware_p, const char *name,
 
 	if (ret) {
 		if (!(opt_flags & FW_OPT_NO_WARN))
-			dev_warn(device,
+			/*dev_warn(device,
 				 "Direct firmware load for %s failed with error %d\n",
-				 name, ret);
+				 name, ret);*/
 		if (nondirect)
 			ret = firmware_fallback_sysfs(fw, name, device,
 						      opt_flags, ret);

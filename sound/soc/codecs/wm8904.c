@@ -1402,7 +1402,6 @@ static int wm8904_hw_params(struct snd_pcm_substream *substream,
 	snd_soc_component_update_bits(component, WM8904_CLOCK_RATES_1,
 			    WM8904_SAMPLE_RATE_MASK |
 			    WM8904_CLK_SYS_RATE_MASK, clock1);
-
 	/* Update filters for the new settings */
 	wm8904_set_retune_mobile(component);
 	wm8904_set_deemph(component);
@@ -1495,7 +1494,6 @@ static int wm8904_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 			    WM8904_AIF_FMT_MASK | WM8904_BCLK_DIR, aif1);
 	snd_soc_component_update_bits(component, WM8904_AUDIO_INTERFACE_3,
 			    WM8904_LRCLK_DIR, aif3);
-
 	return 0;
 }
 
@@ -1545,7 +1543,6 @@ out:
 	snd_soc_component_update_bits(component, WM8904_AUDIO_INTERFACE_1,
 			    WM8904_AIFADC_TDM | WM8904_AIFADC_TDM_CHAN |
 			    WM8904_AIFDAC_TDM | WM8904_AIFDAC_TDM_CHAN, aif1);
-
 	return 0;
 }
 
@@ -1787,12 +1784,10 @@ static int wm8904_set_fll(struct snd_soc_dai *dai, int fll_id, int source,
 			    WM8904_FLL_OSC_ENA, fll1);
 	snd_soc_component_update_bits(component, WM8904_FLL_CONTROL_1,
 			    WM8904_FLL_ENA, fll1);
-
 out:
 	/* Reenable SYSCLK if it was previously active */
 	snd_soc_component_update_bits(component, WM8904_CLOCK_RATES_2,
 			    WM8904_CLK_SYS_ENA, clock2);
-
 	return 0;
 }
 

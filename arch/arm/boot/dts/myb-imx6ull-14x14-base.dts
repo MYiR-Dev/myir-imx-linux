@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+//
+// Copyright (C) 2016 Freescale Semiconductor, Inc.
+
+/dts-v1/;
+
+#include "imx6ull-y2.dtsi"
+#include "myb-imx6ul-14x14.dtsi"
+
+/ {
+	model = "Freescale i.MX6 ULL 14x14 MYiR Board";
+	compatible = "fsl,imx6ull-14x14-evk", "fsl,imx6ull";
+};
+
+&clks {
+	assigned-clocks = <&clks IMX6UL_CLK_PLL3_PFD2>,
+			  <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
+	assigned-clock-rates = <320000000>, <786432000>;
+};
+
+&csi {
+	status = "okay";
+};
+
+&iomuxc_snvs {                                                                                                                                    
+    pinctrl-names = "default_snvs";                                                                                                               
+        pinctrl-0 = <&pinctrl_hog_2>;                                                                                                             
+        imx6ull-evk {                                                                                                                             
+                                                                                                                                                  
+        pinctrl_hog_2: hoggrp-2 {                                                                                                                 
+                fsl,pins = <                                                                                                                      
+                                MX6ULL_PAD_SNVS_TAMPER0__GPIO5_IO00     0x80000000                                                                
+                                MX6ULL_PAD_SNVS_TAMPER9__GPIO5_IO09     0x1b0b0 /* enet1 reset */                                                 
+                                MX6ULL_PAD_SNVS_TAMPER7__GPIO5_IO07     0x1b0b0 /* LTE module WakeOut */                                          
+                                MX6ULL_PAD_SNVS_TAMPER6__GPIO5_IO06     0x1b0b0 /* enet2 reset */                                                 
+                                MX6ULL_PAD_SNVS_TAMPER5__GPIO5_IO05     0x1b8b0 /* LTE module power */                                            
+                                MX6ULL_PAD_SNVS_TAMPER3__GPIO5_IO03     0x1b0b0 /* Camera RST */                                                  
+                                MX6ULL_PAD_SNVS_TAMPER4__GPIO5_IO04     0x1b0b0 /* Camera PWRDN */                                                
+                                MX6ULL_PAD_SNVS_TAMPER2__GPIO5_IO02     0x1b0b0 /* TP Reset */                                                    
+                        >;                                                                                                                        
+                };                                                                                                                                
+                                                                                                                                                  
+        pinctrl_lcdif_reset: lcdifresetgrp {                                                                                                      
+                fsl,pins = <                                                                                                                      
+                                /* used for lcd reset */                                                                                          
+                                MX6UL_PAD_SNVS_TAMPER9__GPIO5_IO09  0x79                                                                          
+                        >;                                                                                                                        
+                };                                                                                                                                
+                                                                                                                                                  
+        };                                                                                                                                        
+};                                                                                                                                                
+       
+
+/delete-node/ &sim2;

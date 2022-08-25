@@ -23,7 +23,7 @@ static inline int _soc_link_ret(struct snd_soc_pcm_runtime *rtd,
 		break;
 	default:
 		dev_err(rtd->dev,
-			"ASoC: error at %s on %s: %d\n",
+			"ASoC: link-error at %s on %s: %d\n",
 			func, rtd->dai_link->name, ret);
 	}
 

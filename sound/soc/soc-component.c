@@ -12,6 +12,7 @@
 #include <linux/pm_runtime.h>
 #include <sound/soc.h>
 
+
 #define soc_component_ret(dai, ret) _soc_component_ret(dai, __func__, ret)
 static inline int _soc_component_ret(struct snd_soc_component *component,
 				     const char *func, int ret)
@@ -25,14 +26,16 @@ static inline int _soc_component_ret(struct snd_soc_component *component,
 	case -EPROBE_DEFER:
 	case -ENOTSUPP:
 		break;
+	/*
 	default:
 		dev_err(component->dev,
-			"ASoC: error at %s on %s: %d\n",
-			func, component->name, ret);
+			"ASoC: component-error at %s on %s: %d\n",
+			func, component->name, ret);*/
 	}
 
 	return ret;
 }
+
 
 /*
  * We might want to check substream by using list.
@@ -544,7 +547,8 @@ int snd_soc_component_update_bits(struct snd_soc_component *component,
 							   mask, val, &change);
 
 	if (ret < 0)
-		return soc_component_ret(component, ret);
+		//return soc_component_ret(component, ret);
+		return ret;
 	return change;
 }
 EXPORT_SYMBOL_GPL(snd_soc_component_update_bits);

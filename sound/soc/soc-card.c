@@ -19,7 +19,7 @@ static inline int _soc_card_ret(struct snd_soc_card *card,
 		break;
 	default:
 		dev_err(card->dev,
-			"ASoC: error at %s on %s: %d\n",
+			"ASoC: card-error at %s on %s: %d\n",
 			func, card->name, ret);
 	}
 

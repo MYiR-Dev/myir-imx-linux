@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0
+//
+// Copyright (C) 2015 Freescale Semiconductor, Inc.
+
+/dts-v1/;
+
+#include "imx6ul-g2.dtsi"
+#include "myb-imx6ul-14x14.dtsi"
+
+/ {
+	model = "Freescale i.MX6 UltraLite 14x14 MYiR Board";
+	compatible = "fsl,imx6ul-14x14-evk", "fsl,imx6ul";
+};

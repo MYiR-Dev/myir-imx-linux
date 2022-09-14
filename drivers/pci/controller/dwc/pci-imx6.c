@@ -2310,6 +2310,8 @@ static int imx6_pcie_suspend_noirq(struct device *dev)
 {
 	struct imx6_pcie *imx6_pcie = dev_get_drvdata(dev);
 
+	printk("====> Skipping imx6_pcie suspend ops\n");
+	return 0;	
 	if (!(imx6_pcie->drvdata->flags & IMX6_PCIE_FLAG_SUPPORTS_SUSPEND))
 		return 0;
 	if (unlikely(imx6_pcie->drvdata->variant == IMX6Q)) {
@@ -2337,6 +2339,8 @@ static int imx6_pcie_resume_noirq(struct device *dev)
 	struct imx6_pcie *imx6_pcie = dev_get_drvdata(dev);
 	struct pcie_port *pp = &imx6_pcie->pci->pp;
 
+	printk("====> Skipping imx6_pcie resume ops\n");
+	return 0;
 	if (!(imx6_pcie->drvdata->flags & IMX6_PCIE_FLAG_SUPPORTS_SUSPEND))
 		return 0;
 	if (unlikely(imx6_pcie->drvdata->variant == IMX6Q)) {

@@ -1,0 +1,17 @@
+NXP DSP
+
+The IP is from Cadence.
+
+Required properties:
+
+  - compatible	: Contains one of "fsl,imx8qxp-dsp-v1", "fsl,imx8qm-dsp-v1",
+		  "fsl,imx8mp-dsp-v1", "fsl,imx8ulp-dsp-v1",
+  - reg		: Offset and length of the register set for the device.
+
+Example:
+
+dsp:  dsp@596e8000 {
+	compatible = "fsl,imx8qxp-dsp";
+	reg = <0x0 0x596e8000 0x0 0x88000>;
+	status = "okay";
+};

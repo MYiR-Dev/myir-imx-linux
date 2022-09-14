@@ -1,0 +1,72 @@
+* Power Management Controller
+
+Properties:
+- compatible: "fsl,<chip>-pmc".
+
+  "fsl,mpc8349-pmc" should be listed for any chip whose PMC is
+  compatible.  "fsl,mpc8313-pmc" should also be listed for any chip
+  whose PMC is compatible, and implies deep-sleep capability.
+
+  "fsl,mpc8548-pmc" should be listed for any chip whose PMC is
+  compatible.  "fsl,mpc8536-pmc" should also be listed for any chip
+  whose PMC is compatible, and implies deep-sleep capability and
+  wake on user defined packet(wakeup on ARP).
+
+  "fsl,p1022-pmc" should be listed for any chip whose PMC is
+  compatible, and implies lossless Ethernet capability during sleep.
+
+  "fsl,mpc8641d-pmc" should be listed for any chip whose PMC is
+  compatible; all statements below that apply to "fsl,mpc8548-pmc" also
+  apply to "fsl,mpc8641d-pmc".
+
+  Compatibility does not include bit assignments in SCCR/PMCDR/DEVDISR; these
+  bit assignments are indicated via the clock nodes.  Device which has a
+  controllable clock source should have a "fsl,pmc-handle" property pointing
+  to the clock node.
+
+- reg: For devices compatible with "fsl,mpc8349-pmc", the first resource
+  is the PMC block, and the second resource is the Clock Configuration
+  block.
+
+  For devices compatible with "fsl,mpc8548-pmc", the first resource
+  is a 32-byte block beginning with DEVDISR.
+
+- interrupts: For "fsl,mpc8349-pmc"-compatible devices, the first
+  resource is the PMC block interrupt.
+
+- fsl,mpc8313-wakeup-timer: For "fsl,mpc8313-pmc"-compatible devices,
+  this is a phandle to an "fsl,gtm" node on which timer 4 can be used as
+  a wakeup source from deep sleep.
+
+Clock nodes:
+The clock nodes are to describe the masks in PM controller registers for each
+soc clock.
+- fsl,pmcdr-mask: For "fsl,mpc8548-pmc"-compatible devices, the mask will be
+  ORed into PMCDR before suspend if the device using this clock is the wake-up
+  source and need to be running during low power mode; clear the mask if
+  otherwise.
+
+- fsl,sccr-mask: For "fsl,mpc8349-pmc"-compatible devices, the corresponding
+  bit specified by the mask in SCCR will be saved and cleared on suspend, and
+  restored on resume.
+
+- fsl,devdisr-mask: Contain one or two cells, depending on the availability of
+  DEVDISR2 register.  For compatible devices, the mask will be ORed into DEVDISR
+  or DEVDISR2 when the clock should be permenently disabled.
+
+Example:
+
+	power@e0070 {
+		compatible = "fsl,mpc8536-pmc", "fsl,mpc8548-pmc";
+		reg = <0xe0070 0x20>;
+
+		etsec1_clk: soc-clk@24 {
+			fsl,pmcdr-mask = <0x00000080>;
+		};
+		etsec2_clk: soc-clk@25 {
+			fsl,pmcdr-mask = <0x00000040>;
+		};
+		etsec3_clk: soc-clk@26 {
+			fsl,pmcdr-mask = <0x00000020>;
+		};
+	};

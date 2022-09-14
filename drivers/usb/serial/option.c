@@ -2090,6 +2090,22 @@ static const struct usb_device_id option_ids[] = {
 	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1404, 0xff) },			/* GosunCn GM500 RNDIS */
 	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1405, 0xff) },			/* GosunCn GM500 MBIM */
 	{ USB_DEVICE_INTERFACE_CLASS(0x305a, 0x1406, 0xff) },			/* GosunCn GM500 ECM/NCM */
+#if 1 //Added by Quectel
+	{ USB_DEVICE(0x2C7C, 0x0125) }, /* Quectel EC20 R2.0/EC20 R2.1/EC25/EG25-G/EM05 */
+	{ USB_DEVICE(0x2C7C, 0x0121) }, /* Quectel EC21/EG21-G */
+	{ USB_DEVICE(0x2C7C, 0x0191) }, /* Quectel EG91 */
+	{ USB_DEVICE(0x2C7C, 0x0195) }, /* Quectel EG95 */
+	{ USB_DEVICE(0x2C7C, 0x0306) }, /* Quectel EG06/EP06/EM06 */
+	{ USB_DEVICE(0x2C7C, 0x0512) }, /* Quectel EG12/EM12/EG18 */
+	{ USB_DEVICE(0x2C7C, 0x0296) }, /* Quectel BG96 */
+	{ USB_DEVICE(0x2C7C, 0x0700) }, /* Quectel BG95/BG77/BG600L-M3/BC69 */
+	{ USB_DEVICE(0x2C7C, 0x0435) }, /* Quectel AG35 */
+	{ USB_DEVICE(0x2C7C, 0x0415) }, /* Quectel AG15 */
+	{ USB_DEVICE(0x2C7C, 0x0452) }, /* Quectel AG520R */
+	{ USB_DEVICE(0x2C7C, 0x0455) }, /* Quectel AG550R */
+	{ USB_DEVICE(0x2C7C, 0x0620) }, /* Quectel EG20 */
+	{ USB_DEVICE(0x2C7C, 0x0800) }, /* Quectel RG500Q/RM500Q/RG510Q/RM510Q */
+#endif
 	{ } /* Terminating entry */
 };
 MODULE_DEVICE_TABLE(usb, option_ids);
@@ -2125,6 +2141,9 @@ static struct usb_serial_driver option_1port_device = {
 #ifdef CONFIG_PM
 	.suspend           = usb_wwan_suspend,
 	.resume            = usb_wwan_resume,
+#if 1 //Added by Quectel
+	.reset_resume      = usb_wwan_resume,
+#endif
 #endif
 };
 

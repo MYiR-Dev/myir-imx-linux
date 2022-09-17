@@ -2,4 +2,4 @@
 
 # required for overlay support
 
-dtb-$(CONFIG_ARCH_MXC) += myd-jx8mma7-lvds-atk10-1.dtb 
+dtb-$(CONFIG_ARCH_MXC) += myd-jx8mma7-lvds-atk10-1.dtb myd-jx8mma7-rpmsg.dtb 

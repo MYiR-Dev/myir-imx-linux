@@ -3181,6 +3181,22 @@ static int fec_enet_alloc_buffers(struct net_device *ndev)
 	return 0;
 }
 
+static void reset_phy(struct fec_enet_private *fep)
+{
+    if (!gpio_is_valid(fep->phy_reset))
+        return;
+
+    gpio_set_value(fep->phy_reset, 0);
+    if (fep->phy_reset_msec > 20)
+        msleep(fep->phy_reset_msec);
+    else
+        usleep_range(fep->phy_reset_msec * 1000,
+                fep->phy_reset_msec * 1000 + 1000);
+    gpio_set_value(fep->phy_reset, 1);
+}
+
+
+
 static int
 fec_enet_open(struct net_device *ndev)
 {
@@ -3191,6 +3207,7 @@ fec_enet_open(struct net_device *ndev)
 	ret = pm_runtime_resume_and_get(&fep->pdev->dev);
 	if (ret < 0)
 		return ret;
+	reset_phy(fep);
 
 	pinctrl_pm_select_default_state(&fep->pdev->dev);
 	ret = fec_enet_clk_enable(ndev, true);
@@ -3635,6 +3652,9 @@ static int fec_reset_phy(struct platform_device *pdev)
 	int msec = 1, phy_post_delay = 0;
 	struct device_node *np = pdev->dev.of_node;
 
+	struct net_device *dev = platform_get_drvdata(pdev);
+        struct fec_enet_private *fep = netdev_priv(dev);
+
 	if (!np)
 		return 0;
 
@@ -3642,12 +3662,16 @@ static int fec_reset_phy(struct platform_device *pdev)
 	/* A sane reset duration should not be longer than 1s */
 	if (!err && msec > 1000)
 		msec = 1;
+	fep->phy_reset_msec = msec;
+
 
 	phy_reset = of_get_named_gpio(np, "phy-reset-gpios", 0);
 	if (phy_reset == -EPROBE_DEFER)
 		return phy_reset;
 	else if (!gpio_is_valid(phy_reset))
 		return 0;
+
+	fep->phy_reset = phy_reset;
 
 	err = of_property_read_u32(np, "phy-reset-post-delay", &phy_post_delay);
 	/* valid reset duration should be less than 1s */

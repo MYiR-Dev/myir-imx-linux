@@ -5,12 +5,6 @@
 
 #include "myir-imx93-11x11.dts"
 
-&adv7535 {
-	status = "disabled";
-};
-
-/delete-node/ &dsi_to_adv7535;
-/delete-node/ &adv7535_to_dsi;
 
 &dsi {
 	#address-cells = <1>;
@@ -19,7 +13,6 @@
 	panel@0 {
 		compatible = "raydium,rm67199";
 		reg = <0>;
-		reset-gpio = <&adp5585gpio 6 GPIO_ACTIVE_LOW>;
 		dsi-lanes = <4>;
 		video-mode = <2>;	/* 0: burst mode
 					 * 1: non-burst mode with sync event
@@ -55,10 +48,6 @@
 	touchscreen@14 {
 		compatible = "goodix,gt1151";
 		reg = <0x14>;
-		interrupt-parent = <&pcal6524>;
-		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
-		irq-gpios = <&pcal6524 7 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&adp5585gpio 9 GPIO_ACTIVE_HIGH>;
 		edge-failling-trigger;
 		touchscreen-size-x = <1080>;
 		touchscreen-size-y = <1920>;

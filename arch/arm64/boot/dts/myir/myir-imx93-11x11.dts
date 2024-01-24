@@ -339,7 +339,18 @@
 	pinctrl-0 = <&pinctrl_lpi2c1>;
 	pinctrl-1 = <&pinctrl_lpi2c1>;
 	status = "okay";
+	
+	eeprom: 24c32@50 {
+		compatible = "atmel,24c32";
+		reg = <0x50>;
+		pagesize = <32>;
+	};
 
+	rtc: rtc@32 {
+		compatible = "epson,rx8025";
+		reg = <0x32>;
+		tatus = "okay";
+    };
 	ptn5150: tcpc@3d {	
 		compatible = "nxp,ptn5150";
 		reg = <0x3d>;

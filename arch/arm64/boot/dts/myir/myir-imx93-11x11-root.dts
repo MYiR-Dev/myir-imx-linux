@@ -5,7 +5,7 @@
 
 /dts-v1/;
 
-#include "imx93-11x11-evk.dts"
+#include "myir-imx93-11x11.dts"
 
 /{
 	interrupt-parent = <&gic>;

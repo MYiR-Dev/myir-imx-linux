@@ -3,7 +3,7 @@
  * Copyright 2022 NXP
  */
 
-#include "imx93-11x11-evk.dts"
+#include "myir-imx93-11x11.dts"
 
 &adv7535 {
 	status = "disabled";

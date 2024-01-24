@@ -59,8 +59,8 @@
 			no-map;
 		};
 
-		rsc_table: rsc-table@2021f000 {
-			reg = <0 0x2021f000 0 0x1000>;
+		rsc_table: rsc-table@2021e000 {
+			reg = <0 0x2021e000 0 0x1000>;
 			no-map;
 		};
 
@@ -198,6 +198,25 @@
 		};
 
 	};
+	leds {
+		compatible = "gpio-leds";
+
+		led-user {
+			label = "am62-sk:blue:heartbeat";
+			gpios = <&at9555 10 GPIO_ACTIVE_HIGH>;
+			max-brightness = <255>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		led-sys {
+			label = "am62-sk:blue:heartbeat";
+			pinctrl-names = "default";
+			pinctrl-1 = <&pinctrl_sysled>;
+			gpios = <&gpio3 21 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+};
 
 &sai1 {
 	#sound-dai-cells = <0>;
@@ -270,12 +289,7 @@
 	};
 };
 
-&flexcan2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_flexcan2>;
-	xceiver-supply = <&reg_can2_stby>;
-	status = "okay";
-};
+
 
 &eqos {
 	pinctrl-names = "default";
@@ -392,6 +406,16 @@
 	pinctrl-0 = <&pinctrl_lpi2c2>;
 	pinctrl-1 = <&pinctrl_lpi2c2>;
 	status = "okay";
+
+	at9555: at9555@20 {
+		compatible = "analogtek,at9555";
+		reg = <0x20>;
+		#gpio-cells = <2>;
+		gpio_base = <130>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		status = "okay";
+	};
 
 	pmic@25 {
 		compatible = "nxp,pca9451a";
@@ -733,6 +757,11 @@
 };
 
 &iomuxc {
+	pinctrl_sysled: pinctrlsysled {
+		fsl,pins = <
+                MX93_PAD_SD3_CMD__GPIO3_IO21               0x0000051E
+			>;
+    };
 
 	pinctrl_uart3: pinctrluart3 {
 		fsl,pins = <

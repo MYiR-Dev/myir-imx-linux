@@ -1244,6 +1244,61 @@ static const struct panel_desc boe_ev121wxm_n10_1850 = {
 	.connector_type = DRM_MODE_CONNECTOR_LVDS,
 };
 
+static const struct display_timing myir_tft_7inch_mode = {
+	.pixelclock = {33000000,33000000,33000000},
+	.hactive = {800,800,800},
+	.hfront_porch = {210,210,210},
+	.hback_porch = {46,46,46},
+	.hsync_len = {1,1,1},
+	.vactive = {480,480,480},
+	.vfront_porch = {23,23,23},
+	.vback_porch = {22,22,22},
+	.vsync_len = {20,20,20},
+};
+
+static const struct panel_desc myir_tft_7inch = {
+	.timings = &myir_tft_7inch_mode,
+	.num_timings = 1,
+	.bpc = 6,
+	.size = {
+		.width = 154,
+		.height = 86,
+
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X24,
+    .bus_flags = DRM_BUS_FLAG_DE_HIGH | DRM_BUS_FLAG_PIXDATA_SAMPLE_NEGEDGE,
+	.connector_type = DRM_MODE_CONNECTOR_DPI,
+};
+
+static const struct drm_display_mode myir_7_inch_lvds_mode = {
+	.clock = 66770,
+	.hdisplay = 1024,
+	.hsync_start = 1024 + 176,
+	.hsync_end = 1024 + 176 + 88,
+	.htotal = 1024 + 176 + 88 + 6,
+	.vdisplay = 600,
+	.vsync_start = 600 + 20,
+	.vsync_end = 600 + 20 + 25,
+	.vtotal = 600 + 20 + 25 + 5,
+};
+
+static const struct panel_desc myir_7_inch_lvds = {
+	.modes = &myir_7_inch_lvds_mode,
+	.bpc = 8,
+	.num_modes = 1,
+	.size = {
+		.width = 154,
+		.height = 85,
+	},
+	.delay = {
+		.prepare = 50,
+		.disable = 50,
+	},
+	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
+	.connector_type = DRM_MODE_CONNECTOR_LVDS,
+};
+
 static const struct drm_display_mode boe_hv070wsa_mode = {
 	.clock = 42105,
 	.hdisplay = 1024,
@@ -4092,6 +4147,12 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "boe,ev121wxm-n10-1850",
 		.data = &boe_ev121wxm_n10_1850,
+	}, {
+		.compatible = "myirtft_panel_7inch",
+		.data = &myir_tft_7inch,
+	}, {
+		.compatible = "myir,7-inch-lvds",
+		.data = &myir_7_inch_lvds,
 	}, {
 		.compatible = "boe,hv070wsa-100",
 		.data = &boe_hv070wsa

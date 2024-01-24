@@ -1270,6 +1270,56 @@ static const struct panel_desc myir_tft_7inch = {
 	.connector_type = DRM_MODE_CONNECTOR_DPI,
 };
 
+static const struct drm_display_mode myir_10_inch_lvds_mode = {
+	// .clock = 71000,
+	// .hdisplay = 1280,
+	// .hsync_start = 1280 + 60 ,
+	// .hsync_end = 1280 + 60 + 17,
+	// .htotal = 1280 + 60 + 17 + 3,
+	// .vdisplay = 800,
+	// .vsync_start = 800 + 20,
+	// .vsync_end = 800 + 20 + 25,
+	// .vtotal = 800 + 20 + 25 + 5,
+
+	.clock = 66770,
+	.hdisplay = 1280,
+	.hsync_start = 1280 + 49,
+	.hsync_end = 1280 + 49 + 33,
+	.htotal = 1280 + 49 + 33 + 17,
+	.vdisplay = 800,
+	.vsync_start = 800 + 1,
+	.vsync_end = 800 + 1 + 7,
+	.vtotal = 800 + 1 + 7 + 15,
+	.flags = DRM_MODE_FLAG_NVSYNC | DRM_MODE_FLAG_NHSYNC,
+	// .pixelclock = { 68900000, 71100000, 73400000 },
+	// .hactive = { 1280, 1280, 1280 },
+	// .hfront_porch = { 65, 80, 95 },
+	// .hback_porch = { 64, 79, 94 },
+	// .hsync_len = { 1, 1, 1 },
+	// .vactive = { 800, 800, 800 },
+	// .vfront_porch = { 7, 11, 14 },
+	// .vback_porch = { 7, 11, 14 },
+	// .vsync_len = { 1, 1, 1 },
+	// .flags = DISPLAY_FLAGS_DE_HIGH,
+};
+
+static const struct panel_desc myir_10_inch_lvds = {
+	.modes = &myir_10_inch_lvds_mode,
+	.bpc = 8,
+	.num_modes = 1,
+	.size = {
+		.width = 230,
+		.height = 150,
+	},
+	.delay = {
+		.prepare = 50,
+		.disable = 50,
+	},
+	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
+	.connector_type = DRM_MODE_CONNECTOR_LVDS,
+};
+
 static const struct drm_display_mode myir_7_inch_lvds_mode = {
 	.clock = 66770,
 	.hdisplay = 1024,
@@ -4153,6 +4203,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "myir,7-inch-lvds",
 		.data = &myir_7_inch_lvds,
+	}, {
+		.compatible = "myir,10-inch-lvds",
+		.data = &myir_10_inch_lvds,
 	}, {
 		.compatible = "boe,hv070wsa-100",
 		.data = &boe_hv070wsa

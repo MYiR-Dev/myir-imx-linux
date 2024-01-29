@@ -299,6 +299,12 @@
 &dphy {
 	status = "okay";
 };
+&flexcan1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan1>;
+	// xceiver-supply = <&reg_can2_stby>;
+	status = "okay";
+};
 
 &eqos {
 	pinctrl-names = "default";
@@ -591,12 +597,24 @@
 
 
 &iomuxc {
-	pinctrl_tyint: typecint {
+	pinctrl_sysled: pinctrlsysled {
 		fsl,pins = <
-                MX93_PAD_GPIO_IO29__GPIO2_IO29             0x0000051E
-		>;
-	};
-	
+                MX93_PAD_SD3_CMD__GPIO3_IO21               0x0000051E
+			>;
+    };
+
+	pinctrl_key: pinctrlkey {
+		fsl,pins = <
+                MX93_PAD_CCM_CLKO1__GPIO3_IO26             0x0000051E
+			>;
+    };
+
+	pinctrl_rgb: pinctrlrgb {
+		fsl,pins = <
+                MX93_PAD_PDM_BIT_STREAM1__GPIO1_IO10       0x0000051E
+			>;
+    };
+
 	pinctrl_lcdif: lcdifgrp {
 		fsl,pins = <
 			MX93_PAD_GPIO_IO00__MEDIAMIX_DISP_CLK		0x31e
@@ -649,10 +667,10 @@
 			>;
     };
 
-	pinctrl_flexcan2: flexcan2grp {
+	pinctrl_flexcan1: flexcan1grp {
 		fsl,pins = <
-			MX93_PAD_GPIO_IO25__CAN2_TX	0x139e
-			MX93_PAD_GPIO_IO27__CAN2_RX	0x139e
+		MX93_PAD_PDM_BIT_STREAM0__CAN1_RX          0x0000057E
+            	MX93_PAD_PDM_CLK__CAN1_TX  				   0x0000057E
 		>;
 	};
 
@@ -811,7 +829,17 @@
 			MX93_PAD_GPIO_IO23__SPDIF_OUT		0x31e
 		>;
 	};
+
+	pinctrl_tyint: typecint {
+		fsl,pins = <
+                MX93_PAD_GPIO_IO29__GPIO2_IO29             0x0000051E
+		>;
+	};
 };
+
+&tpm4 {
+		status = "okay";
+	};
 
 &epxp {
 	status = "okay";

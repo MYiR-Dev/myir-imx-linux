@@ -95,6 +95,39 @@
 		power-domains = <&mlmix>;
 	};
 
+	panel_powr1: regulator-panel_powr1 {
+		compatible = "regulator-fixed";
+		regulator-name = "panel-power1";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpios = <&gpio1 10 GPIO_ACTIVE_LOW>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+	reg_panel_powr2: regulator-panel {
+		compatible = "regulator-fixed";
+		regulator-name = "panel-power1";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpios = <&at9555 0 GPIO_ACTIVE_LOW>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
+
+
+	reg_5640_powr2: regulator-5640 {
+		compatible = "regulator-fixed";
+		regulator-name = "5640-power1";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpios = <&at9555 5 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+		regulator-always-on;
+	};
 	reg_usdhc2_vmmc: regulator-usdhc2 {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
@@ -371,6 +404,39 @@
 	pinctrl-1 = <&pinctrl_lpi2c1>;
 	status = "okay";
 
+	ov5640: camera@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+
+		pinctrl-names ="default";
+		pinctrl-0=<&pinctrl_ov5640_gpio>;
+
+		clocks = <&clk IMX93_CLK_CCM_CKO3>;
+		assigned-clocks = <&clk IMX93_CLK_CCM_CKO3>;
+		assigned-clock-rates = <24000000>;
+		powerdown-gpios = <&gpio4 28 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio3 27 GPIO_ACTIVE_LOW>;
+        clock-names = "xclk";
+
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		mipi_csi;
+		status = "okay";
+
+		port {
+			csi2_cam0: endpoint {
+				remote-endpoint = <&csi2rx0_in_sensor>;
+				data-lanes = <2>;
+				cfg-clk-range = <28>;
+				hs-clk-range = <0x16>;
+				// clock-lanes = <0>;
+				// data-lanes = <1 2>;
+				// link-frequencies = /bits/ 64 <336000000>;
+			};
+		};
+	};
+
 	sgtl5000: audio-codec@a {
 		compatible = "fsl,sgtl5000";
 		reg = <0xa>;
@@ -571,6 +637,20 @@
 	status = "okay";
 };
 
+
+&mipi_csi {
+	status = "okay";
+	port@0 {
+	csi2rx0_in_sensor: endpoint {
+		remote-endpoint = <&csi2_cam0>;
+		bus-type = <4>; /* CSI2 DPHY. */
+				data-lanes = <2>;
+				cfg-clk-range = <28>;
+				hs-clk-range = <0x16>;
+	};
+	};
+};
+
 &usdhc1 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc1>;
@@ -756,6 +836,12 @@
 		>;
 	};
 
+	pinctrl_ov5640_gpio: pinctrl-ov5640-gpio {
+		fsl,pins = <
+                MX93_PAD_CCM_CLKO2__GPIO3_IO27             0x0000057E
+                MX93_PAD_CCM_CLKO3__GPIO4_IO28             0x0000057E
+		>;
+	};
 	pinctrl_usdhc1: usdhc1grp {
 		fsl,pins = <
 			MX93_PAD_SD1_CLK__USDHC1_CLK		0x15fe

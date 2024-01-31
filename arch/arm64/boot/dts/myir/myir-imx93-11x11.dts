@@ -332,6 +332,22 @@
 &dphy {
 	status = "okay";
 };
+
+&dsi {
+ 	status = "okay";
+ 	ports{
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
+
+ 		hdmi:port@1 {
+ 			reg = <1>;
+ 			mipi_dsi_bridge1_out: endpoint {
+ 				remote-endpoint = <&lt9611_1_in>;
+ 				};
+ 			};
+ 		};
+ 		
+};
 &flexcan1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1>;
@@ -490,6 +506,45 @@
 	pinctrl-0 = <&pinctrl_lpi2c2>;
 	pinctrl-1 = <&pinctrl_lpi2c2>;
 	status = "okay";
+	 	hdmi@39 {
+	 	compatible = "lontium,lt9611";
+	 	pinctrl-0 = <&pinctrl_lt9611>;
+	 	pinctrl-names = "default";
+	 	vdd-supply = <&reg_vddio_1v8>;
+	  	vcc-supply = <&reg_vdd_3v3>;
+		
+	 	// ddc-i2c-bus = <&lpi2c2>;
+	 	// hpd-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+	 	// dsi-lanes = <4>;
+	 	reg = <0x39>;
+	 	reset-gpios = <&at9555 9 GPIO_ACTIVE_HIGH>;
+	 	enable-gpios = <&at9555 13 GPIO_ACTIVE_HIGH>;
+	 	interrupts-extended = <&gpio3 23 IRQ_TYPE_EDGE_FALLING>;
+     	// lvds-enabled = <0>;
+     	status = "okay";	    
+
+		 ports {
+		 	#address-cells = <1>;
+		 	#size-cells = <0>;
+
+		 	hdmi_disp: port@0 {
+		 		reg = <0>;
+
+		 		lt9611_1_in: endpoint {
+		 			remote-endpoint = <&mipi_dsi_bridge1_out>;
+		 		};
+		 	};
+/*
+		 	port@2 {
+		 		reg = <2>;
+		 		lt9611_out: endpoint {
+		 			remote-endpoint = <&hdmi_con>;
+		 		};
+		 	};
+		 	*/
+		 	
+		 };
+	};
 
 	at9555: at9555@20 {
 		compatible = "analogtek,at9555";
@@ -677,6 +732,47 @@
 
 
 &iomuxc {
+
+
+	pinctrl_lcdif: lcdifgrp {
+		fsl,pins = <
+			MX93_PAD_GPIO_IO00__MEDIAMIX_DISP_CLK		0x31e
+			MX93_PAD_GPIO_IO01__MEDIAMIX_DISP_DE		0x31e
+			MX93_PAD_GPIO_IO02__MEDIAMIX_DISP_VSYNC		0x31e
+			MX93_PAD_GPIO_IO03__MEDIAMIX_DISP_HSYNC		0x31e
+			MX93_PAD_GPIO_IO04__MEDIAMIX_DISP_DATA00	0x31e
+			MX93_PAD_GPIO_IO05__MEDIAMIX_DISP_DATA01	0x31e
+			MX93_PAD_GPIO_IO06__MEDIAMIX_DISP_DATA02	0x31e
+			MX93_PAD_GPIO_IO07__MEDIAMIX_DISP_DATA03	0x31e
+			MX93_PAD_GPIO_IO08__MEDIAMIX_DISP_DATA04	0x31e
+			MX93_PAD_GPIO_IO09__MEDIAMIX_DISP_DATA05	0x31e
+			MX93_PAD_GPIO_IO10__MEDIAMIX_DISP_DATA06	0x31e
+			MX93_PAD_GPIO_IO11__MEDIAMIX_DISP_DATA07	0x31e
+			MX93_PAD_GPIO_IO12__MEDIAMIX_DISP_DATA08	0x31e
+			MX93_PAD_GPIO_IO13__MEDIAMIX_DISP_DATA09	0x31e
+			MX93_PAD_GPIO_IO14__MEDIAMIX_DISP_DATA10	0x31e
+			MX93_PAD_GPIO_IO15__MEDIAMIX_DISP_DATA11	0x31e
+			MX93_PAD_GPIO_IO16__MEDIAMIX_DISP_DATA12	0x31e
+			MX93_PAD_GPIO_IO17__MEDIAMIX_DISP_DATA13	0x31e
+			MX93_PAD_GPIO_IO18__MEDIAMIX_DISP_DATA14	0x31e
+			MX93_PAD_GPIO_IO19__MEDIAMIX_DISP_DATA15	0x31e
+			MX93_PAD_GPIO_IO20__MEDIAMIX_DISP_DATA16	0x31e
+			MX93_PAD_GPIO_IO21__MEDIAMIX_DISP_DATA17	0x31e
+			MX93_PAD_GPIO_IO22__MEDIAMIX_DISP_DATA18   0x0000051E
+            MX93_PAD_GPIO_IO23__MEDIAMIX_DISP_DATA19   0x0000051E
+            MX93_PAD_GPIO_IO24__MEDIAMIX_DISP_DATA20   0x0000051E
+            MX93_PAD_GPIO_IO25__MEDIAMIX_DISP_DATA21   0x0000051E
+            MX93_PAD_GPIO_IO26__MEDIAMIX_DISP_DATA22   0x0000051E
+            MX93_PAD_GPIO_IO27__MEDIAMIX_DISP_DATA23   0x0000051E
+		>;
+	};
+
+	pinctrl_lt9611: pinctrl9611 {
+		fsl,pins = <
+            MX93_PAD_SD3_DATA1__GPIO3_IO23             0x0000057E
+			>;
+        };
+
 	pinctrl_sysled: pinctrlsysled {
 		fsl,pins = <
                 MX93_PAD_SD3_CMD__GPIO3_IO21               0x0000051E

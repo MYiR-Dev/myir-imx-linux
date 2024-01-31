@@ -146,10 +146,7 @@ static int rx8025_check_validity(struct device *dev)
 	}
 
 	xstp = rx8025_is_osc_stopped(drvdata->model, ctrl2);
-	if (xstp) {
-		dev_warn(dev, "crystal stopped, date is invalid\n");
-		return -EINVAL;
-	}
+
 
 	return 0;
 }

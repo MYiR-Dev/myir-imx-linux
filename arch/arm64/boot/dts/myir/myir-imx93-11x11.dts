@@ -394,10 +394,6 @@
 	assigned-clock-rates = <445333333>, <148444444>, <400000000>, <133333333>;
 };
 
-&lpm {
-	soc-supply = <&buck1>;
-	status = "okay";
-};
 
 /*
  * When add, delete or change any target device setting in &lpi2c1,

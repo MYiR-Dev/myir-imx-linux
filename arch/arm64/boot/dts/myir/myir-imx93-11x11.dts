@@ -458,7 +458,7 @@
 	};
 
 	rtc: rtc@32 {
-		compatible = "epson,rx8025";
+		compatible = "epson,rx8025t";
 		reg = <0x32>;
 		tatus = "okay";
     };

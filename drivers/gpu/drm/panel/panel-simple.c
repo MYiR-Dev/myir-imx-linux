@@ -1321,15 +1321,16 @@ static const struct panel_desc myir_10_inch_lvds = {
 };
 
 static const struct drm_display_mode myir_7_inch_lvds_mode = {
-	.clock = 66770,
-	.hdisplay = 1024,
-	.hsync_start = 1024 + 176,
-	.hsync_end = 1024 + 176 + 88,
-	.htotal = 1024 + 176 + 88 + 6,
+	.clock = 74600,
+	.hdisplay = 1025,
+	.hsync_start = 1025 + 49,
+	.hsync_end = 1025 + 49 + 33,
+	.htotal = 1025 + 49 + 33 + 17,
 	.vdisplay = 600,
 	.vsync_start = 600 + 20,
-	.vsync_end = 600 + 20 + 25,
-	.vtotal = 600 + 20 + 25 + 5,
+	.vsync_end = 600 + 20 + 90,
+	.vtotal = 600 + 20 + 90 + 15,
+	.flags = DRM_MODE_FLAG_NVSYNC | DRM_MODE_FLAG_NHSYNC,
 };
 
 static const struct panel_desc myir_7_inch_lvds = {

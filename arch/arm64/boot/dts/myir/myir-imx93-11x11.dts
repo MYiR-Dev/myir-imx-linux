@@ -128,17 +128,17 @@
 		regulator-boot-on;
 		regulator-always-on;
 	};
-	reg_usdhc2_vmmc: regulator-usdhc2 {
-		compatible = "regulator-fixed";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_reg_usdhc2_vmmc>;
-		regulator-name = "VSD_3V3";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio3 7 GPIO_ACTIVE_HIGH>;
-		off-on-delay-us = <12000>;
-		enable-active-high;
-	};
+	// reg_usdhc2_vmmc: regulator-usdhc2 {
+	// 	compatible = "regulator-fixed";
+	// 	pinctrl-names = "default";
+	// 	pinctrl-0 = <&pinctrl_reg_usdhc2_vmmc>;
+	// 	regulator-name = "VSD_3V3";
+	// 	regulator-min-microvolt = <3300000>;
+	// 	regulator-max-microvolt = <3300000>;
+	// 	gpio = <&gpio3 7 GPIO_ACTIVE_HIGH>;
+	// 	off-on-delay-us = <12000>;
+	// 	enable-active-high;
+	// };
 
 	reg_vdd_12v: regulator-vdd-12v {
 		compatible = "regulator-fixed";
@@ -394,6 +394,10 @@
 	assigned-clock-rates = <445333333>, <148444444>, <400000000>, <133333333>;
 };
 
+&lpm {
+	soc-supply = <&buck1>;
+	status = "okay";
+};
 
 /*
  * When add, delete or change any target device setting in &lpi2c1,
@@ -534,6 +538,9 @@
 	pmic@25 {
 		compatible = "nxp,pca9451a";
 		reg = <0x25>;
+		pinctrl = <&pinctrl_reg_usdhc2_vmmc>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
 
 		regulators {
 			buck1: BUCK1 {
@@ -694,7 +701,7 @@
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>, <&pinctrl_usdhc2_gpio>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>, <&pinctrl_usdhc2_gpio>;
 	cd-gpios = <&gpio3 00 GPIO_ACTIVE_LOW>;
-	vmmc-supply = <&reg_usdhc2_vmmc>;
+	// vmmc-supply = <&reg_usdhc2_vmmc>;
 	bus-width = <4>;
 	status = "okay";
 	no-sdio;

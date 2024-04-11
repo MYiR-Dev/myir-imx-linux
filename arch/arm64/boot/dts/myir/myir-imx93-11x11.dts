@@ -218,6 +218,13 @@
 		vin-supply = <&reg_vaa_sel>;
 	};
 
+	mipi_csi_xtal24m: mipi_csi_xtal24m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+		clock-output-names = "xtal_24MHz";
+	};
+
 	sgtl5000_mclk: sgtl5000-mclk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
@@ -419,9 +426,9 @@
 		pinctrl-names ="default";
 		pinctrl-0=<&pinctrl_ov5640_gpio>;
 
-		clocks = <&clk IMX93_CLK_CCM_CKO3>;
-		assigned-clocks = <&clk IMX93_CLK_CCM_CKO3>;
-		assigned-clock-rates = <24000000>;
+		clocks = <&mipi_csi_xtal24m>;
+		// assigned-clocks = <&clk IMX93_CLK_CCM_CKO3>;
+		// assigned-clock-rates = <24000000>;
 		powerdown-gpios = <&gpio4 28 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&gpio3 27 GPIO_ACTIVE_LOW>;
         clock-names = "xclk";
@@ -435,12 +442,9 @@
 		port {
 			csi2_cam0: endpoint {
 				remote-endpoint = <&csi2rx0_in_sensor>;
-				data-lanes = <2>;
-				cfg-clk-range = <28>;
-				hs-clk-range = <0x16>;
-				// clock-lanes = <0>;
-				// data-lanes = <1 2>;
-				// link-frequencies = /bits/ 64 <336000000>;
+				data-lanes = <1 2>;
+				// cfg-clk-range = <28>;
+				// hs-clk-range = <0x16>;
 			};
 		};
 	};

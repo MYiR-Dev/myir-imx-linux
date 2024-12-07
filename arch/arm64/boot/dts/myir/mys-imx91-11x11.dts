@@ -28,12 +28,12 @@
 		linux,cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			alloc-ranges = <0 0x80000000 0 0x40000000>;
+			alloc-ranges = <0 0x80000000 0 0x20000000>;
 			size = <0 0x2000000>;
 			linux,cma-default;
 		};
 
-		ele_reserved: ele-reserved@a4120000 {
+		ele_reserved: ele-reserved@84120000 {
 			compatible = "shared-dma-pool";
 			reg = <0 0x84120000 0 0x100000>;
 			no-map;
@@ -61,6 +61,19 @@
 		enable-active-high;
 	};
 
+	reg_power: regulator-power{
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_power>;
+		regulator-name = "UART2_RXD_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio1 6 GPIO_ACTIVE_HIGH>;
+		off-on-delay-us = <12000>;
+		enable-active-high;
+		regulator-boot-on;
+    	regulator-always-on;
+	};
 	reg_vdd_12v: regulator-vdd-12v {
 		compatible = "regulator-fixed";
 		regulator-name = "reg_vdd_12v";
@@ -520,7 +533,11 @@
 			MX91_PAD_CCM_CLKO1__GPIO3_IO26             0x0000011E
 		>;
 	};
-
+	pinctrl_power: power {
+		fsl,pins = <
+	        MX91_PAD_UART2_RXD__GPIO1_IO6              0x0000051E
+		>;
+	};
 	pinctrl_eqos: eqosgrp {
 		fsl,pins = <
 			MX91_PAD_ENET1_MDC__ENET1_MDC			0x57e

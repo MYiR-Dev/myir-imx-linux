@@ -40,7 +40,14 @@
 		};
 	};
 
-
+	reg_can2_stby: regulator-can2-stby {
+		compatible = "regulator-fixed";
+		regulator-name = "can2-stby";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio1 10 GPIO_ACTIVE_LOW>;
+		enable-active-low;
+	};
 
 	reg_vref_1v8: regulator-adc-vref {
 		compatible = "regulator-fixed";
@@ -282,13 +289,13 @@
 	status = "okay";
 };
 
-// &flexcan2 {
-// 	pinctrl-names = "default", "sleep";
-// 	pinctrl-0 = <&pinctrl_flexcan2>;
-// 	pinctrl-1 = <&pinctrl_flexcan2_sleep>;
-// 	xceiver-supply = <&reg_can2_stby>;
-// 	status = "okay";
-// };
+&flexcan1 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_flexcan1>;
+
+	xceiver-supply = <&reg_can2_stby>;
+	status = "okay";
+};
 
 &mu1 {
 	status = "okay";
@@ -648,11 +655,13 @@
 			MX91_PAD_CCM_CLKO1__GPIO3_IO26             0x0000011E
 		>;
 	};
+
 	pinctrl_power: power {
 		fsl,pins = <
 	        MX91_PAD_UART2_RXD__GPIO1_IO6              0x0000051E
 		>;
 	};
+
 	pinctrl_eqos: eqosgrp {
 		fsl,pins = <
 			MX91_PAD_ENET1_MDC__ENET1_MDC			0x57e
@@ -729,18 +738,14 @@
 		>;
 	};
 
-	pinctrl_flexcan2: flexcan2grp {
+	pinctrl_flexcan1: flexcan1grp {
 		fsl,pins = <
-			MX91_PAD_GPIO_IO25__CAN2_TX	0x139e
-			MX91_PAD_GPIO_IO27__CAN2_RX	0x139e
+            MX91_PAD_GPIO_IO28__CAN1_TX                0x0000051E
+            MX91_PAD_GPIO_IO29__CAN1_RX                0x0000051E
+			MX91_PAD_PDM_BIT_STREAM1__GPIO1_IO10       0x0000051E
 		>;
 	};
-	pinctrl_flexcan2_sleep: flexcan2sleepgrp {
-		fsl,pins = <
-			MX91_PAD_GPIO_IO25__GPIO2_IO25  0x31e
-			MX91_PAD_GPIO_IO27__GPIO2_IO27	0x31e
-		>;
-	};
+
 
 	pinctrl_lcdif: lcdifgrp {
 		fsl,pins = <

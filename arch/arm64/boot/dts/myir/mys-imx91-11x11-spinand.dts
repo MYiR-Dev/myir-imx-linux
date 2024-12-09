@@ -5,17 +5,6 @@
 
 #include "mys-imx91-11x11.dts"
 
-&reg_usdhc3_vmmc {
-	status = "disabled";
-};
-
-&usdhc3_pwrseq {
-	status = "disabled";
-};
-
-&usdhc3 {
-	status = "disabled";
-};
 
 &flexspi1 {
 	pinctrl-names = "default", "sleep";

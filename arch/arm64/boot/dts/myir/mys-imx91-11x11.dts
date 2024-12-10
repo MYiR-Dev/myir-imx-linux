@@ -350,6 +350,13 @@
 	pinctrl-1 = <&pinctrl_lpi2c1>;
 	status = "okay";
 
+	pcf2131: rtc@53 {
+      	compatible = "nxp,pcf2131";
+      	reg = <0x53>;
+        interrupt-parent = <&pcal6524>;
+      	interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
+        status = "okay";
+    };
 	// codec: wm8962@1a {
 	// 	compatible = "wlf,wm8962";
 	// 	reg = <0x1a>;
@@ -535,10 +542,18 @@
 	status = "okay";
 };
 
+&lpuart3 { /* 485 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3>;
+	rts-gpios =  <&gpio2 25 GPIO_ACTIVE_HIGH>;
+	rs485-rx-during-tx;
+    linux,rs485-enabled-at-boot-time;
+	status = "okay";
+};
 &lpuart5 {
 	/* BT */
 	pinctrl-names = "default";
-	pinctrl-assert-gpios = <&pcal6524 19 GPIO_ACTIVE_HIGH>;
+	/*pinctrl-assert-gpios = <&pcal6524 19 GPIO_ACTIVE_HIGH>; */
 	pinctrl-0 = <&pinctrl_uart5>;
 	status = "okay";
 
@@ -762,6 +777,13 @@
 		>;
 	};
 
+    pinctrl_uart3: pinctrluart3 {
+        fsl,pins = <
+            MX91_PAD_GPIO_IO14__LPUART3_TX             0x0000051E
+            MX91_PAD_GPIO_IO15__LPUART3_RX             0x0000051E
+			MX91_PAD_GPIO_IO25__GPIO2_IO25             0x0000051E
+        >;
+     };
 
 	pinctrl_usdhc1: usdhc1grp {
 		fsl,pins = <

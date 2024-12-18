@@ -755,7 +755,6 @@
 		fsl,pins = <
             MX91_PAD_GPIO_IO28__CAN1_TX                0x0000051E
             MX91_PAD_GPIO_IO29__CAN1_RX                0x0000051E
-			MX91_PAD_PDM_BIT_STREAM1__GPIO1_IO10       0x0000051E
 		>;
 	};
 

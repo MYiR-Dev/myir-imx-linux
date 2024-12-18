@@ -328,7 +328,6 @@
 		reg = <0x50>;
 		pagesize = <32>;
 	};
-
 	rtc: rtc@32 {
 		compatible = "epson,rx8025t";
 		reg = <0x32>;
@@ -487,6 +486,13 @@
 };
 
 &iomuxc {
+
+	pinctrl_EEP: EEP {
+		fsl,pins = <
+			MX91_PAD_CCM_CLKO4__GPIO4_IO29             0x0000051E
+		>;
+	};
+
 	pinctrl_key: key {
 		fsl,pins = <
 			MX91_PAD_CCM_CLKO1__GPIO3_IO26             0x0000011E

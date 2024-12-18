@@ -124,7 +124,24 @@
 
         };
 
+	leds {
+		compatible = "gpio-leds";
 
+		led-user {
+			label = "91x:led1";
+			gpios = <&at9555 10 GPIO_ACTIVE_HIGH>;
+			max-brightness = <255>;
+			linux,default-trigger = "heartbeat";
+		};
+
+		led-sys {
+			label = "91x:led2";
+			pinctrl-names = "default";
+			pinctrl-1 = <&pinctrl_sysled>;
+			gpios = <&gpio3 21 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
 
 
 	// sound-wm8962 {
@@ -306,6 +323,17 @@
 	pinctrl-1 = <&pinctrl_lpi2c1>;
 	status = "okay";
 
+	eeprom: 24c32@50 {
+		compatible = "atmel,24c32";
+		reg = <0x50>;
+		pagesize = <32>;
+	};
+
+	rtc: rtc@32 {
+		compatible = "epson,rx8025t";
+		reg = <0x32>;
+		tatus = "okay";
+    };
 
 	// codec: wm8962@1a {
 	// 	compatible = "wlf,wm8962";
@@ -343,6 +371,16 @@
 	pinctrl-0 = <&pinctrl_lpi2c2>;
 	pinctrl-1 = <&pinctrl_lpi2c2>;
 	status = "okay";
+
+	at9555: at9555@20 {
+		compatible = "analogtek,at9555";
+		reg = <0x20>;
+		#gpio-cells = <2>;
+		gpio_base = <130>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		status = "okay";
+	};
 
 	
 
@@ -454,6 +492,12 @@
 			MX91_PAD_CCM_CLKO1__GPIO3_IO26             0x0000011E
 		>;
 	};
+
+	pinctrl_sysled: pinctrlsysled {
+		fsl,pins = <
+                MX91_PAD_SD3_CMD__GPIO3_IO21               0x0000051E
+			>;
+    };
 
 	pinctrl_power: power {
 		fsl,pins = <

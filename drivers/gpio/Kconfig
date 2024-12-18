@@ -779,6 +779,11 @@ config GPIO_ZYNQ
 	help
 	  Say yes here to support Xilinx Zynq GPIO controller.
 
+config GPIO_AT9555
+    tristate "AT9555 GPIO support"
+    help
+    Say yes here to support AT9555 GPIO controller.
+
 config GPIO_ZYNQMP_MODEPIN
 	tristate "ZynqMP ps-mode pin GPIO configuration driver"
 	depends on ZYNQMP_FIRMWARE

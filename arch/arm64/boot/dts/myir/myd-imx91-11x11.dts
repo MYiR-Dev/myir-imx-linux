@@ -270,7 +270,7 @@
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_flexcan1>;
 
-	xceiver-supply = <&reg_can2_stby>;
+	// xceiver-supply = <&reg_can2_stby>;
 	status = "okay";
 };
 
@@ -308,7 +308,28 @@
 };
 
 
+&fec {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_fec>;
+	// pinctrl-1 = <&pinctrl_fec_sleep>;
+	phy-mode = "rgmii-id";
+	phy-handle = <&ethphy2>;
+	fsl,magic-packet;
+	status = "okay";
 
+	mdio {
+		compatible = "snps,dwmac-mdio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clock-frequency = <5000000>;
+
+		ethphy2: ethernet-phy@2 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <6>;
+			eee-broken-1000t;
+		};
+	};
+};
 
 /*
  * When add, delete or change any target device setting in &lpi2c1,
@@ -398,9 +419,9 @@
 &lpuart3 { /* 485 */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart3>;
-	rts-gpios =  <&gpio2 25 GPIO_ACTIVE_HIGH>;
+    rts-gpios = <&at9555 12 GPIO_ACTIVE_HIGH>;
 	rs485-rx-during-tx;
-    linux,rs485-enabled-at-boot-time;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 };
 &lpuart5 {
@@ -413,6 +434,12 @@
 	bluetooth {
 		compatible = "nxp,88w8987-bt";
 	};
+};
+
+&lpuart6 { /* 232 */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart6>;
+	status = "okay";
 };
 
 &media_blk_ctrl {
@@ -549,24 +576,24 @@
 	// 	>;
 	// };
 
-	// pinctrl_fec: fecgrp {
-	// 	fsl,pins = <
-	// 		MX91_PAD_ENET2_MDC__ENET2_MDC			0x57e
-	// 		MX91_PAD_ENET2_MDIO__ENET2_MDIO			0x57e
-	// 		MX91_PAD_ENET2_RD0__ENET2_RGMII_RD0		0x57e
-	// 		MX91_PAD_ENET2_RD1__ENET2_RGMII_RD1		0x57e
-	// 		MX91_PAD_ENET2_RD2__ENET2_RGMII_RD2		0x57e
-	// 		MX91_PAD_ENET2_RD3__ENET2_RGMII_RD3		0x57e
-	// 		MX91_PAD_ENET2_RXC__ENET2_RGMII_RXC		0x5fe
-	// 		MX91_PAD_ENET2_RX_CTL__ENET2_RGMII_RX_CTL	0x57e
-	// 		MX91_PAD_ENET2_TD0__ENET2_RGMII_TD0		0x57e
-	// 		MX91_PAD_ENET2_TD1__ENET2_RGMII_TD1		0x57e
-	// 		MX91_PAD_ENET2_TD2__ENET2_RGMII_TD2		0x57e
-	// 		MX91_PAD_ENET2_TD3__ENET2_RGMII_TD3		0x57e
-	// 		MX91_PAD_ENET2_TXC__ENET2_RGMII_TXC		0x5fe
-	// 		MX91_PAD_ENET2_TX_CTL__ENET2_RGMII_TX_CTL	0x57e
-	// 	>;
-	// };
+	pinctrl_fec: fecgrp {
+		fsl,pins = <
+			MX91_PAD_ENET2_MDC__ENET2_MDC			0x57e
+			MX91_PAD_ENET2_MDIO__ENET2_MDIO			0x57e
+			MX91_PAD_ENET2_RD0__ENET2_RGMII_RD0		0x57e
+			MX91_PAD_ENET2_RD1__ENET2_RGMII_RD1		0x57e
+			MX91_PAD_ENET2_RD2__ENET2_RGMII_RD2		0x57e
+			MX91_PAD_ENET2_RD3__ENET2_RGMII_RD3		0x57e
+			MX91_PAD_ENET2_RXC__ENET2_RGMII_RXC		0x5fe
+			MX91_PAD_ENET2_RX_CTL__ENET2_RGMII_RX_CTL	0x57e
+			MX91_PAD_ENET2_TD0__ENET2_RGMII_TD0		0x57e
+			MX91_PAD_ENET2_TD1__ENET2_RGMII_TD1		0x57e
+			MX91_PAD_ENET2_TD2__ENET2_RGMII_TD2		0x57e
+			MX91_PAD_ENET2_TD3__ENET2_RGMII_TD3		0x57e
+			MX91_PAD_ENET2_TXC__ENET2_RGMII_TXC		0x5fe
+			MX91_PAD_ENET2_TX_CTL__ENET2_RGMII_TX_CTL	0x57e
+		>;
+	};
 
 	// pinctrl_fec_sleep: fecsleepgrp {
 	// 	fsl,pins = <
@@ -589,8 +616,8 @@
 
 	pinctrl_flexcan1: flexcan1grp {
 		fsl,pins = <
-            MX91_PAD_GPIO_IO28__CAN1_TX                0x0000051E
-            MX91_PAD_GPIO_IO29__CAN1_RX                0x0000051E
+                MX91_PAD_PDM_BIT_STREAM0__CAN1_RX          0x0000051E
+                MX91_PAD_PDM_CLK__CAN1_TX                  0x0000051E
 		>;
 	};
 
@@ -635,7 +662,14 @@
         fsl,pins = <
             MX91_PAD_GPIO_IO14__LPUART3_TX             0x0000051E
             MX91_PAD_GPIO_IO15__LPUART3_RX             0x0000051E
-			MX91_PAD_GPIO_IO25__GPIO2_IO25             0x0000051E
+        >;
+     };
+
+
+	pinctrl_uart6: pinctrluart6 {
+        fsl,pins = <
+            MX91_PAD_GPIO_IO04__LPUART6_TX             0x0000051E
+            MX91_PAD_GPIO_IO05__LPUART6_RX             0x0000051E
         >;
      };
 

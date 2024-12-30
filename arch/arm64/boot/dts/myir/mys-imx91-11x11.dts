@@ -137,7 +137,7 @@
 		regulator-name = "WLAN_EN";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&pcal6524 18 GPIO_ACTIVE_HIGH>;
+		gpio = <&pcal6524 3 GPIO_ACTIVE_HIGH>;
 		/*
 		 * IW612 wifi chip needs more delay than other wifi chips to complete
 		 * the host interface initialization after power up, otherwise the
@@ -150,8 +150,15 @@
 
 	usdhc1_pwrseq: usdhc1_pwrseq {
 		compatible = "mmc-pwrseq-simple";
-		reset-gpios = <&pcal6524 22 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&pcal6524 18 GPIO_ACTIVE_LOW>;
 	};
+
+	clk_ext_12m: clock@0 {
+    compatible = "fixed-clock";
+    #clock-cells = <0>;
+    clock-frequency = <12000000>;
+	};
+
 
 	// reg_audio_pwr: regulator-audio-pwr {
 	// 	compatible = "regulator-fixed";
@@ -380,6 +387,36 @@
       	interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
         status = "okay";
     };
+
+
+	ov5640: camera@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+		pinctrl-names ="default";
+		pinctrl-0=<&pinctrl_parallel_csi>;
+		reset-gpios = <&gpio4 25 GPIO_ACTIVE_HIGH>;
+    	powerdown-gpios  = <&gpio4 26 GPIO_ACTIVE_HIGH>;
+		clocks = <&clk_ext_12m>;
+    	assigned-clocks = <&clk_ext_12m>;
+    	assigned-clock-rates = <12000000>; // 12 MHz
+    	clock-names = "xclk";
+    	mclk = <12000000>;  
+		status = "okay";
+
+		port {
+			dvp5640_ep: endpoint {
+				remote-endpoint = <&parallel_csi_ep>;
+				// bus-type = <5>; /* V4L2_FWNODE_BUS_TYPE_PARALLEL */
+	            bus-width = <8>;
+           		// data-shift = <2>; /* lines 9:2 are used */
+                hsync-active = <0>;
+                vsync-active = <1>;
+                pclk-sample = <1>;
+				link-frequencies = /bits/ 64 <70000000>;
+			};
+		};
+	};
+
 	// codec: wm8962@1a {
 	// 	compatible = "wlf,wm8962";
 	// 	reg = <0x1a>;
@@ -653,7 +690,51 @@
 	status = "okay";
 };
 
+&cameradev {
+    parallel_csi;
+    status = "okay";
+};
+
+&isi_0 {
+    interface = <6 0 2>;
+    status = "okay";
+
+    cap_device {
+        status = "okay";
+    };
+};
+
+&parallel_csi {
+    status = "okay";
+
+    port {
+        parallel_csi_ep: endpoint {
+            remote-endpoint = <&dvp5640_ep>;
+        };
+    };
+};
+
 &iomuxc {
+
+	 pinctrl_parallel_csi: ci_pi {
+        fsl,pins = <
+	        MX91_PAD_ENET2_MDIO__MEDIAMIX_CAM_DATA0    0x0000051E
+            MX91_PAD_ENET2_RD0__MEDIAMIX_CAM_DATA7     0x0000051E
+            MX91_PAD_ENET2_RXC__MEDIAMIX_CAM_DATA6     0x0000051E
+            MX91_PAD_ENET2_RX_CTL__MEDIAMIX_CAM_DATA5  0x0000051E
+            MX91_PAD_ENET2_TD0__MEDIAMIX_CAM_DATA2     0x0000051E
+            MX91_PAD_ENET2_TD1__MEDIAMIX_CAM_DATA1     0x0000051E
+            MX91_PAD_ENET2_TXC__MEDIAMIX_CAM_DATA4     0x0000051E
+            MX91_PAD_ENET2_TX_CTL__MEDIAMIX_CAM_DATA3  0x0000051E
+			MX91_PAD_ENET2_TD2__MEDIAMIX_CAM_HSYNC     0x0000051E
+            MX91_PAD_ENET2_TD3__MEDIAMIX_CAM_VSYNC     0x0000051E
+			MX91_PAD_ENET2_MDC__MEDIAMIX_CAM_CLK       0x0000051E
+			MX91_PAD_ENET2_RD1__GPIO4_IO25             0x0000051E
+            MX91_PAD_ENET2_RD2__GPIO4_IO26             0x0000051E
+
+        >;
+    };
+	
 	pinctrl_key: key {
 		fsl,pins = <
 			MX91_PAD_CCM_CLKO1__GPIO3_IO26             0x0000011E

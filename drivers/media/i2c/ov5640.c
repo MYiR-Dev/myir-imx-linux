@@ -3066,7 +3066,7 @@ static int ov5640_set_framefmt(struct ov5640_dev *sensor,
 
 	/* FORMAT CONTROL00: YUV and RGB formatting */
 	ret = ov5640_write_reg(sensor, OV5640_REG_FORMAT_CONTROL00,
-			       pixfmt->ctrl00);
+			       0x30);
 	if (ret)
 		return ret;
 

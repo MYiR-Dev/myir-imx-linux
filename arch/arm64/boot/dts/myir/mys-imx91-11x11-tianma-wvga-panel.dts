@@ -5,8 +5,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/pwm/pwm.h>
-#include "mys-imx91-11x11.dts"
-
+#include "mys-imx91-11x11-mqs.dts"
 / {
     backlight: backlight {
         compatible = "pwm-backlight";

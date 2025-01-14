@@ -79,6 +79,8 @@ typedef int (*proc_write_t)(struct file *, char *, size_t);
 extern void proc_root_init(void);
 extern void proc_flush_pid(struct pid *);
 
+static inline void *PDE_DATA(const struct inode *inode) {BUG(); return NULL;}
+
 extern struct proc_dir_entry *proc_symlink(const char *,
 		struct proc_dir_entry *, const char *);
 struct proc_dir_entry *_proc_mkdir(const char *, umode_t, struct proc_dir_entry *, void *, bool);
@@ -92,6 +94,9 @@ struct proc_dir_entry *proc_create_mount_point(const char *name);
 struct proc_dir_entry *proc_create_seq_private(const char *name, umode_t mode,
 		struct proc_dir_entry *parent, const struct seq_operations *ops,
 		unsigned int state_size, void *data);
+
+extern void *PDE_DATA(const struct inode *);
+
 #define proc_create_seq_data(name, mode, parent, ops, data) \
 	proc_create_seq_private(name, mode, parent, ops, 0, data)
 #define proc_create_seq(name, mode, parent, ops) \
@@ -157,9 +162,6 @@ extern void bpf_iter_fini_seq_net(void *priv_data);
 int proc_pid_arch_status(struct seq_file *m, struct pid_namespace *ns,
 			struct pid *pid, struct task_struct *task);
 #endif /* CONFIG_PROC_PID_ARCH_STATUS */
-
-void arch_report_meminfo(struct seq_file *m);
-void arch_proc_pid_thread_features(struct seq_file *m, struct task_struct *task);
 
 #else /* CONFIG_PROC_FS */
 

@@ -168,6 +168,7 @@ enum ieee80211_regulatory_flags {
 	REGULATORY_ENABLE_RELAX_NO_IR           = BIT(5),
 	/* reuse bit 6 next time */
 	REGULATORY_WIPHY_SELF_MANAGED		= BIT(7),
+	 REGULATORY_IGNORE_STALE_KICKOFF         = BIT(6),
 };
 
 struct ieee80211_freq_range {

@@ -110,6 +110,28 @@
 	// 	enable-active-high;
 	// };
 
+	sgtl5000_mclk: sgtl5000-mclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <11289600>;
+	};
+
+
+	reg_vdd_3v3: regulator-vdd {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <4000>;
+		enable-active-high;
+	};
+
+	reg_vref_1v8: regulator-adc-vref {
+		compatible = "regulator-fixed";
+		regulator-name = "vref_1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
 
 
 
@@ -168,41 +190,41 @@
 	// 		"IN1R", "AMIC";
 	// };
 
-	sound-micfil {
-		compatible = "fsl,imx-audio-card";
-		model = "micfil-audio";
-		pri-dai-link {
-			link-name = "micfil hifi";
-			format = "i2s";
-			cpu {
-				sound-dai = <&micfil>;
-			};
-		};
-	};
+	// sound-micfil {
+	// 	compatible = "fsl,imx-audio-card";
+	// 	model = "micfil-audio";
+	// 	pri-dai-link {
+	// 		link-name = "micfil hifi";
+	// 		format = "i2s";
+	// 		cpu {
+	// 			sound-dai = <&micfil>;
+	// 		};
+	// 	};
+	// };
 
-	bt_sco_codec: bt_sco_codec {
-		#sound-dai-cells = <1>;
-		compatible = "linux,bt-sco";
-	};
+	// bt_sco_codec: bt_sco_codec {
+	// 	#sound-dai-cells = <1>;
+	// 	compatible = "linux,bt-sco";
+	// };
 
-	sound-bt-sco {
-		compatible = "simple-audio-card";
-		simple-audio-card,name = "bt-sco-audio";
-		simple-audio-card,format = "dsp_a";
-		simple-audio-card,bitclock-inversion;
-		simple-audio-card,frame-master = <&btcpu>;
-		simple-audio-card,bitclock-master = <&btcpu>;
+	// sound-bt-sco {
+	// 	compatible = "simple-audio-card";
+	// 	simple-audio-card,name = "bt-sco-audio";
+	// 	simple-audio-card,format = "dsp_a";
+	// 	simple-audio-card,bitclock-inversion;
+	// 	simple-audio-card,frame-master = <&btcpu>;
+	// 	simple-audio-card,bitclock-master = <&btcpu>;
 
-		btcpu: simple-audio-card,cpu {
-			sound-dai = <&sai1>;
-			dai-tdm-slot-num = <2>;
-			dai-tdm-slot-width = <16>;
-		};
+	// 	btcpu: simple-audio-card,cpu {
+	// 		sound-dai = <&sai1>;
+	// 		dai-tdm-slot-num = <2>;
+	// 		dai-tdm-slot-width = <16>;
+	// 	};
 
-		simple-audio-card,codec {
-			sound-dai = <&bt_sco_codec 1>;
-		};
-	};
+	// 	simple-audio-card,codec {
+	// 		sound-dai = <&bt_sco_codec 1>;
+	// 	};
+	// };
 
 	// sound-xcvr {
 	// 	compatible = "fsl,imx-audio-card";
@@ -214,6 +236,25 @@
 	// 		};
 	// 	};
 	// };
+
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "SGTL5000-Card";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,bitclock-master = <&codec_dai>;
+		simple-audio-card,frame-master = <&codec_dai>;
+		simple-audio-card,widgets = "Headphone", "Headphone Jack";
+		simple-audio-card,routing = "Headphone Jack", "HP_OUT";
+
+		cpu_dai: simple-audio-card,cpu {
+			sound-dai = <&sai1>;
+			codec_dai: simple-audio-card,codec {
+			sound-dai = <&sgtl5000>;
+			clocks = <&sgtl5000_mclk>;
+
+ 			};
+ 		};
+ 	};
 };
 
 &sai1 {
@@ -352,11 +393,22 @@
 	pinctrl-1 = <&pinctrl_lpi2c1>;
 	status = "okay";
 
+	sgtl5000: audio-codec@a {
+		compatible = "fsl,sgtl5000";
+		reg = <0xa>;
+		#sound-dai-cells = <0>;
+		clocks = <&sgtl5000_mclk>;
+		VDDA-supply = <&reg_vdd_3v3>;
+		VDDIO-supply = <&reg_vdd_3v3>;
+		VDDD-supply = <&reg_vref_1v8>;
+	};
+
 	eeprom: 24c32@50 {
 		compatible = "atmel,24c32";
 		reg = <0x50>;
 		pagesize = <32>;
 	};
+	
 	rtc: rtc@32 {
 		compatible = "epson,rx8025t";
 		reg = <0x32>;

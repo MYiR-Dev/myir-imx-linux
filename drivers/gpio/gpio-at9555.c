@@ -151,8 +151,7 @@ static struct at9555_platform_data *at9555_parse_dt(struct device_node *np) {
     return pdata;
 }
 
-static int at9555_gpio_probe(struct i2c_client *client,
-                             const struct i2c_device_id *id) {
+static int at9555_gpio_probe(struct i2c_client *client) {
     int status;
     struct at9555_platform_data *pdata = dev_get_platdata(&client->dev);
     int ret, i;
@@ -261,7 +260,7 @@ static struct i2c_driver at9555_gpio_driver = {
         .name = "at9555_gpio",
         .of_match_table = of_match_ptr(at9555_gpio_match),
     },
-    .probe = (int (*)(struct i2c_client *))at9555_gpio_probe, 
+    .probe = at9555_gpio_probe, 
     // .remove = at9555_gpio_remove,
     .id_table = at9555_gpio_id,
 };

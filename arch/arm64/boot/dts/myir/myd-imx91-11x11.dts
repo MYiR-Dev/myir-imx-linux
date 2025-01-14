@@ -82,6 +82,14 @@
     	regulator-always-on;
 	};
 
+	reg_vdd_3v3: regulator-vdd {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <4000>;
+		enable-active-high;
+	};
 
 	// reg_vrpi_3v3: regulator-vrpi-3v3 {
 	// 	compatible = "regulator-fixed";
@@ -196,16 +204,16 @@
 		};
 	};
 
-	sound-xcvr {
-		compatible = "fsl,imx-audio-card";
-		model = "imx-audio-xcvr";
-		pri-dai-link {
-			link-name = "XCVR PCM";
-			cpu {
-				sound-dai = <&xcvr>;
-			};
-		};
-	};
+	// sound-xcvr {
+	// 	compatible = "fsl,imx-audio-card";
+	// 	model = "imx-audio-xcvr";
+	// 	pri-dai-link {
+	// 		link-name = "XCVR PCM";
+	// 		cpu {
+	// 			sound-dai = <&xcvr>;
+	// 		};
+	// 	};
+	// };
 };
 
 &sai1 {
@@ -242,24 +250,24 @@
 	status = "okay";
 };
 
-&xcvr {
-	#sound-dai-cells = <0>;
-	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&pinctrl_spdif>;
-	pinctrl-1 = <&pinctrl_spdif_sleep>;
-	clocks = <&clk IMX91_CLK_BUS_WAKEUP>,
-		<&clk IMX91_CLK_SPDIF_GATE>,
-		<&clk IMX91_CLK_DUMMY>,
-		<&clk IMX91_CLK_AUD_XCVR_GATE>,
-		<&clk IMX91_CLK_AUDIO_PLL>;
-	clock-names = "ipg", "phy", "spba", "pll_ipg", "pll8k";
-	assigned-clocks = <&clk IMX91_CLK_SPDIF>,
-			 <&clk IMX91_CLK_AUDIO_XCVR>;
-	assigned-clock-parents = <&clk IMX91_CLK_AUDIO_PLL>,
-			 <&clk IMX91_CLK_SYS_PLL_PFD1_DIV2>;
-	assigned-clock-rates = <12288000>, <200000000>;
-	status = "okay";
-};
+// &xcvr {
+// 	#sound-dai-cells = <0>;
+// 	pinctrl-names = "default", "sleep";
+// 	pinctrl-0 = <&pinctrl_spdif>;
+// 	pinctrl-1 = <&pinctrl_spdif_sleep>;
+// 	clocks = <&clk IMX91_CLK_BUS_WAKEUP>,
+// 		<&clk IMX91_CLK_SPDIF_GATE>,
+// 		<&clk IMX91_CLK_DUMMY>,
+// 		<&clk IMX91_CLK_AUD_XCVR_GATE>,
+// 		<&clk IMX91_CLK_AUDIO_PLL>;
+// 	clock-names = "ipg", "phy", "spba", "pll_ipg", "pll8k";
+// 	assigned-clocks = <&clk IMX91_CLK_SPDIF>,
+// 			 <&clk IMX91_CLK_AUDIO_XCVR>;
+// 	assigned-clock-parents = <&clk IMX91_CLK_AUDIO_PLL>,
+// 			 <&clk IMX91_CLK_SYS_PLL_PFD1_DIV2>;
+// 	assigned-clock-rates = <12288000>, <200000000>;
+// 	status = "okay";
+// };
 
 &adc1 {
 	vref-supply = <&reg_vref_1v8>;

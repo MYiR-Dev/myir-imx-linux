@@ -246,13 +246,14 @@
 
 		cpu_dai: simple-audio-card,cpu {
 			sound-dai = <&sai1>;
+		};
 			codec_dai: simple-audio-card,codec {
 			sound-dai = <&sgtl5000>;
 			clocks = <&sgtl5000_mclk>;
 
  			};
- 		};
  	};
+ 	
 };
 
 &sai1 {
@@ -286,7 +287,7 @@
 	assigned-clocks = <&clk IMX91_CLK_PDM>;
 	assigned-clock-parents = <&clk IMX91_CLK_AUDIO_PLL>;
 	assigned-clock-rates = <49152000>;
-	status = "okay";
+	status = "disabled";
 };
 
 // &xcvr {

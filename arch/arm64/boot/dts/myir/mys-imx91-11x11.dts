@@ -786,7 +786,7 @@
 
 	pinctrl_key: key {
 		fsl,pins = <
-			MX91_PAD_CCM_CLKO1__GPIO3_IO26             0x0000011E
+			MX91_PAD_CCM_CLKO1__GPIO3_IO26             0x0000031E
 		>;
 	};
 

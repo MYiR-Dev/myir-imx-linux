@@ -679,7 +679,7 @@ static int tcpci_init(struct tcpc_dev *tcpc)
 
 	tcpci->alert_mask = reg;
 
-	return tcpci_write16(tcpci, TCPC_ALERT_MASK, reg);
+	return ret;
 }
 
 irqreturn_t tcpci_irq(struct tcpci *tcpci)
@@ -911,7 +911,7 @@ static int tcpci_probe(struct i2c_client *client)
 
 	device_set_wakeup_capable(chip->tcpci->dev, true);
 
-	return 0;
+	return tcpci_write16(chip->tcpci, TCPC_ALERT_MASK, chip->tcpci->alert_mask);
 }
 
 static void tcpci_remove(struct i2c_client *client)

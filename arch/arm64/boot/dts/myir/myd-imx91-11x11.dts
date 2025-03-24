@@ -550,7 +550,7 @@
 
 	port {
 		usb1_drd_sw: endpoint {
-
+			remote-endpoint = <&typec1_dr_sw>;
 		};
 	};
 };

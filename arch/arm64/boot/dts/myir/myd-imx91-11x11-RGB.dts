@@ -40,7 +40,7 @@
 
 &lcdif {
         status = "okay";
-        assigned-clock-rates = <484000000>, <121000000>, <400000000>, <133333333>;
+        assigned-clock-rates = <300000000>, <300000000>, <200000000>, <133333333>;
 };
 
 
@@ -53,8 +53,8 @@
                 interrupt-parent = <&gpio2>;
                 interrupts = <28 IRQ_TYPE_EDGE_FALLING>;
                 reset-gpios = <&at9555 2 GPIO_ACTIVE_LOW>;
-                touchscreen-size-x=<1024>;
-                touchscreen-size-y=<600>;
+                touchscreen-size-x=<800>;
+                touchscreen-size-y=<480>;
                 status = "okay";
         };
 };

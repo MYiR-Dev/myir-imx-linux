@@ -157,7 +157,7 @@
 
 		led-user {
 			label = "91x:led1";
-			gpios = <&at9555 10 GPIO_ACTIVE_HIGH>;
+			gpios = <&at9555 10 GPIO_ACTIVE_LOW>;
 			max-brightness = <255>;
 			linux,default-trigger = "heartbeat";
 		};
@@ -166,7 +166,7 @@
 			label = "91x:led2";
 			pinctrl-names = "default";
 			pinctrl-1 = <&pinctrl_sysled>;
-			gpios = <&gpio3 21 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpio3 21 GPIO_ACTIVE_LOW>;
 			linux,default-trigger = "heartbeat";
 		};
 	};

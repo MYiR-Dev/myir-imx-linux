@@ -5,6 +5,7 @@
 
 #include "myd-imx91-11x11.dts"
 / {
+	model = "MYIR MYD-LMX91 RGB board";
         panel {
 		compatible = "myirtft_panel_7inch";
 		power-supply = <&reg_vdd_3v3>;

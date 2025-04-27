@@ -13,7 +13,7 @@
 };
 
 / {
-	model = "NXP i.MX91 11X11 EVK board";
+	model = "MYIR MYD-LMX91 board";
 	compatible = "fsl,imx91-11x11-evk", "fsl,imx91";
 
 	chosen {

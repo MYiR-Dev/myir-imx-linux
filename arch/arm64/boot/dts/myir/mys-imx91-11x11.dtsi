@@ -436,6 +436,7 @@
 				bbnsm_rtc: rtc {
 					compatible = "nxp,imx93-bbnsm-rtc";
 					interrupts = <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>;
+					status = "disabled";
 				};
 
 				bbnsm_pwrkey: pwrkey {

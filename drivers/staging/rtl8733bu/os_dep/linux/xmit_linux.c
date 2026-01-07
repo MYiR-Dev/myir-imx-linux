@@ -114,6 +114,11 @@ void rtw_set_tx_chksum_offload(_pkt *pkt, struct pkt_attrib *pattrib)
 
 int rtw_os_xmit_resource_alloc(_adapter *padapter, struct xmit_buf *pxmitbuf, u32 alloc_sz, u8 flag)
 {
+#ifdef CONFIG_PCIE_DMA_COHERENT
+	struct dvobj_priv *pdvobjpriv = adapter_to_dvobj(padapter);
+	struct pci_dev *pdev = pdvobjpriv->ppcidev;
+#endif
+
 	if (alloc_sz > 0) {
 #ifdef CONFIG_USE_USB_BUFFER_ALLOC_TX
 		struct dvobj_priv	*pdvobjpriv = adapter_to_dvobj(padapter);
@@ -125,7 +130,11 @@ int rtw_os_xmit_resource_alloc(_adapter *padapter, struct xmit_buf *pxmitbuf, u3
 			return _FAIL;
 #else /* CONFIG_USE_USB_BUFFER_ALLOC_TX */
 
+#ifdef CONFIG_PCIE_DMA_COHERENT
+		pxmitbuf->pallocated_buf = dma_alloc_coherent(&pdev->dev, alloc_sz, &pxmitbuf->dma_bpa, GFP_KERNEL);
+#else
 		pxmitbuf->pallocated_buf = rtw_zmalloc(alloc_sz);
+#endif
 		if (pxmitbuf->pallocated_buf == NULL)
 			return _FAIL;
 
@@ -152,6 +161,11 @@ int rtw_os_xmit_resource_alloc(_adapter *padapter, struct xmit_buf *pxmitbuf, u3
 
 void rtw_os_xmit_resource_free(_adapter *padapter, struct xmit_buf *pxmitbuf, u32 free_sz, u8 flag)
 {
+#ifdef CONFIG_PCIE_DMA_COHERENT
+	struct dvobj_priv *pdvobjpriv = adapter_to_dvobj(padapter);
+	struct pci_dev *pdev = pdvobjpriv->ppcidev;
+#endif
+
 	if (flag) {
 #ifdef CONFIG_USB_HCI
 		int i;
@@ -175,7 +189,11 @@ void rtw_os_xmit_resource_free(_adapter *padapter, struct xmit_buf *pxmitbuf, u3
 		pxmitbuf->dma_transfer_addr = 0;
 #else	/* CONFIG_USE_USB_BUFFER_ALLOC_TX */
 		if (pxmitbuf->pallocated_buf)
+		#ifdef CONFIG_PCIE_DMA_COHERENT
+			dma_free_coherent(&pdev->dev, free_sz, pxmitbuf->pallocated_buf, pxmitbuf->dma_bpa);
+		#else
 			rtw_mfree(pxmitbuf->pallocated_buf, free_sz);
+		#endif
 #endif /* CONFIG_USE_USB_BUFFER_ALLOC_TX */
 	}
 }
@@ -205,7 +223,9 @@ static inline bool rtw_os_need_wake_queue(_adapter *padapter, u16 os_qid)
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
 
 	if (padapter->registrypriv.wifi_spec) {
-		if (pxmitpriv->hwxmits[os_qid].accnt < WMM_XMIT_THRESHOLD)
+		if (os_qid < 4 && pxmitpriv->hwxmits[os_qid].accnt < WMM_XMIT_THRESHOLD)
+			return _TRUE;
+		else if (os_qid == 4) /* EAPOL */
 			return _TRUE;
 #ifdef DBG_CONFIG_ERROR_DETECT
 #ifdef DBG_CONFIG_ERROR_RESET
@@ -242,14 +262,18 @@ static inline bool rtw_os_need_stop_queue(_adapter *padapter, u16 os_qid)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 35))
 	if (padapter->registrypriv.wifi_spec) {
 		/* No free space for Tx, tx_worker is too slow */
-		if (pxmitpriv->hwxmits[os_qid].accnt > WMM_XMIT_THRESHOLD)
+		if ((os_qid < 4) && (pxmitpriv->hwxmits[os_qid].accnt > WMM_XMIT_THRESHOLD))
+			return _TRUE;
+		else if ((os_qid == 4) && (pxmitpriv->free_xframe_ext_cnt == 0)) /* EAPOL */
 			return _TRUE;
 	} else {
-		if (pxmitpriv->free_xmitframe_cnt <= 4)
+		if ((os_qid < 4) && (pxmitpriv->free_xmitframe_cnt <= 4)) /* VO VI BE BK */
+			return _TRUE;
+		else if ((os_qid == 4) && (pxmitpriv->free_xframe_ext_cnt == 0)) /* EAPOL */
 			return _TRUE;
 	}
 #else
-	if (pxmitpriv->free_xmitframe_cnt <= 4)
+	if (pxmitpriv->free_xmitframe_cnt < 4)
 		return _TRUE;
 #endif
 	return _FALSE;
@@ -375,6 +399,7 @@ int _rtw_xmit_entry(_pkt *pkt, _nic_hdl pnetdev)
 {
 	_adapter *padapter = (_adapter *)rtw_netdev_priv(pnetdev);
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
+	struct pwrctrl_priv *pwrpriv = adapter_to_pwrctl(padapter);
 #ifdef CONFIG_TCP_CSUM_OFFLOAD_TX	
 	struct sk_buff *skb = pkt;
 	struct sk_buff *segs, *nskb;
@@ -391,12 +416,19 @@ int _rtw_xmit_entry(_pkt *pkt, _nic_hdl pnetdev)
 
 	if ((rtw_if_up(padapter) == _FALSE)
 #ifdef CONFIG_LAYER2_ROAMING
-		&&(!padapter->mlmepriv.roam_network)
+		&& (!padapter->mlmepriv.roam_buf_pkt)
 #endif
 	){
 		DBG_COUNTER(padapter->tx_logs.os_tx_err_up);
 		#ifdef DBG_TX_DROP_FRAME
 		RTW_INFO("DBG_TX_DROP_FRAME %s if_up fail\n", __FUNCTION__);
+		#endif
+		goto drop_packet;
+	}
+
+	if (pwrpriv->bInSuspend == _TRUE) {
+		#ifdef DBG_TX_DROP_FRAME
+		RTW_INFO("DBG_TX_DROP_FRAME %s in suspend flow\n", __FUNCTION__);
 		#endif
 		goto drop_packet;
 	}

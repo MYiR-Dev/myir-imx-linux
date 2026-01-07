@@ -25,6 +25,7 @@
 #define	TDLS_INITIATOR_STATE		BIT(28)			/* 0x10000000 */
 #define	TDLS_RESPONDER_STATE		BIT(29)			/* 0x20000000 */
 #define	TDLS_LINKED_STATE			BIT(30)			/* 0x40000000 */
+#define	TDLS_RESETUP_STATE			BIT(31)			/* 0x80000000 */
 /* TDLS PU Buffer STA */
 #define	TDLS_WAIT_PTR_STATE			BIT(24)			/* 0x01000000 */	/* Waiting peer's TDLS_PEER_TRAFFIC_RESPONSE frame */
 /* TDLS Check ALive */

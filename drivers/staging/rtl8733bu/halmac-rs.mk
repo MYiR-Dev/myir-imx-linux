@@ -4,7 +4,8 @@
 # (CONFIG_RTL*) setting are all ready!
 
 # Base directory
-path_hm := hal/halmac
+path_hm := hal/halmac-rs
+EXTRA_CFLAGS += -DCONFIG_HALMAC_RS
 
 ifeq ($(CONFIG_PCI_HCI), y)
 pci := y
@@ -16,34 +17,9 @@ ifeq ($(CONFIG_USB_HCI), y)
 usb := y
 endif
 
-ifeq ($(CONFIG_RTL8822B), y)
-series := 88xx
-ic := 8822b
-endif
-
-ifeq ($(CONFIG_RTL8822C), y)
-series := 88xx
-ic := 8822c
-endif
-
-ifeq ($(CONFIG_RTL8821C), y)
-series := 88xx
-ic := 8821c
-endif
-
-ifeq ($(CONFIG_RTL8814B), y)
-series := 88xx_v1
-ic := 8814b
-endif
-
 ifeq ($(CONFIG_RTL8733B), y)
 series := 87xx
 ic := 8733b
-endif
-ifeq ($(series), 88xx_v1)
-d2all :=
-else
-d2all := y
 endif
 
 halmac-y +=		$(path_hm)/halmac_api.o
@@ -66,10 +42,9 @@ halmac-$(usb) += 	$(path_hm_d1)/halmac_usb_$(series).o
 
 # Level 2 directory
 path_hm_d2 := $(path_hm_d1)/halmac_$(ic)
-halmac-$(d2all) +=	$(path_hm_d2)/halmac_cfg_wmac_$(ic).o \
-			$(path_hm_d2)/halmac_common_$(ic).o
-
-halmac-y +=		$(path_hm_d2)/halmac_gpio_$(ic).o \
+halmac-y +=		$(path_hm_d2)/halmac_cfg_wmac_$(ic).o \
+			$(path_hm_d2)/halmac_common_$(ic).o \
+			$(path_hm_d2)/halmac_gpio_$(ic).o \
 			$(path_hm_d2)/halmac_init_$(ic).o \
 			$(path_hm_d2)/halmac_phy_$(ic).o \
 			$(path_hm_d2)/halmac_pwr_seq_$(ic).o

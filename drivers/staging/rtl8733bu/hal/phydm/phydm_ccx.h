@@ -26,8 +26,8 @@
 #ifndef __PHYDMCCX_H__
 #define __PHYDMCCX_H__
 
-/* 2020.08.12 split env_mntr api into set_env_mntr and result_env_mntr api for dig_fa_source*/
-#define CCX_VERSION "4.7"
+/* 2021.03.10 Add 8814C flag*/
+#define CCX_VERSION "4.9"
 
 /* @1 ============================================================
  * 1  Definition
@@ -63,11 +63,14 @@
 /*IFS-CLM*/
 #define	IFS_CLM_PERIOD_MAX	65535
 #define	IFS_CLM_NUM		4
+/*EDCCA-CLM*/
+#define	EDCCA_CLM_PERIOD	65535
 
 #define NHM_SUCCESS		BIT(0)
 #define CLM_SUCCESS		BIT(1)
 #define FAHM_SUCCESS		BIT(2)
 #define IFS_CLM_SUCCESS		BIT(3)
+#define EDCCA_CLM_SUCCESS	BIT(4)
 #define	ENV_MNTR_FAIL		0xff
 
 /* @1 ============================================================
@@ -108,6 +111,15 @@ enum phydm_ifs_clm_level {
 	IFS_CLM_LV_3		= 3,	/* @High priority function (ex: Check hang function) */
 	IFS_CLM_LV_4		= 4,	/* @Debug function (the highest priority) */
 	IFS_CLM_MAX_NUM		= 5
+};
+
+enum phydm_edcca_clm_level {
+	EDCCA_CLM_RELEASE	= 0,
+	EDCCA_CLM_LV_1	= 1,	/* @Low Priority function */
+	EDCCA_CLM_LV_2	= 2,	/* @Middle Priority function */
+	EDCCA_CLM_LV_3	= 3,	/* @High priority function (ex: Check hang function) */
+	EDCCA_CLM_LV_4	= 4,	/* @Debug function (the highest priority) */
+	EDCCA_CLM_MAX_NUM	= 5
 };
 
 enum nhm_divider_opt_all {
@@ -174,6 +186,12 @@ enum phydm_ifs_clm_unit {
 	IFS_CLM_INIT
 };
 
+enum edcca_clm_application {
+	EDCCA_CLM_BACKGROUND	= 0,/*@default*/
+	EDCCA_CLM_ACS		= 1,
+	EDCCA_CLM_DBG		= 2,
+};
+
 /* @1 ============================================================
  * 1  structure
  * 1 ============================================================
@@ -186,6 +204,8 @@ struct env_trig_rpt {
 struct env_mntr_rpt {
 	u8			nhm_ratio;
 	u8			nhm_env_ratio; /*exclude nhm_r[0] above -80dBm or first cluster under -80dBm*/
+	u8			nhm_idle_ratio;
+	u8			nhm_tx_ratio;
 	u8			nhm_result[NHM_RPT_NUM];
 	u8			clm_ratio;
 	u8			nhm_rpt_stamp;
@@ -204,6 +224,8 @@ struct enhance_mntr_trig_rpt {
 struct enhance_mntr_rpt {
 	u8			nhm_ratio;
 	u8			nhm_env_ratio; /*exclude nhm_r[0] above -80dBm or first cluster under -80dBm*/
+	u8			nhm_idle_ratio;
+	u8			nhm_tx_ratio;
 	u8			nhm_result[NHM_RPT_NUM];
 	u8			clm_ratio;
 	u8			nhm_rpt_stamp;
@@ -263,11 +285,17 @@ struct ifs_clm_para_info {
 	s16				th_shift;
 };
 
+struct edcca_clm_para_info {
+	enum edcca_clm_application	edcca_clm_app;
+	enum phydm_edcca_clm_level	edcca_clm_lv;
+};
+
 struct ccx_info {
 	u32			nhm_trigger_time;
 	u32			clm_trigger_time;
 	u32			fahm_trigger_time;
 	u32			ifs_clm_trigger_time;
+	u32			edcca_clm_trigger_time;
 	u64			start_time;	/*@monitor for the test duration*/
 	u8			ccx_watchdog_result;
 #ifdef NHM_SUPPORT
@@ -284,7 +312,10 @@ struct ccx_info {
 	u8			nhm_manual_ctrl;
 	u8			nhm_ratio;	/*@1% per nuit, it means the interference igi can't overcome.*/
 	u8			nhm_env_ratio; /*exclude nhm_r[0] above -80dBm or first cluster under -80dBm*/
+	u8			nhm_idle_ratio;
+	u8			nhm_tx_ratio;
 	u8			nhm_rpt_sum;
+	u16			nhm_duration;	/*@Real time of NHM_VALID */
 	u8			nhm_set_lv;
 	boolean			nhm_ongoing;
 	u8			nhm_rpt_stamp;
@@ -365,14 +396,21 @@ struct ccx_info {
 	u8			ifs_clm_ofdm_fa_ratio;
 	u8			ifs_clm_ofdm_cca_excl_fa_ratio;
 #endif
+#ifdef EDCCA_CLM_SUPPORT
+	enum edcca_clm_application	edcca_clm_app;
+	u8				edcca_clm_manual_ctrl;
+	u8				edcca_clm_set_lv;
+	boolean 			edcca_clm_ongoing;
+	u16				edcca_clm_result;
+	u8				edcca_clm_ratio;
+	u8				edcca_clm_rpt_stamp;
+#endif
 };
 
 /* @1 ============================================================
  * 1 Function Prototype
  * 1 ============================================================
  */
-
-u8 phydm_env_mntr_get_802_11_k_rsni(void *dm_void, s8 rcpi, s8 anpi);
 
 #ifdef FAHM_SUPPORT
 void phydm_fahm_init(void *dm_void);
@@ -392,6 +430,8 @@ void phydm_clm_c2h_report_handler(void *dm_void, u8 *cmd_buf, u8 cmd_len);
 
 void phydm_clm_dbg(void *dm_void, char input[][16], u32 *_used, char *output,
 		   u32 *_out_len);
+
+void phydm_set_clm_mntr_mode(void *dm_void, enum clm_monitor_mode mode);
 #endif
 
 u8 phydm_env_mntr_trigger(void *dm_void, struct nhm_para_info *nhm_para,
@@ -420,9 +460,16 @@ u8 phydm_enhance_mntr_result(void *dm_void, struct enhance_mntr_rpt *rpt);
 void phydm_enhance_mntr_dbg(void *dm_void, char input[][16], u32 *_used,
 			char *output, u32 *_out_len);
 
+#ifdef EDCCA_CLM_SUPPORT
+void phydm_edcca_clm_dbg(void *dm_void, char input[][16], u32 *_used,
+			 char *output, u32 *_out_len);
+#endif
+
 void phydm_env_mntr_result_watchdog(void *dm_void);
 
 void phydm_env_mntr_set_watchdog(void *dm_void);
+
+u8 phydm_env_mntr_get_802_11_k_rsni(void *dm_void, s8 rcpi, s8 anpi);
 
 void phydm_env_monitor_init(void *dm_void);
 

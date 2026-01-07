@@ -38,7 +38,7 @@ _HAL_INTFS_FILES +=	hal/efuse/rtl8733b/HalEfuseMask8733B_SDIO.o
 _HAL_INTFS_FILES +=	hal/hal_hci/hal_sdio_coex.o
 endif
 
-include $(src)/halmac.mk
+include $(src)/halmac-rs.mk
 
 _BTC_FILES +=		hal/btc/halbtc8733bwifionly.o
 ifeq ($(CONFIG_BT_COEXIST), y)

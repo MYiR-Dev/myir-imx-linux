@@ -49,11 +49,6 @@ void odm_config_bb_phy_reg_pg_8733b(struct dm_struct *dm, u32 band,
 void odm_config_bb_phy_8733b(struct dm_struct *dm, u32 addr, u32 bitmask,
 				u32 data);
 
-void odm_config_bb_txpwr_lmt_8733b_ex(struct dm_struct *dm, u8 regulation,
-				      u8 band, u8 bandwidth,
-				      u8 rate_section, u8 rf_path,
-				      u8 channel, u8 power_limit);
-
 void odm_config_bb_txpwr_lmt_8733b(struct dm_struct *dm, u8 *regulation,
 				      u8 *band, u8 *bandwidth,
 				      u8 *rate_section, u8 *rf_path,

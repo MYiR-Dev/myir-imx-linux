@@ -856,9 +856,9 @@ void _iqk_lok_by_path_8733b(void *dm_void, u8 path)
 	//IDACI = 0x1bfc[29:25], IDACQ = 0x1bfc[9:5]
 	idac_ic = (u8)((reg_1bfc >> 25) & 0x1F);
 	idac_qc = (u8)((reg_1bfc >> 5) & 0x1F);
-	if (odm_get_bb_reg(dm, 0x1bfc, BIT(24)) == 1)
+	if ((odm_get_bb_reg(dm, 0x1bfc, BIT(24)) == 1) && (idac_ic < 0x1F))
 		idac_ic += 1;
-	if (odm_get_bb_reg(dm, 0x1bfc, BIT(4)) == 1)
+	if ((odm_get_bb_reg(dm, 0x1bfc, BIT(4)) == 1) && (idac_qc < 0x1F))
 		idac_qc += 1;
 
 	odm_set_rf_reg(dm, path, RF_0x08, 0xF8000, idac_ic);
@@ -1074,9 +1074,9 @@ void _iqk_lok_by_path_8733b(void *dm_void, u8 path)
 	//IDACI = 0x1bfc[29:26], IDACQ = 0x1bfc[9:6]
 	idac_if = (u8)((reg_1bfc >> 26) & 0xF);
 	idac_qf = (u8)((reg_1bfc >> 6) & 0xF);
-	if (odm_get_bb_reg(dm, 0x1bfc, BIT(25)) == 1)
+	if ((odm_get_bb_reg(dm, 0x1bfc, BIT(25)) == 1) && (idac_if < 0xF))
 		idac_if += 1;
-	if (odm_get_bb_reg(dm, 0x1bfc, BIT(5)) == 1)
+	if ((odm_get_bb_reg(dm, 0x1bfc, BIT(5)) == 1) && (idac_qf < 0xF))
 		idac_qf += 1;
 	odm_set_rf_reg(dm, path, RF_0x09, 0xF0000, idac_if);
 	odm_set_rf_reg(dm, path, RF_0x09, 0x003C0, idac_qf);
@@ -1489,7 +1489,8 @@ void _phy_iq_calibrate_8733b(struct dm_struct *dm,
 		iqk_info->iqk_step = 0;
 		RF_DBG(dm, DBG_RF_IQK, "[IQK]Kcount = %d\n", iqk_info->kcount);
 #if 1
-		if (dm->rfe_type <= 2 || dm->rfe_type == 4 || dm->rfe_type == 9) {//only pathA or pathB
+		if (dm->rfe_type <= 2 || dm->rfe_type == 4 || dm->rfe_type == 9
+			|| dm->rfe_type == 13) {//only pathA or pathB
 			_iqk_afe_setting_8733b(dm, true);
 			_iqk_start_iqk_8733b(dm, path);
 			_iqk_afe_setting_8733b(dm, false);

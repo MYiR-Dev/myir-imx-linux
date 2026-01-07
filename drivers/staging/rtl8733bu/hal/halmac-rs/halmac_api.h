@@ -17,13 +17,13 @@
 #define _HALMAC_API_H_
 
 /*test program svn version*/
-#define HALMAC_SVN_VER  "135"
+#define HALMAC_SVN_VER  "138"
 
 #define HALMAC_MAJOR_VER        1
 #define HALMAC_PROTOTYPE_VER    6
 #define HALMAC_MINOR_VER        6
 /*halmac release version */
-#define HALMAC_PATCH_VER        39   
+#define HALMAC_PATCH_VER        42  
 
 #define HALMAC_87XX_SUPPORT	(HALMAC_8733B_SUPPORT)
 

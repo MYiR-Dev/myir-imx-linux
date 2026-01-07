@@ -114,7 +114,7 @@ void _rtl8733b_set_FwPwrMode_cmd(PADAPTER adapter, u8 psmode, u8 rfon_ctrl)
 	u8 h2c[RTW_HALMAC_H2C_MAX_SIZE] = {0};
 	u8 PowerState = 0, awake_intvl = 1, rlbm = 0;
 	u8 allQueueUAPSD = 0;
-	char *fw_psmode_str = "";
+	char *fw_psmode_str = "UNSPECIFIED";
 #ifdef CONFIG_P2P
 	struct wifidirect_info *wdinfo = &adapter->wdinfo;
 #endif /* CONFIG_P2P */
@@ -212,8 +212,6 @@ void _rtl8733b_set_FwPwrMode_cmd(PADAPTER adapter, u8 psmode, u8 rfon_ctrl)
 			fw_psmode_str = "LPS";
 		else if (mode == 2)
 			fw_psmode_str = "WMMPS";
-		else
-			fw_psmode_str = "UNSPECIFIED";
 
 		RTW_INFO(FUNC_ADPT_FMT": fw ps mode = %s, drv ps mode = %d, rlbm = %d ,"
 				    "smart_ps = %d, allQueueUAPSD = %d, PowerState = %d\n",
@@ -350,6 +348,83 @@ void rtl8733b_download_BTCoex_AP_mode_rsvd_page(PADAPTER adapter)
 }
 #endif /* CONFIG_BT_COEXIST */
 
+#ifdef CONFIG_P2P_PS
+void rtl8733b_set_p2p_ps_offload_cmd(_adapter *padapter, u8 p2p_ps_state)
+{
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
+	struct pwrctrl_priv		*pwrpriv = adapter_to_pwrctl(padapter);
+	struct wifidirect_info	*pwdinfo = &(padapter->wdinfo);
+	struct P2P_PS_Offload_t	*p2p_ps_offload = (struct P2P_PS_Offload_t *)(&pHalData->p2p_ps_offload);
+	u8	i;
+
+	switch (p2p_ps_state) {
+	case P2P_PS_DISABLE:
+		RTW_INFO("P2P_PS_DISABLE\n");
+		_rtw_memset(p2p_ps_offload, 0 , 1);
+		break;
+	case P2P_PS_ENABLE:
+		RTW_INFO("P2P_PS_ENABLE\n");
+		/* update CTWindow value. */
+		if (pwdinfo->ctwindow > 0) {
+			p2p_ps_offload->CTWindow_En = 1;
+			rtw_write8(padapter, REG_CTWND, pwdinfo->ctwindow);
+		}
+
+		/* hw only support 2 set of NoA */
+		for (i = 0 ; i < pwdinfo->noa_num ; i++) {
+			/* To control the register setting for which NOA */
+			rtw_write8(padapter, REG_TXCMD_NOA_SEL, (i << 4));
+			if (i == 0)
+				p2p_ps_offload->NoA0_En = 1;
+			else
+				p2p_ps_offload->NoA1_En = 1;
+
+			/* config P2P NoA Descriptor Register */
+			/* RTW_INFO("%s(): noa_duration = %x\n",__FUNCTION__,pwdinfo->noa_duration[i]); */
+			rtw_write32(padapter, REG_NOA_PARAM, pwdinfo->noa_duration[i]);
+
+			/* RTW_INFO("%s(): noa_interval = %x\n",__FUNCTION__,pwdinfo->noa_interval[i]); */
+			rtw_write32(padapter, REG_NOA_PARAM_1, pwdinfo->noa_interval[i]);
+
+			/* RTW_INFO("%s(): start_time = %x\n",__FUNCTION__,pwdinfo->noa_start_time[i]); */
+			rtw_write32(padapter, REG_NOA_PARAM_2, pwdinfo->noa_start_time[i]);
+
+			/* RTW_INFO("%s(): noa_count = %x\n",__FUNCTION__,pwdinfo->noa_count[i]); */
+			rtw_write8(padapter, REG_NOA_PARAM_3, pwdinfo->noa_count[i]);
+		}
+
+		if ((pwdinfo->opp_ps == 1) || (pwdinfo->noa_num > 0)) {
+			/* rst p2p circuit */
+			rtw_write8(padapter, REG_DUAL_TSF_RST, BIT(4));
+
+			p2p_ps_offload->Offload_En = 1;
+
+			if (pwdinfo->role == P2P_ROLE_GO) {
+				p2p_ps_offload->role = 1;
+				p2p_ps_offload->AllStaSleep = 0;
+			} else
+				p2p_ps_offload->role = 0;
+
+			p2p_ps_offload->discovery = 0;
+		}
+		break;
+	case P2P_PS_SCAN:
+		RTW_INFO("P2P_PS_SCAN\n");
+		p2p_ps_offload->discovery = 1;
+		break;
+	case P2P_PS_SCAN_DONE:
+		RTW_INFO("P2P_PS_SCAN_DONE\n");
+		p2p_ps_offload->discovery = 0;
+		pwdinfo->p2p_ps_state = P2P_PS_ENABLE;
+		break;
+	default:
+		break;
+	}
+
+	rtl8733b_fillh2ccmd(padapter, SUB_CMD_ID_P2PPS, sizeof(p2p_ps_offload), (u8 *)p2p_ps_offload);
+}
+#endif
+
 
 /*
  * Below functions are for C2H
@@ -414,7 +489,7 @@ C2HTxRPTHandler_8733b(
 
 	psta->sta_stats.tx_ok_cnt = TxOK;
 	psta->sta_stats.tx_fail_cnt = TxFail;
-
+	psta->sta_stats.tx_fail_cnt_sum += TxFail;
 }
 
 static void
@@ -449,7 +524,11 @@ C2HSPC_STAT_8733b(
 		return;
 	}
 	psta->sta_stats.tx_retry_cnt = (C2H_SPECIAL_STATISTICS_GET_DATA3(CmdBuf) << 8) | C2H_SPECIAL_STATISTICS_GET_DATA2(CmdBuf);
+	psta->sta_stats.tx_retry_cnt_sum += psta->sta_stats.tx_retry_cnt;
+
+	enter_critical_bh(&pstapriv->tx_rpt_lock);
 	rtw_sctx_done(&pstapriv->gotc2h);
+	exit_critical_bh(&pstapriv->tx_rpt_lock);
 }
 #ifdef CONFIG_FW_HANDLE_TXBCN
 #define C2H_SUB_CMD_ID_FW_TBTT_RPT  0X23
@@ -517,8 +596,13 @@ static void process_c2h_event(PADAPTER adapter, u8 *c2h, u32 size)
 	pc2h_data = c2h + desc_size;
 	c2h_len = size - desc_size;
 
-	id = C2H_GET_CMD_ID(pc2h_data);
-	seq = C2H_GET_SEQ(pc2h_data);
+	if (c2h_len >= 4) {
+		id = C2H_GET_CMD_ID(pc2h_data);
+		seq = C2H_GET_SEQ(pc2h_data);
+	} else {
+		id = C2H_GET_CMD_ID_1BYTE(pc2h_data);
+		seq = C2H_GET_SEQ_1BYTE(pc2h_data);
+	}
 
 	/* shift 2 byte to remove cmd id & seq */
 	pc2h_payload = pc2h_data + 2;
@@ -629,6 +713,7 @@ void rtl8733b_c2h_handler_no_io(PADAPTER adapter, u8 *pbuf, u16 length)
 	case C2H_IQK_FINISH:
 	case C2H_MCC:
 	case C2H_BCN_EARLY_RPT:
+	case C2H_TX_PAUSE_RPT:
 	case C2H_LPS_STATUS_RPT:	
 	case C2H_EXTEND:
 		/* no I/O, process directly */

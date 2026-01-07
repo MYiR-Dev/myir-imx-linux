@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2017 Realtek Corporation.
+ * Copyright(c) 2007 - 2021 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -284,6 +284,23 @@ u8 *rtw_set_ie
 	return pbuf + len + 2;
 }
 
+u8 *rtw_set_ie_tpc_report(u8 *buf, u32 *buf_len, u8 tx_power, u8 link_margin)
+{
+	u8 ie_data[2];
+
+	ie_data[0] = tx_power;
+	ie_data[1] = link_margin;
+	return rtw_set_ie(buf, WLAN_EID_TPC_REPORT,  2, ie_data, buf_len);
+}
+
+void rtw_bss_ex_set_tpc_report(WLAN_BSSID_EX *bss, u8 tx_power, u8 link_margin)
+{
+	if (bss->IELength + 4 <= MAX_IE_SZ)
+		rtw_set_ie_tpc_report(bss->IEs + bss->IELength, &bss->IELength, tx_power, link_margin);
+	else
+		rtw_warn_on(1);
+}
+
 inline u8 *rtw_set_ie_ch_switch(u8 *buf, u32 *buf_len, u8 ch_switch_mode,
 				u8 new_ch, u8 ch_switch_cnt)
 {
@@ -322,6 +339,23 @@ inline u8 hal_ch_offset_to_secondary_ch_offset(u8 ch_offset)
 inline u8 *rtw_set_ie_secondary_ch_offset(u8 *buf, u32 *buf_len, u8 secondary_ch_offset)
 {
 	return rtw_set_ie(buf, WLAN_EID_SECONDARY_CHANNEL_OFFSET,  1, &secondary_ch_offset, buf_len);
+}
+
+inline u8 *rtw_set_ie_wide_bw_ch_switch(u8 *buf, u32 *buf_len,
+	u8 ch_width, u8 seg_0, u8 seg_1)
+{
+	u8 csw_data[3] = {0};
+
+	/*
+	* [0] : New Channel Width
+	* [1] : New Channel Center Frequency Segment 0
+	* [2] : New Channel Center Frequency Segment 1
+	*/
+	csw_data[0] = ch_width;
+	csw_data[1] = seg_0;
+	csw_data[2] = seg_1;
+
+	return rtw_set_ie(buf, WLAN_EID_VHT_WIDE_BW_CHSWITCH, 3, csw_data, buf_len);
 }
 
 inline u8 *rtw_set_ie_mesh_ch_switch_parm(u8 *buf, u32 *buf_len, u8 ttl,
@@ -1056,10 +1090,15 @@ int rtw_parse_wpa2_ie(u8 *rsn_ie, int rsn_ie_len, int *group_cipher,
 	}
 
 	if (gmcs) {
-		if (info.gmcs)
+		if (info.gmcs) {
 			*gmcs = rtw_get_rsn_cipher_suite(info.gmcs);
-		else
-			*gmcs = WPA_CIPHER_BIP_CMAC_128; /* default value when absent */
+		} else {
+			if (info.cap &&
+			    GET_RSN_CAP_MFP_OPTION(info.cap) > MFP_INVALID)
+				*gmcs = WPA_CIPHER_BIP_CMAC_128;
+			else
+				*gmcs = 0;
+		}
 	}
 
 	if (akm) {
@@ -1133,7 +1172,7 @@ int rtw_get_wapi_ie(u8 *in_ie, uint in_len, u8 *wapi_ie, u16 *wapi_len)
 
 int rtw_get_sec_ie(u8 *in_ie, uint in_len, u8 *rsn_ie, u16 *rsn_len, u8 *wpa_ie, u16 *wpa_len)
 {
-	u8 authmode, sec_idx;
+	u8 authmode;
 	u8 wpa_oui[4] = {0x0, 0x50, 0xf2, 0x01};
 	uint	cnt;
 
@@ -1141,8 +1180,6 @@ int rtw_get_sec_ie(u8 *in_ie, uint in_len, u8 *rsn_ie, u16 *rsn_len, u8 *wpa_ie,
 	/* Search required WPA or WPA2 IE and copy to sec_ie[ ] */
 
 	cnt = (_TIMESTAMP_ + _BEACON_ITERVAL_ + _CAPABILITY_);
-
-	sec_idx = 0;
 
 	while (cnt < in_len) {
 		authmode = in_ie[cnt];
@@ -1169,9 +1206,7 @@ int rtw_get_sec_ie(u8 *in_ie, uint in_len, u8 *rsn_ie, u16 *rsn_len, u8 *wpa_ie,
 
 	}
 
-
 	return *rsn_len + *wpa_len;
-
 }
 
 u8 rtw_is_wps_ie(u8 *ie_ptr, uint *wps_ielen)
@@ -1225,7 +1260,7 @@ u8 *rtw_get_wps_ie_from_scan_queue(u8 *in_ie, uint in_len, u8 *wps_ie, uint *wps
  *
  * Returns: The address of the WPS IE found, or NULL
  */
-u8 *rtw_get_wps_ie(const u8 *in_ie, uint in_len, u8 *wps_ie, uint *wps_ielen)
+u8 *rtw_get_wps_ie(const u8 *in_ie, int in_len, u8 *wps_ie, uint *wps_ielen)
 {
 	uint cnt;
 	const u8 *wpsie_ptr = NULL;
@@ -1617,23 +1652,16 @@ static int rtw_ieee802_11_parse_vendor_specific(u8 *pos, uint elen,
 
 }
 
-/**
- * ieee802_11_parse_elems - Parse information elements in management frames
- * @start: Pointer to the start of IEs
- * @len: Length of IE buffer in octets
- * @elems: Data structure for parsed elements
- * @show_errors: Whether to show parsing errors in debug log
- * Returns: Parsing result
- */
-ParseRes rtw_ieee802_11_parse_elems(u8 *start, uint len,
+static ParseRes _rtw_ieee802_11_parse_elems(u8 *start, uint len,
 				    struct rtw_ieee802_11_elems *elems,
-				    int show_errors)
+				    int show_errors, bool reset)
 {
 	uint left = len;
 	u8 *pos = start;
 	int unknown = 0;
 
-	_rtw_memset(elems, 0, sizeof(*elems));
+	if (reset)
+		_rtw_memset(elems, 0, sizeof(*elems));
 
 	while (left >= 2) {
 		u8 id, elen;
@@ -1765,6 +1793,16 @@ ParseRes rtw_ieee802_11_parse_elems(u8 *start, uint len,
 			elems->rann_len = elen;
 			break;
 #endif
+#ifdef CONFIG_STA_MULTIPLE_BSSID
+		case WLAN_EID_MULTIPLE_BSSID:
+			elems->mbssid = pos;
+			elems->mbssid_len = elen;
+			break;
+		case WLAN_EID_NON_TX_BSSID_CAP:
+			elems->non_tx_bssid_cap = pos;
+			elems->non_tx_bssid_cap_len = elen;
+			break;
+#endif
 		default:
 			unknown++;
 			if (!show_errors)
@@ -1785,6 +1823,121 @@ ParseRes rtw_ieee802_11_parse_elems(u8 *start, uint len,
 	return unknown ? ParseUnknown : ParseOK;
 
 }
+
+/**
+ * ieee802_11_parse_elems - Parse information elements in management frames
+ * @start: Pointer to the start of IEs
+ * @len: Length of IE buffer in octets
+ * @elems: Data structure for parsed elements
+ * @show_errors: Whether to show parsing errors in debug log
+ * Returns: Parsing result
+ */
+ParseRes rtw_ieee802_11_parse_elems(u8 *start, uint len,
+				    struct rtw_ieee802_11_elems *elems,
+				    int show_errors)
+{
+	return _rtw_ieee802_11_parse_elems(start, len, elems, show_errors, true);
+}
+
+#ifdef CONFIG_STA_MULTIPLE_BSSID
+static bool rtw_mbssid_ntbssid_profile_match_id(u8 *profile, uint len, u8 mbssid_idx)
+{
+	uint left = len;
+	u8 *pos = profile;
+
+	while (left >= 2) {
+		u8 id, elen;
+
+		id = *pos++;
+		elen = *pos++;
+		left -= 2;
+
+		if (elen > left)
+			return false;
+
+		switch (id) {
+		case WLAN_EID_MULTI_BSSID_IDX:
+			if (GET_MULTIPLE_BSSID_IDX_INDEX(pos - 2) == mbssid_idx)
+				return true;
+			break;
+		default:
+			break;
+		}
+
+		left -= elen;
+		pos += elen;
+	}
+
+	return false;
+}
+
+/**
+ * rtw_ieee802_11_override_elems_by_mbssid - override information elements in management frames
+ * @mbssid_ie: Pointer to the start of mbssid IE
+ * @mbssid_ie_len: Length of IE buffer in octets
+ * @mbssid_idx: the specific mbssid index to get for override
+ * @elems: Data structure for parsed elements
+ * @show_errors: Whether to show parsing errors in debug log
+ * Returns: Parsing result
+ */
+ParseRes rtw_ieee802_11_override_elems_by_mbssid(
+	u8 *mbssid_ie, uint mbssid_ie_len, u8 mbssid_idx, struct rtw_ieee802_11_elems *elems
+	, int show_errors)
+{
+	uint left = mbssid_ie_len;
+	u8 *pos = mbssid_ie;
+	u8 max_bssid_indicator;
+	int unknown = 0;
+
+	if (left < 3) {
+		RTW_WARN("%s mbssid_ie_len < 3\n", __func__);
+		return ParseFailed;
+	}
+
+	max_bssid_indicator = GET_MBSSID_MAX_BSSID_INDOCATOR(pos);
+	if (mbssid_idx >= (1 << max_bssid_indicator)) {
+		RTW_WARN("%s mbssid_idx >= max_bssid_indicator(%u)\n"
+			, __func__, 1 << max_bssid_indicator);
+		return ParseFailed;
+	}
+
+	pos += MBSSID_MAX_BSSID_INDICATOR_OFFSET;
+	left -= MBSSID_MAX_BSSID_INDICATOR_OFFSET;
+
+	while (left >= 2) {
+		u8 id, elen;
+
+		id = *pos++;
+		elen = *pos++;
+		left -= 2;
+
+		if (elen > left) {
+			if (show_errors) {
+				RTW_INFO("%s parse failed (id=%d elen=%d left=%lu)\n"
+					, __func__, id, elen, (unsigned long) left);
+			}
+			return ParseFailed;
+		}
+
+		switch (id) {
+		case MBSSID_NONTRANSMITTED_BSSID_PROFILE_ID:
+			if (rtw_mbssid_ntbssid_profile_match_id(pos, elen, mbssid_idx))
+				_rtw_ieee802_11_parse_elems(pos, elen, elems, show_errors, false);
+			break;
+		default:
+			break;
+		}
+		left -= elen;
+		pos += elen;
+	}
+
+	if (left)
+		return ParseFailed;
+
+	return unknown ? ParseUnknown : ParseOK;
+
+}
+#endif /* CONFIG_STA_MULTIPLE_BSSID */
 
 static u8 key_char2num(u8 ch);
 static u8 key_char2num(u8 ch)
@@ -1909,7 +2062,7 @@ extern char *rtw_initmac;
 void rtw_macaddr_cfg(u8 *out, const u8 *hw_mac_addr)
 {
 #define DEFAULT_RANDOM_MACADDR 1
-	u8 mac[ETH_ALEN];
+	u8 mac[ETH_ALEN]= {0};
 
 	if (out == NULL) {
 		rtw_warn_on(1);
@@ -2094,7 +2247,8 @@ void dump_ies(void *sel, const u8 *buf, u32 buf_len)
  * @ht: check HT IEs
  * @vht: check VHT IEs, if true imply ht is true
  */
-void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht)
+#if CONFIG_ALLOW_FUNC_2G_5G_ONLY
+RTW_FUNC_2G_5G_ONLY void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht)
 {
 	u8 *p;
 	int	ie_len;
@@ -2158,6 +2312,7 @@ void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u
 	}
 #endif /* CONFIG_80211N_HT */
 }
+#endif
 
 void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht)
 {
@@ -2172,95 +2327,6 @@ void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 
 			 , *ch, bss->Configuration.DSConfig);
 		*ch = bss->Configuration.DSConfig;
 		rtw_warn_on(1);
-	}
-}
-
-/**
- * rtw_is_chbw_grouped - test if the two ch settings can be grouped together
- * @ch_a: ch of set a
- * @bw_a: bw of set a
- * @offset_a: offset of set a
- * @ch_b: ch of set b
- * @bw_b: bw of set b
- * @offset_b: offset of set b
- */
-bool rtw_is_chbw_grouped(u8 ch_a, u8 bw_a, u8 offset_a
-			 , u8 ch_b, u8 bw_b, u8 offset_b)
-{
-	bool is_grouped = _FALSE;
-
-	if (ch_a != ch_b) {
-		/* ch is different */
-		goto exit;
-	} else if ((bw_a == CHANNEL_WIDTH_40 || bw_a == CHANNEL_WIDTH_80)
-		   && (bw_b == CHANNEL_WIDTH_40 || bw_b == CHANNEL_WIDTH_80)
-		  ) {
-		if (offset_a != offset_b)
-			goto exit;
-	}
-
-	is_grouped = _TRUE;
-
-exit:
-	return is_grouped;
-}
-
-/**
- * rtw_sync_chbw - obey g_ch, adjust g_bw, g_offset, bw, offset
- * @req_ch: pointer of the request ch, may be modified further
- * @req_bw: pointer of the request bw, may be modified further
- * @req_offset: pointer of the request offset, may be modified further
- * @g_ch: pointer of the ongoing group ch
- * @g_bw: pointer of the ongoing group bw, may be modified further
- * @g_offset: pointer of the ongoing group offset, may be modified further
- */
-void rtw_sync_chbw(u8 *req_ch, u8 *req_bw, u8 *req_offset
-		   , u8 *g_ch, u8 *g_bw, u8 *g_offset)
-{
-
-	*req_ch = *g_ch;
-
-	if (*req_bw == CHANNEL_WIDTH_80 && *g_ch <= 14) {
-		/*2.4G ch, downgrade to 40Mhz */
-		*req_bw = CHANNEL_WIDTH_40;
-	}
-
-	switch (*req_bw) {
-	case CHANNEL_WIDTH_80:
-		if (*g_bw == CHANNEL_WIDTH_40 || *g_bw == CHANNEL_WIDTH_80)
-			*req_offset = *g_offset;
-		else if (*g_bw == CHANNEL_WIDTH_20)
-			rtw_get_offset_by_chbw(*req_ch, *req_bw, req_offset);
-
-		if (*req_offset == HAL_PRIME_CHNL_OFFSET_DONT_CARE) {
-			RTW_ERR("%s req 80MHz BW without offset, down to 20MHz\n", __func__);
-			rtw_warn_on(1);
-			*req_bw = CHANNEL_WIDTH_20;
-		}
-		break;
-	case CHANNEL_WIDTH_40:
-		if (*g_bw == CHANNEL_WIDTH_40 || *g_bw == CHANNEL_WIDTH_80)
-			*req_offset = *g_offset;
-		else if (*g_bw == CHANNEL_WIDTH_20)
-			rtw_get_offset_by_chbw(*req_ch, *req_bw, req_offset);
-
-		if (*req_offset == HAL_PRIME_CHNL_OFFSET_DONT_CARE) {
-			RTW_ERR("%s req 40MHz BW without offset, down to 20MHz\n", __func__);
-			rtw_warn_on(1);
-			*req_bw = CHANNEL_WIDTH_20;
-		}
-		break;
-	case CHANNEL_WIDTH_20:
-		*req_offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
-		break;
-	default:
-		RTW_ERR("%s req unsupported BW:%u\n", __func__, *req_bw);
-		rtw_warn_on(1);
-	}
-
-	if (*req_bw > *g_bw) {
-		*g_bw = *req_bw;
-		*g_offset = *req_offset;
 	}
 }
 

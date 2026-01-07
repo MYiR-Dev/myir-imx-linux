@@ -184,6 +184,7 @@ do {\
 #define REG_CCK_CHECK			0x0454
 #define REG_AMPDU_MAX_TIME_V1	0x0455
 #define REG_TX_HANG_CTRL		0x045E
+#define REG_TX_HANG_CTRL_OPT		0x04FC
 #define REG_LIFETIME_EN			0x0426
 #define REG_BT_COEX_TABLE0		0x06C0
 #define REG_BT_COEX_TABLE1		0x06C4
@@ -194,6 +195,7 @@ do {\
 #define REG_BT_STAT_CTRL		0x0778
 
 #define BIT_EN_GNT_BT_AWAKE	BIT(3)
+#define BIT_GNT_BT_OPT		BIT(0)
 #define BIT_EN_BCN_FUNCTION	BIT(3)
 #define BIT_EN_BCN_PKT_REL	BIT(6)
 #define BIT_FEN_BB_GLB_RST	BIT(1)
@@ -244,6 +246,7 @@ typedef enum _BTC_CHIP_TYPE {
 	BTC_CHIP_RTL8703B 		= 11,
 	BTC_CHIP_RTL8725A 		= 12,
 	BTC_CHIP_RTL8733B 		= 13,
+	BTC_CHIP_RTL8822E		= 14,
 	BTC_CHIP_MAX
 } BTC_CHIP_TYPE, *PBTC_CHIP_TYPE;
 
@@ -263,6 +266,12 @@ static const char *const glbt_info_src[] = {
 	"BT Info[wifi fw]",
 	"BT Info[bt rsp]",
 	"BT Info[bt auto report]",
+};
+
+static const char *const glbt_le_audio_info_src[] = {
+	"BT LE audio Info[wifi fw]",
+	"BT LE audio Info[bt rsp]",
+	"BT LE audio Info[bt auto report]"
 };
 
 #define BTC_INFO_FTP		BIT(7)
@@ -336,6 +345,13 @@ enum btc_btinfo_src {
 	BTC_BTINFO_SRC_MAX
 };
 
+enum btc_bt_le_audio_info_src {
+	BTC_BT_LE_AUDIO_INFO_SRC_WL_FW	= 0x0,
+	BTC_BT_LE_AUDIO_INFO_SRC_BT_RSP = 0x1,
+	BTC_BT_LE_AUDIO_INFO_SRC_BT_ACT = 0x2,
+	BTC_BT_LE_AUDIO_INFO_SRC_MAX
+};
+
 enum btc_bt_profile {
 	BTC_BTPROFILE_NONE		= 0,
 	BTC_BTPROFILE_HFP		= BIT(0),
@@ -371,6 +387,7 @@ enum btc_bt_status {
 	BTC_BTSTATUS_ACL_BUSY		= 0x3,
 	BTC_BTSTATUS_SCO_BUSY		= 0x4,
 	BTC_BTSTATUS_ACL_SCO_BUSY	= 0x5,
+	BTC_BTSTATUS_LE_AUDIO_BUSY	= 0x6,
 	BTC_BTSTATUS_MAX
 };
 
@@ -381,6 +398,8 @@ static const char *const bt_status_string[] = {
 	"BT ACL-busy",
 	"BT SCO-busy",
 	"BT ACL-SCO-busy",
+	"BT LE-audio-BIS-busy",
+	"BT LE-audio-CIS-busy",
 	"BT Non-Defined-state"
 };
 
@@ -463,7 +482,9 @@ enum btc_wl2bt_scoreboard {
 	BTC_SCBD_EXTFEM		= BIT(8),
 	BTC_SCBD_TDMA		= BIT(9),
 	BTC_SCBD_FIX2M		= BIT(10),
+	BTC_SCBD_BT_HILNA	= BIT(13),
 	BTC_SCBD_MAILBOX_DBG	= BIT(14),
+	BTC_SCBD_WLS1		= BIT(15),
 	BTC_SCBD_ALL		= 0xffff,
 	BTC_SCBD_ALL_32BIT	= 0xffffffff
 };
@@ -702,6 +723,16 @@ enum btc_wl_rfk_state {
 	BTC_RFK_STATE_MAX
 };
 
+enum {
+	BTC_BT_SS_GROUP_NON_SHARED_ANT = 0x0,
+	BTC_BT_TX_GROUP_NON_SHARED_ANT = 0x1,
+	BTC_BT_RX_GROUP_NON_SHARED_ANT = 0x2,
+	BTC_BT_SS_GROUP_SHARED_ANT = 0x3,
+	BTC_BT_TX_GROUP_SHARED_ANT = 0x4,
+	BTC_BT_RX_GROUP_SHARED_ANT = 0x5,
+	BTC_BT_MAX_GROUP
+};
+
 struct btc_board_info {
 	/* The following is some board information */
 	u8				bt_chip_type;
@@ -748,6 +779,7 @@ struct btc_coex_dm {
 	u8	cur_toggle_para[6];
 	u8	bt_slot_length1[10];
 	u8	bt_slot_length2[10];
+	u8	lna2_level;
 	u32	cur_ant_pos_type;
 	u32	cur_switch_status;
 	u32	setting_tdma;
@@ -796,6 +828,10 @@ struct btc_coex_sta {
 	boolean bt_ble_hid_exist;
 	boolean bt_mesh;
 	boolean bt_ctr_ok;
+	boolean bt_hi_lna_rx;
+	boolean bt_le_audio_exist;
+	boolean bt_le_audio_BIS;
+	boolean bt_le_audio_CIS;
 
 	boolean wl_under_lps;
 	boolean wl_in_lps_enter;
@@ -823,6 +859,7 @@ struct btc_coex_sta {
 	boolean wl_leak_ap; /* !is_no_wl_5ms_extend  */
 	boolean wl_blacklist_ap;
 	boolean wl_rfk;
+	boolean wl_media_status_type;
 
 	u8	coex_table_type;
 	u8 	coex_run_reason;
@@ -831,15 +868,23 @@ struct btc_coex_sta {
 	u8	gnt_workaround_state;
 	u8	tdma_timer_base;
 	u8	bt_rssi;
+	u8	bt_le_audio_rssi;
 	u8	bt_profile_num;
 	u8	bt_profile_num_pre;
 	u8	bt_info_c2h[BTC_BTINFO_SRC_MAX][BTC_BTINFO_LENGTH_MAX];
+	u8	bt_le_audio_info_c2h[BTC_BT_LE_AUDIO_INFO_SRC_MAX][BTC_BTINFO_LENGTH_MAX];
 	u8	bt_info_lb2;
 	u8	bt_info_lb3;
 	u8	bt_info_hb0;
 	u8	bt_info_hb1;
 	u8	bt_info_hb2;
 	u8	bt_info_hb3;
+	u8	bt_le_audio_info_lb2;
+	u8	bt_le_audio_info_lb3;
+	u8	bt_le_audio_info_hb0;
+	u8	bt_le_audio_info_hb1;
+	u8	bt_le_audio_info_hb2;
+	u8	bt_le_audio_info_hb3;
 	u8	bt_ble_scan_type;
 	u8	bt_afh_map[10];
 	u8	bt_a2dp_vendor_id;
@@ -874,7 +919,7 @@ struct btc_coex_sta {
 	u32	score_board_WB;
 	u16	bt_reg_vendor_ac;
 	u16	bt_reg_vendor_ae;
-	u32	bt_reg_vendor_dac;
+	u16	bt_reg_vendor_dae;
 	u16	bt_reg_modem_a;
 	u16	bt_reg_rf_2;
 	u16	bt_reg_rf_9;
@@ -896,7 +941,10 @@ struct btc_coex_sta {
 	u32	wl_arfb2;
 	u32	wl_traffic_dir;
 	u32	wl_bw;
+	u32	wl_rx_tp;
+	u32	wl_tx_tp;
 	u32	cnt_bt_info_c2h[BTC_BTINFO_SRC_MAX];
+	u32	cnt_bt_le_audio_info_c2h[BTC_BT_LE_AUDIO_INFO_SRC_MAX];
 	u32	cnt_bt[BTC_CNT_BT_MAX];
 	u32	cnt_wl[BTC_CNT_WL_MAX];
 	u32	cnt_timer[BTC_TIMER_MAX];
@@ -930,6 +978,7 @@ struct btc_wifi_link_info_ext {
 	boolean is_4way;
 	boolean is_32k;
 	boolean is_connected;
+	boolean is_port_num_change;
 	u8	num_of_active_port;
 	u32	port_connect_status;
 	u32	traffic_dir;
@@ -1668,6 +1717,13 @@ typedef VOID
 	IN		u1Byte	type
 	);
 
+typedef VOID
+(*BTC_PHYDM_SET_AGC_TBL)(
+	IN		PVOID	pDM_Odm,
+	IN		BOOLEAN bt_is_linked,
+	IN		u1Byte agc_index
+	);
+
 typedef u1Byte
 (*BFP_BTC_GET_ANT_DET_VAL_FROM_BT)(
 
@@ -1772,6 +1828,7 @@ struct btc_statistics {
 	u32					cnt_media_status_notify;
 	u32					cnt_specific_packet_notify;
 	u32					cnt_bt_info_notify;
+	u32					cnt_bt_le_audio_info_notify;
 	u32					cnt_rf_status_notify;
 	u32					cnt_periodical;
 	u32					cnt_coex_dm_switch;
@@ -1865,6 +1922,7 @@ struct btc_coexist {
 	BTC_PHYDM_CMNINFOQUERY				btc_phydm_query_PHY_counter;
 	BTC_REDUCE_WL_TX_POWER				btc_reduce_wl_tx_power;
 	BTC_PHYDM_MODIFY_ANTDIV_HWSW		btc_phydm_modify_antdiv_hwsw;
+	BTC_PHYDM_SET_AGC_TBL			btc_phydm_set_agc_table;
 	BFP_BTC_GET_ANT_DET_VAL_FROM_BT		btc_get_ant_det_val_from_bt;
 	BFP_BTC_GET_BLE_SCAN_TYPE_FROM_BT	btc_get_ble_scan_type_from_bt;
 	BFP_BTC_GET_BLE_SCAN_PARA_FROM_BT	btc_get_ble_scan_para_from_bt;
@@ -1942,8 +2000,10 @@ struct btc_chip_para {
 	boolean			scbd_support;
 	u32				scbd_reg;
 	u8				scbd_bit_num;
+	boolean				le_audio_support;
 	boolean			mailbox_support;
 	boolean			lte_indirect_access;
+	boolean				new_scbd9_def; /* TRUE: 1:TDMA on(8733b/8822e) */
 	boolean			new_scbd10_def; /* TRUE: 1:fix 2M(8822c) */
 	u8				indirect_type;	/* 0:17xx, 1:7cx */
 	u8				pstdma_type; /* 0: LPSoff, 1:LPSon */
@@ -2061,6 +2121,12 @@ EXhalbtcoutsrc_rx_rate_change_notify(
 	IN	u1Byte			btc_rate_id
 	);
 VOID
+EXhalbtcoutsrc_thtp_notify(
+	IN 	PBTC_COEXIST		pBtCoexist,
+	IN 	u4Byte			rx_tp,
+	IN 	u4Byte			tx_tp
+	);
+VOID
 EXhalbtcoutsrc_StackOperationNotify(
 	IN	PBTC_COEXIST		pBtCoexist,
 	IN	u1Byte			type
@@ -2159,15 +2225,16 @@ EXhalbtcoutsrc_DisplayAntDetection(
 	IN	PBTC_COEXIST		pBtCoexist
 	);
 
-#define	MASKBYTE0		0xff
-#define	MASKBYTE1		0xff00
-#define	MASKBYTE2		0xff0000
-#define	MASKBYTE3		0xff000000
+#define	MASKBYTE0	0xff
+#define	MASKBYTE1	0xff00
+#define	MASKBYTE2	0xff0000
+#define	MASKBYTE3	0xff000000
 #define	MASKHWORD	0xffff0000
-#define	MASKLWORD		0x0000ffff
+#define	MASKLWORD	0x0000ffff
 #define	MASKDWORD	0xffffffff
-#define	MASK12BITS		0xfff
-#define	MASKH4BITS		0xf0000000
+#define	MASK12BITS	0xfff
+#define	MASK20BITS	0xfffff
+#define	MASKH4BITS	0xf0000000
 #define	MASKOFDM_D	0xffc00000
 #define	MASKCCK		0x3f3f3f3f
 

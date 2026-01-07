@@ -52,6 +52,9 @@
 #define	DIG_MAX_PERFORMANCE_MODE	0x5a
 #define	DIG_MAX_OF_MIN_PERFORMANCE_MODE	0x40	/*@[WLANBB-871]*/
 #define	DIG_MIN_PERFORMANCE		0x20
+#if (RTL8822B_SUPPORT == 1)
+#define	DIG_MAX_OF_MIN_PERFORMANCE_MODE_22B		0x38
+#endif
 
 /*@DIG DFS function*/
 #define	DIG_MAX_DFS			0x28
@@ -174,7 +177,8 @@ struct phydm_dig_struct {
 	RTL8198F_SUPPORT || RTL8192F_SUPPORT || RTL8195B_SUPPORT ||\
 	RTL8822C_SUPPORT || RTL8814B_SUPPORT || RTL8721D_SUPPORT ||\
 	RTL8710C_SUPPORT || RTL8812F_SUPPORT || RTL8197G_SUPPORT ||\
-	RTL8733B_SUPPORT)
+	RTL8733B_SUPPORT || RTL8735B_SUPPORT || RTL8730A_SUPPORT ||\
+	RTL8822E_SUPPORT)
 	u8		rf_gain_idx;
 	u8		agc_table_idx;
 	u8		big_jump_lmt[16];
@@ -268,6 +272,12 @@ struct phydm_fa_struct {
 	u32		cnt_cck_txon;
 	u32		cnt_ofdm_txen;
 	u32		cnt_ofdm_txon;
+	u32		cnt_mpdu_crc32_ok;
+	u32		cnt_mpdu_crc32_error;
+	u32		cnt_mpdu_miss;
+	u32		cnt_mac664_report;
+	u8		cnt_mac664_type;
+	u32		cnt_bt_polluted;
 };
 
 #ifdef PHYDM_TDMA_DIG_SUPPORT

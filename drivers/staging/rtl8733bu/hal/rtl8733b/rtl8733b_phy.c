@@ -603,18 +603,19 @@ void rtl8733b_set_tx_power_level(PADAPTER adapter, u8 channel)
 	struct hal_spec_t *hal_spec = GET_HAL_SPEC(adapter);
 	u8 path;
 
-	for (path = RF_PATH_A; path < hal_spec->rf_reg_path_num; ++path) {
 #ifdef CONFIG_TXPWR_PG_WITH_TSSI_OFFSET
-		if (hal_data->txpwr_pg_mode == TXPWR_PG_WITH_TSSI_OFFSET) {
-			_halrf_tssi_set_powerlevel_8733b(phydm, 0, path);
-		} else 
+	if (hal_data->txpwr_pg_mode == TXPWR_PG_WITH_TSSI_OFFSET) {
+		path = (u8)odm_get_bb_reg(phydm, 0x1884, BIT(20));
+		_halrf_tssi_set_powerlevel_8733b(phydm, 0, path);
+	} else 
 #endif
-		{
-			/*
-			* can't bypass unused path
-			* because phydm need all path values to calculate min diff
-			*/
-			set_tx_power_level_by_path(adapter, channel, path);
+	{
+		for (path = RF_PATH_A; path < hal_spec->rf_reg_path_num; ++path) {
+		/*
+		* can't bypass unused path
+		* because phydm need all path values to calculate min diff
+		*/
+		set_tx_power_level_by_path(adapter, channel, path);
 		}
 	}
 }
@@ -808,12 +809,25 @@ static void switch_chnl_and_set_bw_by_drv(PADAPTER adapter, u8 switch_band)
 	if (hal->bSetChnlBW) {
 		/* get primary channel index */
 		u8 pri_ch_idx = get_pri_ch_id(adapter);
+		u8 is_srrc = false;
 
 		/* 3.1 set MAC register */
 		mac_switch_bandwidth(adapter, pri_ch_idx);
 
-		/* 3.2 set BB/RF registet */
+		/* 3.2 set BB/RF register, 8733b set bandedge configure for SRRC by default */
 		ret = config_phydm_switch_bandwidth_8733b(p_dm_odm, pri_ch_idx, hal->current_channel_bw);
+
+		if (_rtw_memcmp(adapter_to_rfctl(adapter)->alpha2, "CN", 2) == _TRUE
+			&& (phy_is_tx_power_limit_needed(adapter)
+				#ifdef CONFIG_MP_INCLUDED
+				|| rtw_mp_mode_check(adapter)
+				#endif
+			)
+		)
+			is_srrc = true;
+		/* Non-SRRC should set to original bandedge configure */
+		config_phydm_srrc_setting_8733b(p_dm_odm, is_srrc);
+
 		hal->bSetChnlBW = _FALSE;
 
 		if (!ret) {

@@ -27,6 +27,9 @@
 #define DRIVER_EARLY_INT_TIME_8733B	0x05
 #define BCN_DMA_ATIME_INT_TIME_8733B	0x02
 
+#define C2H_GET_CMD_ID_1BYTE(c2h_pkt) LE_BITS_TO_1BYTE(c2h_pkt + 0X00, 0, 8)
+#define C2H_GET_SEQ_1BYTE(c2h_pkt) LE_BITS_TO_1BYTE(c2h_pkt + 0X01, 0, 8)
+
 /* rtl8733b_ops.c */
 struct hw_port_reg {
 	u32 net_type;
@@ -112,6 +115,10 @@ void rtl8733b_c2h_handler_no_io(PADAPTER, u8 *pbuf, u16 length);
 #ifdef CONFIG_BT_COEXIST
 void rtl8733b_download_BTCoex_AP_mode_rsvd_page(PADAPTER);
 #endif /* CONFIG_BT_COEXIST */
+
+#ifdef CONFIG_P2P_PS
+void rtl8733b_set_p2p_ps_offload_cmd(PADAPTER padapter, u8 p2p_ps_state);
+#endif
 
 /* rtl8733b_phy.c */
 u8 rtl8733b_phy_init_mac_register(PADAPTER);

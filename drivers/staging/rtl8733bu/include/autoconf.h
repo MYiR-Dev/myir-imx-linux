@@ -102,7 +102,7 @@
 #endif
 
 /*#define SUPPORT_HW_RFOFF_DETECTED*/
-//#define CONFIG_RTW_LED
+/* #define CONFIG_RTW_LED */
 #ifdef CONFIG_RTW_LED
 	#define CONFIG_RTW_SW_LED
 	#ifdef CONFIG_RTW_SW_LED
@@ -154,6 +154,7 @@
 	#define CONFIG_PREALLOC_RECV_SKB
 	#ifdef CONFIG_PREALLOC_RECV_SKB
 		/* #define CONFIG_FIX_NR_BULKIN_BUFFER */ /* only use PREALLOC_RECV_SKB buffer, don't alloc skb at runtime */
+		#define CONFIG_USB_PROTECT_RX_CLONED_SKB
 	#endif
 #endif
 
@@ -196,10 +197,9 @@
 #ifdef CONFIG_POWER_SAVING
 	#define CONFIG_IPS
 	#ifdef CONFIG_IPS
-	/* #define CONFIG_IPS_LEVEL_2 1*/ /*enable this to set default IPS mode to IPS_LEVEL_2*/
-	#define CONFIG_IPS_CHECK_IN_WD /* Do IPS Check in WatchDog.	*/
-	/* #define CONFIG_FWLPS_IN_IPS */
-	#endif
+		#define CONFIG_IPS_CHECK_IN_WD /* Do IPS Check in WatchDog.	*/
+		/* #define CONFIG_FWLPS_IN_IPS */
+	#endif /* CONFIG_IPS */
 	/* #define SUPPORT_HW_RFOFF_DETECTED */
 
 	#define CONFIG_LPS
@@ -232,6 +232,7 @@
 
 #define CONFIG_GLOBAL_UI_PID
 
+#define CONFIG_CCV_FW
 
 /*
  * Others
@@ -298,5 +299,6 @@
  */
 #define DBG	1
 #define DBG_CONFIG_ERROR_DETECT
+#define RTW_DETECT_HANG
+
 /* #define CONFIG_DISABLE_ODM */
-#define CONFIG_CCV_FW

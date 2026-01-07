@@ -27,6 +27,7 @@
 #define __HALRF_DPK_H__
 
 /*@--------------------------Define Parameters-------------------------------*/
+#define LBK_RXIQK 0
 #define GAIN_LOSS 1
 #define DO_DPK 2
 #define DPK_ON 3
@@ -36,18 +37,24 @@
 #define DPK_LOK 4
 #define DPK_TXK 5
 #define DAGC 4
+#define SYNC_DC 5
+#define MDPK_DC 6
 #define LOSS_CHK 0
 #define GAIN_CHK 1
+#define SYNC_CHK 3
 #define PAS_READ 2
 #define AVG_THERMAL_NUM 8
 #define AVG_THERMAL_NUM_DPK 8
 #define THERMAL_DPK_AVG_NUM 4
 
+#define DPK_RF18 2
+
 /*define RF path numer*/
-#if (RTL8198F_SUPPORT == 1 || RTL8814B_SUPPORT == 1)
+#if (RTL8198F_SUPPORT == 1 || RTL8814B_SUPPORT == 1|| RTL8814C_SUPPORT == 1)
 #define KPATH 4
 #elif (RTL8192F_SUPPORT == 1 || RTL8197F_SUPPORT == 1 ||RTL8197G_SUPPORT == 1 ||\
-	RTL8822C_SUPPORT == 1 || RTL8812F_SUPPORT == 1 || RTL8733B_SUPPORT == 1)
+	RTL8822C_SUPPORT == 1 || RTL8812F_SUPPORT == 1 || RTL8733B_SUPPORT == 1 ||\
+	RTL8822E_SUPPORT == 1)
 #define KPATH 2
 #else
 #define KPATH 1
@@ -74,30 +81,35 @@ struct dm_dpk_info {
 	u8	thermal_dpk[KPATH];					/*path*/	
 	u8	thermal_dpk_avg[KPATH][AVG_THERMAL_NUM_DPK];	/*path*/
 	u8	pre_pwsf[KPATH];
+	u16	pwsf[KPATH];				/*path*/
 	u8	thermal_dpk_avg_index;
 	u32	gnt_control;
 	u32	gnt_value;
 	u8	dpk_ch;
 	u8	dpk_band;
 	u8	dpk_bw;
-	u32	dpk_rf18[2];
+	u32	dpk_rf18[DPK_RF18];
 	u32	dpk_cal_cnt;
 	u32	dpk_ok_cnt;
 	u32	dpk_reload_cnt;
+	u8	txagc_k[KPATH];		/*txagc@dpk with path*/
 
-#if (RTL8822C_SUPPORT == 1 || RTL8812F_SUPPORT == 1 || RTL8197G_SUPPORT == 1)
+#if (RTL8822C_SUPPORT == 1 || RTL8812F_SUPPORT == 1 || RTL8197G_SUPPORT == 1 || RTL8735B_SUPPORT == 1 || \
+	RTL8822E_SUPPORT == 1)
 	u16	dc_i[2];			/*MDPD DC I path*/
 	u16	dc_q[2];			/*MDPD DC Q path*/
 	u8	corr_val[2];			/*Corr value path*/
 	u8	corr_idx[2];			/*Corr index path*/
 #endif
 
-#if (RTL8822C_SUPPORT == 1 || RTL8812F_SUPPORT == 1)
+#if (RTL8822C_SUPPORT == 1 || RTL8812F_SUPPORT == 1 || RTL8822E_SUPPORT == 1)
 	u8	result[2];			/*path*/
 	u8	dpk_txagc[2];			/*path*/
 	u32	coef[2][20];			/*path/MDPD coefficient*/
 	u16	dpk_gs[2];			/*MDPD coef gs*/
 	u8	thermal_dpk_delta[2];		/*path*/
+	u32	dpk_lms_err[2];			/*path*/
+	u32	dpk_data[11];			/*path/MDPD coefficient*/
 #endif
 
 #if (RTL8198F_SUPPORT == 1 || RTL8192F_SUPPORT == 1 || RTL8197F_SUPPORT == 1 ||\
@@ -122,7 +134,12 @@ struct dm_dpk_info {
 	u8	tx_gain;
 #endif
 
-#if (RTL8195B_SUPPORT == 1 || RTL8721D_SUPPORT == 1)
+#if (RTL8814C_SUPPORT == 1)
+	u8	thr_pwsf[KPATH];
+#endif
+
+
+#if (RTL8195B_SUPPORT == 1)
 		u8	dpk_txagc;
 		/*2G DPK data*/
 	u8	dpk_2g_result[KPATH][3];			/*path/group*/
@@ -136,7 +153,34 @@ struct dm_dpk_info {
 	u32	lut_5g_odd[KPATH][GROUP_5G][16];		/*path/group/LUT data*/
 #endif
 
-#if(RTL8733B_SUPPORT == 1)
+#if (RTL8721D_SUPPORT == 1)
+	s16	tmp_pas_i[32];			/*PAScan I data*/
+	s16	tmp_pas_q[32];			/*PAScan Q data*/
+	u8	dpk_txagc;			/*path*/
+#if (DPK_BY_GROUP_K_8721D)
+	/*2G DPK data*/
+	u8	dpk_2g_result[1][3];		/*path/group*/
+	u8	pwsf_2g[1][3];			/*path/group*/
+	u32	lut_2g_even[1][3][16];		/*path/group/LUT data*/
+	u32	lut_2g_odd[1][3][16];		/*path/group/LUT data*/
+	/*5G DPK data*/
+	u8	dpk_5g_result[1][6];		/*path/group*/
+	u8	pwsf_5g[1][6];			/*path/group*/
+	u32	lut_5g_even[1][6][16];		/*path/group/LUT data*/
+	u32	lut_5g_odd[1][6][16];		/*path/group/LUT data*/
+#else
+	u8	dpk_2g_result[1][1];		/*path/group*/
+	u8	pwsf_2g[1][1];			/*path/group*/
+	u32	lut_2g_even[1][1][16];		/*path/group/LUT data*/
+	u32	lut_2g_odd[1][1][16];		/*path/group/LUT data*/
+	u8	dpk_5g_result[1][1];		/*path/group*/
+	u8	pwsf_5g[1][1];			/*path/group*/
+	u32	lut_5g_even[1][1][16];		/*path/group/LUT data*/
+	u32	lut_5g_odd[1][1][16];		/*path/group/LUT data*/
+#endif
+#endif
+
+#if(RTL8733B_SUPPORT == 1 || RTL8730A_SUPPORT == 1)
 	u8	one_shot_cnt;
 	u8	dpk_current_path;
 	u8	thermal_init[KPATH];
@@ -145,12 +189,12 @@ struct dm_dpk_info {
 	u8	txagc[KPATH];				/*path*/
 	u8	tssi_txagc[KPATH][2];			/*path/0:txagc_rf,1:tssi_offset*/
 	u16	digital_bbgain[KPATH];			/*path*/
-	u16	pwsf[KPATH];				/*path*/
+	//u16	pwsf[KPATH];				/*path*/
 
 #endif
 };
 
-#if (RTL8822C_SUPPORT == 1)
+#if (RTL8822C_SUPPORT == 1 || RTL8822E_SUPPORT == 1)
 struct dm_dpk_c2h_report {
 	u8	result[2];		/*ch0_result/ch1_result*/
 	u8	therm[2][2];		/*therm0_s0/therm0_s1/therm1_s0/therm1_s1*/

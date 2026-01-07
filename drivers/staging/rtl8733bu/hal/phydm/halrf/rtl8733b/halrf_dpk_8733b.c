@@ -339,7 +339,8 @@ void _dpk_get_tssi_mode_txagc(struct dm_struct *dm)
 	       path, dpk_info->thermal_init[path]);
 
 	if ((!dpk_info->dpk_band) && (!(dm->rfe_type <= 2 ||
-		dm->rfe_type == 4 || dm->rfe_type == 9))) {
+		dm->rfe_type == 4 || dm->rfe_type == 9
+		|| dm->rfe_type == 13))) {
 		/*if not only one path, do another pathK*/
 		poll_cnt = 0;
 		path = ~path & 0x1;
@@ -1275,7 +1276,7 @@ void _dpk_path_select_8733b(struct dm_struct *dm)
 	_iqk_fill_iqk_xy_8733b(dm, path);
 
 	if (!dpk_info->dpk_band && !(dm->rfe_type <= 2 || dm->rfe_type == 4 ||
-		dm->rfe_type == 9)) {
+		dm->rfe_type == 9 || dm->rfe_type == 13)) {
 		/*K another path*/
 		path = ~path & 0x1;
 		odm_set_bb_reg(dm, R_0x1884, BIT(20), path);
@@ -1294,7 +1295,7 @@ void _dpk_result_summary_8733b(struct dm_struct *dm)
 	RF_DBG(dm, DBG_RF_DPK, "[DPK] ======== DPK Result Summary =======\n");
 
 	if (dpk_info->dpk_band || dm->rfe_type <= 2 || dm->rfe_type == 4 ||
-		dm->rfe_type == 9) {
+		dm->rfe_type == 9 || dm->rfe_type == 13) {
 		RF_DBG(dm, DBG_RF_DPK,
 		       "[DPK] S%d txagc = 0x%x, pwsf offset = 0x%x\n",
 		       path, dpk_info->txagc[path],

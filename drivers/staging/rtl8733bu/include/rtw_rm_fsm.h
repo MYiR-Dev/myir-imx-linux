@@ -105,7 +105,8 @@ enum bcn_req_opt_sub_id{
 	bcn_req_rep_info = 1,		/* len 2 */
 	bcn_req_rep_detail = 2,		/* len 1 */
 	bcn_req_req = 10,		/* len 0-237 */
-	bcn_req_ap_ch_rep = 51		/* len 1-237 */
+	bcn_req_ap_ch_rep = 51,		/* len 1-237 */
+	bcn_req_last_bcn_rpt_ind = 164	/* len 1 */
 };
 
 /* IEEE 802.11-2012 Table 8-66 Reporting condition of Beacon Report */
@@ -133,6 +134,7 @@ struct bcn_req_opt {
 	u8 req_id_num;
 	u8 req_id[BCN_REQ_REQ_OPT_MAX_NUM];
 	u8 rep_detail;
+	u8 rep_last_bcn_ind;
 	NDIS_802_11_SSID ssid;
 
 	/* bcn report condition */
@@ -215,6 +217,7 @@ struct rm_meas_req {
 	u16 rand_intvl;		/* units of TU */
 	u16 meas_dur;		/* units of TU */
 
+	u8 scan_mode;
 	u8 bssid[6];		/* for bcn_req */
 
 	u8 *pssid;
@@ -256,10 +259,12 @@ struct rm_meas_rep {
 	u8 ipi[11];
 
 	u16 rpt;
+	u8 scan_mode;
 	u8 bssid[6];		/* for bcn_req */
 };
 
-#define MAX_BUF_NUM	128
+#define MAX_RM_PKT_NUM	32
+#define MAX_RM_AP_NUM	128
 struct data_buf {
 	u8 *pbuf;
 	u16 len;
@@ -286,8 +291,13 @@ struct rm_obj {
 	u8 poll_mode;
 	u8 free_run_counter_valid; /* valid:_SUCCESS/invalid:_FAIL */
 
-	struct data_buf buf[MAX_BUF_NUM];
+	struct data_buf buf[MAX_RM_PKT_NUM];
 	bool from_ioctl;
+
+	struct wlan_network *ap[MAX_RM_AP_NUM];
+	u8 ap_num;
+
+	_adapter *adapter;
 
 	_list list;
 };

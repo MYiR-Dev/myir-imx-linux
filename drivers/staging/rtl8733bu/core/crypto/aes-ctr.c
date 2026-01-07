@@ -30,13 +30,13 @@ int aes_ctr_encrypt(const u8 *key, size_t key_len, const u8 *nonce,
 	u8 *pos = data;
 	u8 counter[AES_BLOCK_SIZE], buf[AES_BLOCK_SIZE];
 
-	ctx = rtl_aes_encryp_init(key, key_len);
+	ctx = aes_encrypt_init(key, key_len);
 	if (ctx == NULL)
 		return -1;
 	os_memcpy(counter, nonce, AES_BLOCK_SIZE);
 
 	while (left > 0) {
-		rtl_aes_encryp(ctx, counter, buf);
+		wpa_aes_encrypt(ctx, counter, buf);
 
 		len = (left < AES_BLOCK_SIZE) ? left : AES_BLOCK_SIZE;
 		for (j = 0; j < len; j++)
@@ -50,7 +50,7 @@ int aes_ctr_encrypt(const u8 *key, size_t key_len, const u8 *nonce,
 				break;
 		}
 	}
-	rtl_aes_encryp_deinit(ctx);
+	aes_encrypt_deinit(ctx);
 	return 0;
 }
 

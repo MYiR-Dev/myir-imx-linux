@@ -52,7 +52,7 @@
 /*@extend for different bw & path*/
 
 #define CCK_PD_IC_TYPE4 ODM_IC_JGR3_SERIES /*@extend for different bw & path*/
-#define CCK_PD_IC_TYPE5 (ODM_RTL8733B) /*@extend for different CR*/
+#define CCK_PD_IC_TYPE5 (ODM_RTL8733B | ODM_RTL8735B | ODM_RTL8730A) /*@extend for different CR*/
 
 /*@Compile time flag of CCK_PD HW type*/
 #if (RTL8188E_SUPPORT || RTL8812A_SUPPORT || RTL8821A_SUPPORT ||\
@@ -74,7 +74,7 @@
 #ifdef PHYDM_IC_JGR3_SERIES_SUPPORT
 	#define PHYDM_COMPILE_CCKPD_TYPE4 /*@extend for different bw & path*/
 #endif
-#if (RTL8733B_SUPPORT)
+#if (RTL8733B_SUPPORT || RTL8735B_SUPPORT || RTL8730A_SUPPORT)
 	#define PHYDM_COMPILE_CCKPD_TYPE5 /*@extend for different & path*/
 #endif
 

@@ -31,7 +31,7 @@ enum NHM_PID {
 		clm.mntr_time = time;\
 	} while (0)
 
-#define init_nhm_param(nhm, txon, cca, cnt_opt, app, lv, time) \
+#define init_nhm_param(nhm, txon, cca, cnt_opt, app, lv, time, en_1db_mode) \
 	do {\
 		nhm.incld_txon = txon;\
 		nhm.incld_cca = cca;\
@@ -39,20 +39,21 @@ enum NHM_PID {
 		nhm.nhm_app = app;\
 		nhm.nhm_lv = lv;\
 		nhm.mntr_time = time;\
+		nhm.en_1db_mode = en_1db_mode;\
 	} while (0)
 
 	
 #define init_acs_clm(clm, time) \
 	init_clm_param(clm, CLM_ACS, CLM_LV_2, time)
 
-#define init_acs_nhm(nhm, time) \
-	init_nhm_param(nhm, NHM_EXCLUDE_TXON, NHM_EXCLUDE_CCA, NHM_CNT_ALL, NHM_ACS, NHM_LV_2, time)
+#define init_acs_nhm(nhm, time, en_1db_mode) \
+	init_nhm_param(nhm, NHM_EXCLUDE_TXON, NHM_EXCLUDE_CCA, NHM_CNT_ALL, NHM_ACS, NHM_LV_2, time, en_1db_mode)
 
-#define init_11K_high_nhm(nhm, time) \
-	init_nhm_param(nhm, NHM_EXCLUDE_TXON, NHM_EXCLUDE_CCA, NHM_CNT_ALL, IEEE_11K_HIGH, NHM_LV_2, time)
+#define init_11K_high_nhm(nhm, time, en_1db_mode) \
+	init_nhm_param(nhm, NHM_EXCLUDE_TXON, NHM_EXCLUDE_CCA, NHM_CNT_ALL, IEEE_11K_HIGH, NHM_LV_2, time, en_1db_mode)
 	
-#define init_11K_low_nhm(nhm, time) \
-		init_nhm_param(nhm, NHM_EXCLUDE_TXON, NHM_EXCLUDE_CCA, NHM_CNT_ALL, IEEE_11K_LOW, NHM_LV_2, time)
+#define init_11K_low_nhm(nhm, time, en_1db_mode) \
+		init_nhm_param(nhm, NHM_EXCLUDE_TXON, NHM_EXCLUDE_CCA, NHM_CNT_ALL, IEEE_11K_LOW, NHM_LV_2, time, en_1db_mode)
 
 
 #endif /*(RTK_ACS_VERSION == 3)*/

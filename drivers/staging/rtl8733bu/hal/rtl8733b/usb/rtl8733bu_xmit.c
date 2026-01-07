@@ -846,6 +846,7 @@ static void rtl8733bu_xmit_tasklet(unsigned long priv)
 	int ret = _FALSE;
 	_adapter *padapter = (_adapter *)priv;
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
+	struct pwrctrl_priv *pwrpriv = adapter_to_pwrctl(padapter);
 
 	while (1) {
 		if (RTW_CANNOT_TX(padapter)) {
@@ -855,6 +856,13 @@ static void rtl8733bu_xmit_tasklet(unsigned long priv)
 
 		if (rtw_xmit_ac_blocked(padapter) == _TRUE)
 			break;
+
+		if (pwrpriv->bInSuspend == _TRUE) {
+		#ifdef DBG_TX_DROP_FRAME
+			RTW_INFO("DBG_TX_DROP_FRAME %s in suspend flow\n", __FUNCTION__);
+		#endif
+			break;
+		}
 
 		ret = rtl8733bu_xmitframe_complete(padapter, pxmitpriv, NULL);
 
@@ -884,6 +892,11 @@ s32	rtl8733bu_init_xmit_priv(PADAPTER padapter)
 
 void	rtl8733bu_free_xmit_priv(PADAPTER padapter)
 {
+	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
+
+#ifdef PLATFORM_LINUX
+	tasklet_kill(&pxmitpriv->xmit_tasklet);
+#endif
 }
 
 static s32 xmitframe_direct(PADAPTER padapter, struct xmit_frame *pxmitframe)
@@ -978,6 +991,7 @@ s32 rtl8733bu_hal_mgmt_xmitframe_enqueue(PADAPTER padapter, struct xmit_frame *p
 
 	err = rtw_mgmt_xmitframe_enqueue(padapter, pxmitframe);
 	if (err != _SUCCESS) {
+		rtw_free_xmitbuf(pxmitpriv, pxmitframe->pxmitbuf);
 		rtw_free_xmitframe(pxmitpriv, pxmitframe);
 		pxmitpriv->tx_drop++;
 	} else {

@@ -58,10 +58,14 @@ static u8 sethwreg(PADAPTER padapter, u8 variable, u8 *val)
 			/* use 16k to workaround for HISILICON platform */
 			pHalData->rxagg_usb_timeout = 8;
 			pHalData->rxagg_usb_size = 3;
-#else
+#elif defined(CONFIG_PLATFORM_I386_PC)
 			/* default setting */
 			pHalData->rxagg_usb_timeout = 0x20;
 			pHalData->rxagg_usb_size = 0x05;
+#else
+			/* Avoid the Synopsys USB host receive buffer size limit */
+			pHalData->rxagg_usb_timeout = 0x20;
+			pHalData->rxagg_usb_size = 0x04;
 #endif
 		}
 		rtw_halmac_rx_agg_switch(pdvobjpriv, _TRUE);

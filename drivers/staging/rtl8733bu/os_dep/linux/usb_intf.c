@@ -47,6 +47,7 @@ static void rtw_dev_shutdown(struct device *dev)
 	struct usb_interface *usb_intf = container_of(dev, struct usb_interface, dev);
 	struct dvobj_priv *dvobj = NULL;
 	_adapter *adapter = NULL;
+	struct cmd_priv *pcmdpriv;
 
 	RTW_INFO("%s\n", __func__);
 
@@ -70,6 +71,19 @@ static void rtw_dev_shutdown(struct device *dev)
 					else
 					#endif
 					{
+
+						RTW_PRINT("stop cmd thread during %s\n", __func__);
+						rtw_set_drv_stopped(adapter);	/*for stop thread*/
+						rtw_stop_drv_threads(adapter);
+						rtw_cancel_all_timer(adapter);
+						rtw_intf_stop(adapter);
+						pcmdpriv = &adapter->cmdpriv;
+						if (ATOMIC_READ(&(pcmdpriv->cmdthd_running)) == _TRUE) {
+							RTW_ERR("cmd_thread not stop !!\n");
+							rtw_warn_on(1);
+						} else {
+							RTW_PRINT("cmd thread is stopped during %s\n", __func__);
+						}
 						#ifdef CONFIG_BT_COEXIST
 						RTW_INFO("%s call halt notify\n", __FUNCTION__);
 						rtw_btcoex_HaltNotify(adapter);
@@ -253,6 +267,8 @@ static struct usb_device_id rtw_usb_id_tbl[] = {
 	/*=== Realtek demoboard ===*/
 	{USB_DEVICE_AND_INTERFACE_INFO(USB_VENDER_ID_REALTEK, 0xF192, 0xff, 0xff, 0xff), .driver_info = RTL8192F}, /* 8192FU 2*2 */
 	{USB_DEVICE_AND_INTERFACE_INFO(USB_VENDER_ID_REALTEK, 0xA725, 0xff, 0xff, 0xff), .driver_info = RTL8192F}, /* 8725AU 2*2 */
+	/*=== Customer ID ===*/
+	{USB_DEVICE(0x0b05, 0x18f1), .driver_info = RTL8192F}, /* ASUS USB-N13 C1 */
 #endif
 
 #ifdef CONFIG_RTL8821C
@@ -296,6 +312,13 @@ static struct usb_device_id rtw_usb_id_tbl[] = {
 	{USB_DEVICE_AND_INTERFACE_INFO(USB_VENDER_ID_REALTEK, 0xF72B, 0xff, 0xff, 0xff), .driver_info = RTL8733B}, /* USB Single-fuction, WiFi only */
 #endif
 
+#ifdef CONFIG_RTL8822E
+	/*=== Realtek demoboard ===*/
+	{USB_DEVICE_AND_INTERFACE_INFO(USB_VENDER_ID_REALTEK, 0xE822, 0xff, 0xff, 0xff), .driver_info = RTL8822E}, /* Default ID for USB multi-function */
+	{USB_DEVICE_AND_INTERFACE_INFO(USB_VENDER_ID_REALTEK, 0xA82A, 0xff, 0xff, 0xff), .driver_info = RTL8822E}, /* Default ID for USB multi-function */
+#endif /* CONFIG_RTL8822E */
+
+
 	{}	/* Terminating entry */
 };
 
@@ -333,10 +356,10 @@ struct rtw_usb_drv usb_drv = {
 	.usbdrv.reset_resume   = rtw_resume,
 #endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19))
-	.usbdrv.drvwrap.driver.shutdown = rtw_dev_shutdown,
-#else
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)) || (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 19))
 	.usbdrv.driver.shutdown = rtw_dev_shutdown,
+#else
+	.usbdrv.drvwrap.driver.shutdown = rtw_dev_shutdown,
 #endif
 };
 
@@ -503,6 +526,12 @@ static void rtw_decide_chip_type_by_usb_info(struct dvobj_priv *pdvobjpriv, cons
 	if (pdvobjpriv->chip_type == RTL8733B)
 		rtl8733bu_set_hw_type(pdvobjpriv);
 #endif /* CONFIG_RTL8733B */
+
+#ifdef CONFIG_RTL8822E
+	if (pdvobjpriv->chip_type == RTL8822E)
+		rtl8822eu_set_hw_type(pdvobjpriv);
+#endif /* CONFIG_RTL8822E */
+
 }
 
 static struct dvobj_priv *usb_dvobj_init(struct usb_interface *usb_intf, const struct usb_device_id *pdid)
@@ -566,6 +595,11 @@ static struct dvobj_priv *usb_dvobj_init(struct usb_interface *usb_intf, const s
 	piface_desc = &phost_iface->desc;
 
 	pdvobjpriv->nr_endpoint = piface_desc->bNumEndpoints;
+	if (pdvobjpriv->nr_endpoint > MAX_ENDPOINT_NUM) {
+		RTW_ERR("USB EP_Number : %d > RT DEF-MAX_EP_NUM :%d\n",
+			pdvobjpriv->nr_endpoint, MAX_ENDPOINT_NUM);
+		goto free_dvobj;
+	}
 
 	/* RTW_INFO("\ndump usb_endpoint_descriptor:\n"); */
 
@@ -585,14 +619,29 @@ static struct dvobj_priv *usb_dvobj_init(struct usb_interface *usb_intf, const s
 			/* RTW_INFO("bSynchAddress=%x\n",pendp_desc->bSynchAddress); */
 
 			if (RT_usb_endpoint_is_bulk_in(pendp_desc)) {
+				if (pdvobjpriv->RtNumInPipes == MAX_BULKIN_NUM) {
+					RTW_ERR("USB IN EP_Number exceeds RT DEF-MAX_IN_EP_NUM :%d\n",
+						MAX_BULKIN_NUM);
+					goto free_dvobj;
+				}
 				RTW_INFO("RT_usb_endpoint_is_bulk_in = %x\n", RT_usb_endpoint_num(pendp_desc));
 				pdvobjpriv->RtInPipe[pdvobjpriv->RtNumInPipes] = RT_usb_endpoint_num(pendp_desc);
 				pdvobjpriv->RtNumInPipes++;
 			} else if (RT_usb_endpoint_is_int_in(pendp_desc)) {
+				if (pdvobjpriv->RtNumInPipes == MAX_BULKIN_NUM) {
+					RTW_ERR("USB IN EP_Number exceeds RT DEF-MAX_IN_EP_NUM :%d\n",
+						MAX_BULKIN_NUM);
+					goto free_dvobj;
+				}
 				RTW_INFO("RT_usb_endpoint_is_int_in = %x, Interval = %x\n", RT_usb_endpoint_num(pendp_desc), pendp_desc->bInterval);
 				pdvobjpriv->RtInPipe[pdvobjpriv->RtNumInPipes] = RT_usb_endpoint_num(pendp_desc);
 				pdvobjpriv->RtNumInPipes++;
 			} else if (RT_usb_endpoint_is_bulk_out(pendp_desc)) {
+				if (pdvobjpriv->RtNumOutPipes == MAX_BULKOUT_NUM) {
+					RTW_ERR("USB OUT EP_Number exceeds RT DEF-MAX_OUT_EP_NUM :%d\n",
+						MAX_BULKOUT_NUM);
+					goto free_dvobj;
+				}
 				RTW_INFO("RT_usb_endpoint_is_bulk_out = %x\n", RT_usb_endpoint_num(pendp_desc));
 				pdvobjpriv->RtOutPipe[pdvobjpriv->RtNumOutPipes] = RT_usb_endpoint_num(pendp_desc);
 				pdvobjpriv->RtNumOutPipes++;
@@ -784,6 +833,11 @@ u8 rtw_set_hal_ops(_adapter *padapter)
 	if (rtw_get_chip_type(padapter) == RTL8733B)
 		rtl8733bu_set_hal_ops(padapter);
 #endif /* CONFIG_RTL8733B */
+
+#ifdef CONFIG_RTL8822E
+	if (rtw_get_chip_type(padapter) == RTL8822E)
+		rtl8822eu_set_hal_ops(padapter);
+#endif /* CONFIG_RTL8822E */
 
 	if (_FAIL == rtw_hal_ops_check(padapter))
 		return _FAIL;
@@ -1106,6 +1160,7 @@ _adapter *rtw_usb_primary_adapter_init(struct dvobj_priv *dvobj,
 #else
 	padapter->hw_port = HW_PORT0;
 #endif
+	padapter->adapter_link.adapter = padapter;
 
 	/* step init_io_priv */
 	if (rtw_init_io_priv(padapter, usb_set_intf_ops) == _FAIL)
@@ -1298,7 +1353,9 @@ static int rtw_drv_init(struct usb_interface *pusb_intf, const struct usb_device
 #ifdef CONFIG_GLOBAL_UI_PID
 	if (ui_pid[1] != 0) {
 		RTW_INFO("ui_pid[1]:%d\n", ui_pid[1]);
+#ifndef CONFIG_DISABLE_KILLPID
 		rtw_signal_process(ui_pid[1], SIGUSR2);
+#endif
 	}
 #endif
 

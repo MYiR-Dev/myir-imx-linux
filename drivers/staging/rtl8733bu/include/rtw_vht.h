@@ -199,7 +199,7 @@ u64	rtw_vht_mcs_map_to_bitmap(u8 *mcs_map, u8 nss);
 void	rtw_vht_use_default_setting(_adapter *padapter);
 u32	rtw_build_vht_operation_ie(_adapter *padapter, u8 *pbuf, u8 channel);
 u32	rtw_build_vht_op_mode_notify_ie(_adapter *padapter, u8 *pbuf, u8 bw);
-u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf);
+u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf, bool log);
 void	update_sta_vht_info_apmode(_adapter *padapter, void *psta);
 void	update_hw_vht_param(_adapter *padapter);
 void	VHT_caps_handler(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs pIE);
@@ -208,7 +208,7 @@ void	VHT_caps_handler_infra_ap(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs pIE
 #endif /* ROKU_PRIVATE */
 void	VHT_operation_handler(_adapter *padapter, PNDIS_802_11_VARIABLE_IEs pIE);
 void	rtw_process_vht_op_mode_notify(_adapter *padapter, u8 *pframe, void *sta);
-u32	rtw_restructure_vht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, uint in_len, uint *pout_len);
+u32	rtw_restructure_vht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, uint in_len, uint *pout_len, u8 channel);
 void	VHTOnAssocRsp(_adapter *padapter);
 u8	rtw_vht_mcsmap_to_nss(u8 *pvht_mcs_map);
 void rtw_vht_nss_to_mcsmap(u8 nss, u8 *target_mcs_map, u8 *cur_mcs_map);

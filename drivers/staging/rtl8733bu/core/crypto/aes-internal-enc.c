@@ -93,7 +93,7 @@ d##3 = TE0(s##3) ^ TE1(s##0) ^ TE2(s##1) ^ TE3(s##2) ^ rk[4 * i + 3]
 }
 
 
-void * rtl_aes_encryp_init(const u8 *key, size_t len)
+void * aes_encrypt_init(const u8 *key, size_t len)
 {
 	u32 *rk;
 	int res;
@@ -113,14 +113,16 @@ void * rtl_aes_encryp_init(const u8 *key, size_t len)
 	return rk;
 }
 
-int rtl_aes_encryp(void *ctx, const u8 *plain, u8 *crypt)
+
+int wpa_aes_encrypt(void *ctx, const u8 *plain, u8 *crypt)
 {
 	u32 *rk = ctx;
 	rijndaelEncrypt(ctx, rk[AES_PRIV_NR_POS], plain, crypt);
 	return 0;
 }
 
-void rtl_aes_encryp_deinit(void *ctx)
+
+void aes_encrypt_deinit(void *ctx)
 {
 	os_memset(ctx, 0, AES_PRIV_SIZE);
 	rtw_mfree(ctx, AES_PRIV_SIZE);

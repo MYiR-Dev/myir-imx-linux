@@ -61,6 +61,17 @@ void phydm_dynamic_switch_htstf_agc_8733b(struct dm_struct *dm)
 
 void phydm_hwsetting_8733b(struct dm_struct *dm)
 {
+	u8 channel = *dm->channel;
+	
 	phydm_dynamic_switch_htstf_agc_8733b(dm);
+	
+	if (dm->is_fixed_chsm_winsize_bc || dm->is_fixed_chsm_winsize_mtk) {
+		if (channel >= 36) {
+			odm_set_bb_reg(dm, R_0xc10, BIT(1), 0x1);
+			odm_set_bb_reg(dm, R_0xc10, 0xC, 0x0);
+		}
+	} else {
+		odm_set_bb_reg(dm, R_0xc10, BIT(1), 0x0);
+	}
 }
 #endif

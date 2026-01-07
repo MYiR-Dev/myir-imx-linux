@@ -271,6 +271,75 @@
 #define TSSI_5GH2_TXC_14B 0x3a2
 #define TSSI_5GH2_TXD_14B 0x3a1
 
+/*8735B*/
+#define PPG_THERMAL_A_OFFSET_35B 0x4c0
+
+#define PPG_PABIAS_35B	0x4c1
+
+#define TSSI_2GM_TXA_35B 0x4c5
+#define TSSI_2GH_TXA_35B 0x4c6
+#define TSSI_5GL1_TXA_35B 0x4c7
+#define TSSI_5GL2_TXA_35B 0x4c8
+#define TSSI_5GM1_TXA_35B 0x4c9
+#define TSSI_5GM2_TXA_35B 0x4ca
+#define TSSI_5GH1_TXA_35B 0x4cb
+#define TSSI_5GH2_TXA_35B 0x4cc
+
+#define PPG_ADCDCK1_35B	0x4de
+#define PPG_ADCDCK2_35B	0x4df
+
+#define PPG_RXGAINTRIM_35B 0x4e1
+
+/*8730A*/
+#define PPG_THERMAL_A_OFFSET_30A 0x7b0
+#define PPG_PABIAS_30A	0x7b1
+#define TSSI_2GM_TXA_30A 0x7b5
+#define TSSI_2GH_TXA_30A 0x7b6
+#define TSSI_5GL1_TXA_30A 0x7b7
+#define TSSI_5GL2_TXA_30A 0x7b8
+#define TSSI_5GM1_TXA_30A 0x7b9
+#define TSSI_5GM2_TXA_30A 0x7ba
+#define TSSI_5GH1_TXA_30A 0x7bb
+#define TSSI_5GH2_TXA_30A 0x7bc
+
+/*8822E*/
+#define PPG_THERMAL_A_OFFSET_22E 0x5df
+#define PPG_THERMAL_B_OFFSET_22E 0x5a0
+#define PPG_2GL_TXAB_22E 0x5c4
+#define PPG_2GM_TXAB_22E 0x5de
+#define PPG_2GH_TXAB_22E 0x5c2
+#define PPG_5GL1_TXA_22E 0x5dc
+#define PPG_5GL1_TXB_22E 0x5db
+#define PPG_5GL2_TXA_22E 0x5d8
+#define PPG_5GL2_TXB_22E 0x5d7
+#define PPG_5GM1_TXA_22E 0x5d4
+#define PPG_5GM1_TXB_22E 0x5d3
+#define PPG_5GM2_TXA_22E 0x5d0
+#define PPG_5GM2_TXB_22E 0x5cf
+#define PPG_5GH1_TXA_22E 0x5cc
+#define PPG_5GH1_TXB_22E 0x5cb
+
+#define PPG_PABIAS_2GA_22E 0x5c6
+#define PPG_PABIAS_2GB_22E 0x5c5
+#define PPG_PABIAS_5GA_22E 0x5c8
+#define PPG_PABIAS_5GB_22E 0x5c7
+
+#define TSSI_2GM_TXA_22E 0x1c0
+#define TSSI_2GM_TXB_22E 0x1bf
+#define TSSI_2GH_TXA_22E 0x1be
+#define TSSI_2GH_TXB_22E 0x1bd
+#define TSSI_5GL1_TXA_22E 0x1bc
+#define TSSI_5GL1_TXB_22E 0x1bb
+#define TSSI_5GL2_TXA_22E 0x1ba
+#define TSSI_5GL2_TXB_22E 0x1b9
+#define TSSI_5GM1_TXA_22E 0x1b8
+#define TSSI_5GM1_TXB_22E 0x1b7
+#define TSSI_5GM2_TXA_22E 0x1b6
+#define TSSI_5GM2_TXB_22E 0x1b5
+#define TSSI_5GH1_TXA_22E 0x1b4
+#define TSSI_5GH1_TXB_22E 0x1b3
+#define TSSI_5GH2_TXA_22E 0x1b2
+#define TSSI_5GH2_TXB_22E 0x1b1
 
 struct odm_power_trim_data {
 	u8 flag;

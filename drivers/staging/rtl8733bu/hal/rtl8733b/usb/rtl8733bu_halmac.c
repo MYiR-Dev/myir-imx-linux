@@ -207,8 +207,8 @@ static u8 usb_write_data_rsvd_page_normal(void *d, u8 *pBuf, u32 size)
 	u8 *buf = NULL;
 
 	if (size + TXDESC_OFFSET > MAX_CMDBUF_SZ) {
-		RTW_INFO("%s: total buffer size(%d) > MAX_CMDSZE(%d)\n"
-			 , __func__, size + TXDESC_OFFSET, MAX_CMDSZ);
+		RTW_INFO("%s: total buffer size(%d) > MAX_CMDBUF_SZ(%d)\n"
+			 , __func__, size + TXDESC_OFFSET, MAX_CMDBUF_SZ);
 		return _FALSE;
 	}
 

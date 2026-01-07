@@ -32,6 +32,7 @@ void rtw_btc_ex_connect_notify(struct btc_coexist *btc, u8 type);
 void rtw_btc_ex_media_status_notify(struct btc_coexist *btc, u8 type);
 void rtw_btc_ex_specific_packet_notify(struct btc_coexist *btc, u8 type);
 void rtw_btc_ex_bt_info_notify(struct btc_coexist *btc, u8 *tmp_buf, u8 length);
+void rtw_btc_ex_bt_le_audio_info_notify(struct btc_coexist *btc, u8 *tmp_buf, u8 length);
 void rtw_btc_ex_wl_fwdbginfo_notify(struct btc_coexist *btc, u8 *tmp_buf,
 				    u8 length);
 void rtw_btc_ex_rx_rate_change_notify(struct btc_coexist *btc,
@@ -39,6 +40,7 @@ void rtw_btc_ex_rx_rate_change_notify(struct btc_coexist *btc,
 				      u8 btc_rate_id);
 void rtw_btc_ex_tx_rate_change_notify(struct btc_coexist *btc, u8 tx_rate,
 				      u8 tx_retry_ratio, u8 macid);
+void rtw_btc_ex_thpt_notify(struct btc_coexist *btc, u32 rx_tp, u32 tx_tp);
 void rtw_btc_ex_rf_status_notify(struct btc_coexist *btc, u8 type);
 void rtw_btc_ex_halt_notify(struct btc_coexist *btc);
 void rtw_btc_ex_pnp_notify(struct btc_coexist *btc, u8 pnp_state);
@@ -68,10 +70,12 @@ void rtw_btc_ex_wl_rfk_notify(struct btc_coexist *btc, u8 path,
 #define rtw_btc_ex_media_status_notify(btc, type)
 #define rtw_btc_ex_specific_packet_notify(btc, type)
 #define rtw_btc_ex_bt_info_notify(btc, tmp_buf, length)
+#define rtw_btc_ex_bt_le_audio_info_notify(btc, tmp_buf, length)
 #define rtw_btc_ex_wl_fwdbginfo_notify(btc, tmp_buf, length)
 #define rtw_btc_ex_rx_rate_change_notify(btc, is_data_frame, btc_rate_id)
 #define rtw_btc_ex_tx_rate_change_notify(btcoexist, tx_rate, tx_retry_ratio, \
 				       macid)
+#define rtw_btc_ex_thpt_notify(btc, rx_tp, tx_tp)
 #define rtw_btc_ex_rf_status_notify(btc, type)
 #define rtw_btc_ex_halt_notify(btc)
 #define rtw_btc_ex_pnp_notify(btc, pnp_state)

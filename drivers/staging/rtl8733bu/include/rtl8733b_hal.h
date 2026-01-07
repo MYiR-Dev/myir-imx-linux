@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2019 Realtek Corporation.
+ * Copyright(c) 2019 - 2021 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -17,7 +17,7 @@
 
 #include <osdep_service.h>		/* BIT(x) */
 #include <drv_types.h>			/* PADAPTER */
-#include "../hal/halmac/halmac_api.h"	/* MAC REG definition */
+#include "../hal/halmac-rs/halmac_api.h"	/* MAC REG definition */
 
 #define MAX_RECVBUF_SZ		16384	/* 16KB (RX_FIFO_SIZE_8733B), TX: 32KB */
 

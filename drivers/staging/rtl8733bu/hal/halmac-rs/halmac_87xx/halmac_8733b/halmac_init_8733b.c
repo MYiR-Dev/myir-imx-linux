@@ -124,7 +124,7 @@
 #define WLAN_RTS_RATE_FB_RATE5_H	0x000000E0
 
 #define WLAN_TX_FUNC_CFG1		0x30
-#define WLAN_TX_FUNC_CFG2		0x30
+#define WLAN_TX_FUNC_CFG2		0x20  //Modify ampdu timing 0x604[20]=0 to fix transmitting ampdu packet with crc error to encrypted router
 #define WLAN_MAC_OPT_NORM_FUNC1		0x98
 #define WLAN_MAC_OPT_LB_FUNC1		0x80
 #define WLAN_MAC_OPT_FUNC2		0xB1810041
@@ -298,7 +298,7 @@ static struct halmac_pg_num HALMAC_PG_NUM_SDIO_8733B[] = {
 /*SDIO Page Number*/
 static struct halmac_pg_num HALMAC_PG_NUM_SDIO_8733B[] = {
 	/* { mode, hq_num, nq_num, lq_num, exq_num, gap_num} */
-	{HALMAC_TRX_MODE_NORMAL, 12, 2, 2, 0, 0},
+	{HALMAC_TRX_MODE_NORMAL, 8, 8, 8, 8, 1},
 	{HALMAC_TRX_MODE_TRXSHARE, 4, 4, 4, 4, 1},
 	{HALMAC_TRX_MODE_WMM, 8, 8, 8, 8, 1},
 	{HALMAC_TRX_MODE_P2P, 8, 8, 8, 8, 1},
@@ -1152,6 +1152,9 @@ init_wmac_cfg_8733b(struct halmac_adapter *adapter)
 	HALMAC_REG_W8(REG_TCR + 2, WLAN_TX_FUNC_CFG2);
 	HALMAC_REG_W8(REG_TCR + 1, WLAN_TX_FUNC_CFG1);
 
+	// 0x60D[7:0]=0x2, MAC_RX deadlock timer timeout value
+	HALMAC_REG_W8(REG_RX_PKT_LIMIT + 1, 0x2);
+
 	value16 = HALMAC_REG_R16(REG_WMAC_CSIDMA_CFG);
 	value16 = (value16 & 0xF000) | 0xFC;
 	HALMAC_REG_W16(REG_WMAC_CSIDMA_CFG,value16);//jerry_zhou csi_report put in page 252,0x169C[11:0]=0xFC
@@ -1164,7 +1167,8 @@ init_wmac_cfg_8733b(struct halmac_adapter *adapter)
 	sec_cfg&= ~(BIT(4) | BIT(6)| BIT(3)|BIT(5));
 	HALMAC_REG_W8(REG_WSEC_OPTION + 2, sec_cfg);
 
-	HALMAC_REG_W8_SET(REG_SND_PTCL_CTRL, BIT_R_DISABLE_CHECK_VHTSIGB_CRC);
+	//rx pkt only have plcp header, trigger recca, rx desc lenth error, 0x718[6]=0,rx state machine doesn't update wrong length
+	//HALMAC_REG_W8_SET(REG_SND_PTCL_CTRL, BIT_R_DISABLE_CHECK_VHTSIGB_CRC);
 
 	HALMAC_REG_W32(REG_WMAC_OPTION_FUNCTION_2, WLAN_MAC_OPT_FUNC2);
 

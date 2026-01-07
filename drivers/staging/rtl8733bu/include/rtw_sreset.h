@@ -37,6 +37,7 @@ struct sreset_priv {
 	u64 self_dect_fw_cnt;
 	u64 tx_dma_status_cnt;
 	u64 rx_dma_status_cnt;
+	u64 proc_trigger_cnt;
 	u8 rx_cnt;
 	u8 self_dect_fw;
 	u8 self_dect_case;

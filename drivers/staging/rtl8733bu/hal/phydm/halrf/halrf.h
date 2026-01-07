@@ -41,6 +41,14 @@
 #include "halrf/rtl8822c/halrf_txgapk_8822c.h"
 #endif
 
+#if (RTL8822E_SUPPORT == 1)
+#include "halrf/rtl8822e/halrf_rfk_init_8822e.h"
+#include "halrf/rtl8822e/halrf_iqk_8822e.h"
+#include "halrf/rtl8822e/halrf_tssi_8822e.h"
+#include "halrf/rtl8822e/halrf_dpk_8822e.h"
+#include "halrf/rtl8822e/halrf_txgapk_8822e.h"
+#endif
+
 #if (DM_ODM_SUPPORT_TYPE & ODM_AP)
 #if (RTL8197G_SUPPORT == 1)
 #include "halrf/rtl8197g/halrf_rfk_init_8197g.h"
@@ -60,6 +68,14 @@
 #include "halrf/rtl8814b/halrf_dpk_8814b.h"
 #include "halrf/rtl8814b/halrf_txgapk_8814b.h"
 #endif
+
+#if (RTL8814C_SUPPORT == 1)
+#include "halrf/rtl8814c/halrf_rfk_init_8814c.h"
+#include "halrf/rtl8814c/halrf_iqk_8814c.h"
+#include "halrf/rtl8814c/halrf_dpk_8814c.h"
+#include "halrf/rtl8814c/halrf_txgapk_8814c.h"
+#endif
+
 
 /*@============================================================*/
 /*@Definition */
@@ -109,7 +125,9 @@
 #define IQK_VER_8710C "0x0a"
 #define IQK_VER_8197G "0x03"
 #define IQK_VER_8733B "0x00"
-
+#define IQK_VER_8814C "0x00"
+#define IQK_VER_8735B "0x03"
+#define IQK_VER_8822E "0x14"
 
 /*LCK version*/
 #define LCK_VER_8188E "0x02"
@@ -126,13 +144,14 @@
 #define LCK_VER_8723D "0x01"
 #define LCK_VER_8822B "0x02"
 #define LCK_VER_8822C "0x00"
-#define LCK_VER_8821C "0x03"
+#define LCK_VER_8821C "0x04"
 #define LCK_VER_8814B "0x02"
 #define LCK_VER_8195B "0x02"
 #define LCK_VER_8710C "0x02"
 #define LCK_VER_8197G "0x01"
 #define LCK_VER_8198F "0x01"
-
+#define LCK_VER_8814C "0x00"
+#define LCK_VER_8735B "0x01"
 /*power tracking version*/
 #define PWRTRK_VER_8188E "0x01"
 #define PWRTRK_VER_8192E "0x01"
@@ -151,6 +170,8 @@
 #define PWRTRK_VER_8821C "0x01"
 #define PWRTRK_VER_8814B "0x00"
 #define PWRTRK_VER_8197G "0x00"
+#define PWRTRK_VER_8814C "0x00"
+#define PWRTRK_VER_8822E "0x01"
 
 /*DPK version*/
 #define DPK_VER_8188E "NONE"
@@ -165,14 +186,17 @@
 #define DPK_VER_8710B "NONE"
 #define DPK_VER_8723D "NONE"
 #define DPK_VER_8822B "NONE"
-#define DPK_VER_8822C "0x20"
+#define DPK_VER_8822C "0x21"
 #define DPK_VER_8821C "NONE"
-#define DPK_VER_8192F "0x11"
+#define DPK_VER_8192F "0x13"
 #define DPK_VER_8198F "0x0e"
 #define DPK_VER_8814B "0x0f"
 #define DPK_VER_8195B "0x0c"
 #define DPK_VER_8812F "0x0a"
-#define DPK_VER_8197G "0x09"
+#define DPK_VER_8197G "0x0b"
+#define DPK_VER_8814C "0x01"
+#define DPK_VER_8735B "0x0b"
+#define DPK_VER_8822E "0x10"
 
 /*RFK_INIT version*/
 #define RFK_INIT_VER_8822B "0x8"
@@ -182,14 +206,30 @@
 #define RFK_INIT_VER_8814B "0xa"
 #define RFK_INIT_VER_8812F "0x4"
 #define RFK_INIT_VER_8197G "0x4"
+#define RFK_INIT_VER_8814C "0x0"
+#define RFK_INIT_VER_8735B "0xe"
+#define RFK_INIT_VER_8822E "0xc"
 
 /*DACK version*/
 #define DACK_VER_8822C "0xa"
 #define DACK_VER_8814B "0x4"
-
+#define DACK_VER_8814C "0x0"
+#define DACK_VER_8735B "0x3"
+#define DACK_VER_8822E "0x5"
 /*TXGAPK version*/
 #define TXGAPK_VER_8814B "0x1"
 #define TXGAPK_VER_8195B "0x2"
+#define TXGAPK_VER_8822E "0x6"
+
+/*RXDCK version*/
+#define RXDCK_VER_8735B "0x6"
+#define RXDCK_VER_8822E "0x4"
+
+/*RCK version*/
+#define RCK_VER_8735B "0x1"
+
+/*RX Spur K version*/
+#define RXSPURK_VER_8822E "0x10"
 
 /*Kfree tracking version*/
 #define KFREE_VER_8188E \
@@ -233,6 +273,7 @@
 #define TSSI_VER_8814B "0x1"
 #define TSSI_VER_8197G "0x1"
 #define TSSI_VER_8733B "0x1"
+#define TSSI_VER_8735B "0x15"
 
 /*PA Bias Calibration version*/
 #define PABIASK_VER_8188E \
@@ -326,7 +367,8 @@
 	(dm->support_ic_type == ODM_RTL8822B) ? PWRTRK_VER_8822B : \
 	(dm->support_ic_type == ODM_RTL8822C) ? PWRTRK_VER_8822C : \
 	(dm->support_ic_type == ODM_RTL8821C) ? PWRTRK_VER_8821C : \
-	(dm->support_ic_type == ODM_RTL8197G) ? PWRTRK_VER_8197G : "unknown"
+	(dm->support_ic_type == ODM_RTL8197G) ? PWRTRK_VER_8197G : \
+	(dm->support_ic_type == ODM_RTL8822E) ? PWRTRK_VER_8822E : "unknown"
 
 #define HALRF_DPK_VER \
 	(dm->support_ic_type == ODM_RTL8188E) ? DPK_VER_8188E : \
@@ -347,7 +389,9 @@
 	(dm->support_ic_type == ODM_RTL8812F) ? DPK_VER_8812F : \
 	(dm->support_ic_type == ODM_RTL8821C) ? DPK_VER_8821C : \
 	(dm->support_ic_type == ODM_RTL8814B) ? DPK_VER_8814B : \
-	(dm->support_ic_type == ODM_RTL8197G) ? DPK_VER_8197G : "unknown"
+	(dm->support_ic_type == ODM_RTL8197G) ? DPK_VER_8197G : \
+	(dm->support_ic_type == ODM_RTL8735B) ? DPK_VER_8735B : \
+	(dm->support_ic_type == ODM_RTL8822E) ? DPK_VER_8822E : "unknown"
 
 #define HALRF_KFREE_VER \
 	(dm->support_ic_type == ODM_RTL8188E) ? KFREE_VER_8188E : \
@@ -374,7 +418,8 @@
 	(dm->support_ic_type == ODM_RTL8821C) ? TSSI_VER_8821C : \
 	(dm->support_ic_type == ODM_RTL8814B) ? TSSI_VER_8814B : \
 	(dm->support_ic_type == ODM_RTL8197G) ? TSSI_VER_8197G : \
-	(dm->support_ic_type == ODM_RTL8733B) ? TSSI_VER_8733B : "unknown"
+	(dm->support_ic_type == ODM_RTL8733B) ? TSSI_VER_8733B : \
+	(dm->support_ic_type == ODM_RTL8735B) ? TSSI_VER_8735B : "unknown"
 
 #define HALRF_PABIASK_VER \
 	(dm->support_ic_type == ODM_RTL8188E) ? PABIASK_VER_8188E : \
@@ -401,11 +446,24 @@
 	(dm->support_ic_type == ODM_RTL8812F) ? RFK_INIT_VER_8812F : \
 	(dm->support_ic_type == ODM_RTL8198F) ? RFK_INIT_VER_8198F : \
 	(dm->support_ic_type == ODM_RTL8814B) ? RFK_INIT_VER_8814B : \
-	(dm->support_ic_type == ODM_RTL8197G) ? RFK_INIT_VER_8197G : "unknown"
+	(dm->support_ic_type == ODM_RTL8197G) ? RFK_INIT_VER_8197G : \
+	(dm->support_ic_type == ODM_RTL8735B) ? RFK_INIT_VER_8735B : \
+	(dm->support_ic_type == ODM_RTL8822E) ? RFK_INIT_VER_8822E : "unknown"
 
 #define HALRF_DACK_VER \
 	(dm->support_ic_type == ODM_RTL8822C) ? DACK_VER_8822C : \
 	(dm->support_ic_type == ODM_RTL8814B) ? DACK_VER_8814B : "unknown"
+
+#define HALRF_RXDCK_VER \
+	(dm->support_ic_type == ODM_RTL8735B) ? RXDCK_VER_8735B : \
+	(dm->support_ic_type == ODM_RTL8822E) ? RXDCK_VER_8822E : "unknown"
+
+#define HALRF_RCK_VER \
+	(dm->support_ic_type == ODM_RTL8735B) ? RCK_VER_8735B : "unknown"
+
+#define HALRF_RXSPURK_VER \
+	(dm->support_ic_type == ODM_RTL8822E) ? RXSPURK_VER_8822E : "unknown"
+
 
 #define IQK_THRESHOLD 8
 #define DPK_THRESHOLD 4
@@ -439,7 +497,9 @@ enum halrf_func_idx { /*F_XXX = PHYDM XXX function*/
 	RF06_DPK_TRK = 6,
 	RF07_2GBAND_SHIFT = 7,
 	RF08_RXDCK = 8,
-	RF09_RFK = 9
+	RF09_RFK = 9,
+	RF10_PA_DYNAMIC_BIAS = 10,
+	RF11_RX_SPURK = 11
 };
 
 enum halrf_ability {
@@ -451,7 +511,9 @@ enum halrf_ability {
 	HAL_RF_DACK = BIT(RF05_DACK),
 	HAL_RF_DPK_TRACK = BIT(RF06_DPK_TRK),
 	HAL_2GBAND_SHIFT = BIT(RF07_2GBAND_SHIFT),
-	HAL_RF_RXDCK = BIT(RF08_RXDCK)
+	HAL_RF_RXDCK = BIT(RF08_RXDCK),
+	HAL_RF_PA_DYNAMIC_BIAS = BIT(RF10_PA_DYNAMIC_BIAS),
+	HAL_RF_RX_SPURK = BIT(RF11_RX_SPURK)
 };
 
 enum halrf_shift_band {
@@ -468,7 +530,9 @@ enum halrf_dbg_comp {
 	DBG_RF_TXGAPK = BIT(RF04_TXGAPK),
 	DBG_RF_DACK = BIT(RF05_DACK),
 	DBG_RF_DPK_TRACK = BIT(RF06_DPK_TRK),
+	DBG_RF_RXDCK = BIT(RF08_RXDCK),
 	DBG_RF_RFK = BIT(RF09_RFK),
+	DBG_RF_RXSPURK = BIT(RF11_RX_SPURK),
 	DBG_RF_MP = BIT(29),
 	DBG_RF_TMP = BIT(30),
 	DBG_RF_INIT = BIT(31)
@@ -546,14 +610,44 @@ struct _halrf_tssi_data {
 #endif
 };
 
+#define RF_GAIN_TABLE_NUM 12
+
 struct _halrf_txgapk_info {
-	u32 txgapk_rf3f_bp[5][12][PHYDM_MAX_RF_PATH]; /* band(2Gcck/2GOFDM/5GL/5GM/5GH)/idx/path */
+	u32 txgapk_rf3f_bp[5][RF_GAIN_TABLE_NUM][PHYDM_MAX_RF_PATH]; /* band(2Gcck/2GOFDM/5GL/5GM/5GH)/idx/path */
+	u32 txgapk_rf3f_same[5][RF_GAIN_TABLE_NUM][PHYDM_MAX_RF_PATH]; /* band(2Gcck/2GOFDM/5GL/5GM/5GH)/idx/path */
 	boolean txgapk_bp_done;
-	s8 offset[12][PHYDM_MAX_RF_PATH];
-	s8 fianl_offset[12][PHYDM_MAX_RF_PATH];
+	s8 offset[RF_GAIN_TABLE_NUM][PHYDM_MAX_RF_PATH];
+	s8 fianl_offset[RF_GAIN_TABLE_NUM][PHYDM_MAX_RF_PATH];
 	u8 read_txgain;
+
+	s32 track_d[2][11];
+	s32 track_ta[2][11];
+	s32 power_d[2][11];
+	s32 power_ta[2][11];
+
+	boolean	is_txgapk_ok;
 };
 
+struct _halrf_rxdck_info {
+	boolean 	is_rxdck_timeout;
+	boolean		is_rxdck_off;
+	u8		rxdck_ch;
+	u8		rxdck_band;
+	u8		rxdck_bw;
+};
+
+struct _halrf_afedck_info {
+	u8 dadck_d[2][2];		/*path/IQ*/
+	boolean dadck_fail;
+};
+
+#define RXSPURK_PSD_RESULT_NUM 24
+
+struct _halrf_rxspurk_info {
+	u32 rxspurk_psd_result[RXSPURK_PSD_RESULT_NUM];
+	u32 final_psd_idx;
+	boolean nbi_csi_en;
+};
 
 /*@============================================================*/
 /*@ structure */
@@ -573,6 +667,9 @@ struct _hal_rf_ {
 	boolean dpk_done;
 	u64 dpk_progressing_time;
 	u64 iqk_progressing_time;
+	u64 txgapk_progressing_time;
+	u64 rxdck_progressing_time;
+	u64 rxspurk_progressing_time;
 	u32 fw_ver;
 
 	boolean *is_con_tx;
@@ -584,6 +681,8 @@ struct _hal_rf_ {
 	boolean is_rfk_h2c_timeout;
 	boolean aac_checked;
 	boolean is_txgapk_in_progress;
+	boolean is_rxspurk_in_progress;
+	boolean is_tssi_mode[KPATH];
 
 	u8 *mp_rate_index;
 	u32 *manual_rf_supportability;
@@ -597,11 +696,12 @@ struct _hal_rf_ {
 	u8 ext_lna_5g;		/*@with 5G external LNA  NO/Yes = 0/1*/
 	u8 ext_pa;		/*@with 2G external PNA  NO/Yes = 0/1*/
 	u8 ext_pa_5g;		/*@with 5G external PNA  NO/Yes = 0/1*/
-#if !(DM_ODM_SUPPORT_TYPE & ODM_IOT)
 	struct _halrf_psd_data halrf_psd_data;
 	struct _halrf_tssi_data halrf_tssi_data;
-#endif
 	struct _halrf_txgapk_info halrf_txgapk_info;
+	struct _halrf_rxdck_info halrf_rxdck_info;
+	struct _halrf_afedck_info halrf_afedck_info;
+	struct _halrf_rxspurk_info halrf_rxspurk_info;
 	u8 power_track_type;
 	u8 mp_pwt_type;
 	u8 pre_band_type;
@@ -660,6 +760,8 @@ void halrf_segment_iqk_trigger(void *dm_void, boolean clear,
 
 void halrf_lck_trigger(void *dm_void);
 
+void halrf_lck_track(void *dm_void);
+
 void halrf_iqk_debug(void *dm_void, u32 *const dm_value, u32 *_used,
 		     char *output, u32 *_out_len);
 
@@ -676,6 +778,8 @@ u32 halrf_psd_log2base(u32 val);
 void halrf_dpk_trigger(void *dm_void);
 
 void halrf_txgapk_trigger(void *dm_void);
+
+void halrf_rxspurk_trigger(void *dm_void);
 
 u8 halrf_dpk_result_check(void *dm_void);
 
@@ -696,6 +800,10 @@ void halrf_dpk_c2h_report_transfer(void	*dm_void, boolean is_ok, u8 *buf, u8 buf
 
 void halrf_dpk_info_rsvd_page(void *dm_void, u8 *buf, u32 *buf_size);
 
+void halrf_rx_dck_trigger(void *dm_void);
+
+void halrf_rx_dck_debug_cmd(void *dm_void, char input[][16], u32 *_used,
+			 char *output, u32 *_out_len);
 /*Global function*/
 
 void halrf_reload_bp(void *dm_void, u32 *bp_reg, u32 *bp, u32 num);
@@ -728,13 +836,16 @@ halrf_config_rfk_with_header_file(void *dm_void, u32 config_type);
 	RTL8195B_SUPPORT == 1 || RTL8198F_SUPPORT == 1 ||\
 	RTL8814B_SUPPORT == 1  || RTL8822C_SUPPORT == 1 ||\
 	RTL8812F_SUPPORT == 1 || RTL8710C_SUPPORT == 1 ||\
-	RTL8197G_SUPPORT == 1)
+	RTL8197G_SUPPORT == 1  || RTL8822E_SUPPORT == 1)
 void halrf_iqk_dbg(void *dm_void);
 #endif
 
 void halrf_tssi_get_efuse(void *dm_void);
 
 void halrf_do_tssi(void *dm_void);
+
+u8 halrf_do_tssi_by_manual(void *dm_void, u8 path);
+
 
 void halrf_set_tssi_enable(void *dm_void, boolean enable);
 
@@ -770,6 +881,8 @@ u32 halrf_tssi_get_de(void *dm_void, u8 path);
 
 u32 halrf_get_online_tssi_de(void *dm_void, u8 path, s32 pout);
 
+u32 halrf_get_online_tssi_de_new(void *dm_void, u8 path, s32 dbm, s32 pout);
+
 void halrf_tssi_trigger(void *dm_void);
 
 void halrf_spur_compensation(void *dm_void);
@@ -779,6 +892,12 @@ void halrf_txgapk_write_gain_table(void *dm_void);
 void halrf_txgapk_reload_tx_gain(void *dm_void);
 
 void halrf_txgap_enable_disable(void *dm_void, u8 enable);
+
+void halrf_pwr_table_info(void *dm_void, u32 *_used, char *output, u32 *_out_len);
+
+void halrf_xtal_trk_info(void *dm_void, u32 *_used, char *output, u32 *_out_len);
+
+void halrf_tssi_info(void *dm_void, u32 *_used, char *output, u32 *_out_len);
 
 void halrf_set_dpk_track(void *dm_void, u8 enable);
 
@@ -812,8 +931,25 @@ void halrf_rxdck(void *dm_void);
 
 void halrf_delay_10us(u16 v1);
 
+void halrf_delay_1us(u16 v1);
+
 void halrf_dump_rfk_reg(void *dm_void, char input[][16], u32 *_used,
 			      char *output, u32 *_out_len);
+
+void halrf_pwr_table_debug_cmd(void *dm_void, char input[][16], u32 *_used,
+				char *output, u32 *_out_len);
+
+void halrf_xtal_trk_debug_cmd(void *dm_void, char input[][16], u32 *_used,
+				char *output, u32 *_out_len);
+
+void halrf_tssi_debug_cmd(void *dm_void, char input[][16], u32 *_used,
+				char *output, u32 *_out_len);
+
+void halrf_rxspurk_debug_cmd(void *dm_void, char input[][16], u32 *_used,
+				char *output, u32 *_out_len);
+
+void halrf_pwr_trk_debug_cmd(void *dm_void, char input[][16], u32 *_used,
+				char *output, u32 *_out_len);
 
 void halrf_xtal_thermal_track(void *dm_void);
 
@@ -821,8 +957,24 @@ void halrf_powertracking_thermal(void *dm_void);
 
 u32 halrf_tssi_turn_target_power(void *dm_void, s16 power_offset, u8 path);
 
+void halrf_tssi_set_power(void *dm_void, u32 tx_rate, u32 power);
+
+u32 halrf_tssi_get_power(void *dm_void, u32 tx_rate);
+
 void halrf_tssi_set_power_offset(void *dm_void, s16 power_offset, u8 path);
 
 void halrf_rfk_power_save(void *dm_void, boolean is_power_save);
 
+void halrf_txgapk_debug_cmd(void *dm_void, char input[][16], u32 *_used,
+			 char *output, u32 *_out_len);
+
+void halrf_txgapk_disable(void *dm_void);
+
+void halrf_txgapk_info(void *dm_void, u32 *_used, char *output, u32 *_out_len);
+
+u8 halrf_get_thermal(void *dm_void, u8 path);
+
+void halrf_ex_dac_fifo_rst(void *dm_void);
+
+void halrf_kip_rsvd_page(void *dm_void, u8 *buf, u32 *buf_size);
 #endif /*__HALRF_H__*/

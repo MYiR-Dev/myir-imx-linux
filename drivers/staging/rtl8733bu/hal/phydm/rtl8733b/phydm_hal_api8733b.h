@@ -99,7 +99,7 @@ boolean config_phydm_switch_band_8733b(struct dm_struct *dm, u8 central_ch);
 
 boolean config_phydm_switch_channel_8733b(struct dm_struct *dm,
 					  u8 central_ch);
-
+boolean config_phydm_switch_bandwidth_8733b_10m(struct dm_struct *dm, enum channel_width bw);
 boolean config_phydm_switch_bandwidth_8733b(struct dm_struct *dm, u8 pri_ch,
 					    enum channel_width bw);
 
@@ -107,8 +107,8 @@ boolean config_phydm_switch_channel_bw_8733b(struct dm_struct *dm,
 					     u8 central_ch,
 					     u8 primary_ch_idx,
 					     enum channel_width bandwidth);
-void phydm_spur_eliminate_8733b(struct dm_struct *dm);
-void phydm_spur_cancellation_8733b(struct dm_struct *dm);
+
+void config_phydm_srrc_setting_8733b(struct dm_struct *dm, boolean is_SRRC);
 
 void phydm_i_only_setting_8733b(struct dm_struct *dm, boolean en_i_only,
 				boolean en_before_cca);
@@ -116,6 +116,8 @@ void phydm_i_only_setting_8733b(struct dm_struct *dm, boolean en_i_only,
 boolean config_phydm_parameter_init_8733b(struct dm_struct *dm,
 					  enum odm_parameter_init type);
 boolean phydm_chk_bb_state_idle_8733b(struct dm_struct *dm);
+
+void phydm_bw80_enable_8733b(struct dm_struct *dm, boolean enable);
 
 #if CONFIG_POWERSAVING
 boolean phydm_8733b_lps(struct dm_struct *dm, boolean enable_lps);

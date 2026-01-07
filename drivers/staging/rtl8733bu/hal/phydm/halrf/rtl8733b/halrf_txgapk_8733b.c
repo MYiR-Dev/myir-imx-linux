@@ -261,8 +261,8 @@ void _txgapk_afe_setting_8733b(struct dm_struct *dm, boolean do_txgapk)
 		odm_set_bb_reg(dm, R_0x1b08, MASKDWORD, 0x00000000);
 		odm_set_bb_reg(dm, R_0x1c38, MASKDWORD, 0x00000000);
 		odm_set_bb_reg(dm, R_0x1830, BIT(30), 0x1);
-		//odm_set_bb_reg(dm, R_0x9f0, MASKLWORD, 0xcccc);
-		//odm_set_bb_reg(dm, R_0x1d40, BIT(3), 0x0);
+		odm_set_bb_reg(dm, R_0x9f0, MASKLWORD, 0xcccc);
+		odm_set_bb_reg(dm, R_0x1d40, BIT(3), 0x0);
 		odm_set_bb_reg(dm, R_0x1e24, BIT(31), 0x1);
 		odm_set_bb_reg(dm, R_0x2a24, BIT(13), 0x0); /*CCK CCA*/
 		odm_set_bb_reg(dm, R_0x1c68, BIT(24), 0x0); /*OFDM CCA*/
@@ -637,8 +637,7 @@ void halrf_txgapk_8733b(struct dm_struct *dm)
 	u32 rf_reg_backup[GAPK_RF_REG_NUM_8733B][GAPK_RF_PATH_NUM_8733B];
 
 	u32 bb_reg[GAPK_BB_REG_NUM_8733B] = {
-		R_0x1b00, R_0x1b14, R_0x1b24, R_0x1b38, R_0x1b3c, R_0x1bcc,
-		R_0x1d40, R_0x9f0};
+		R_0x1b00, R_0x1b14, R_0x1b24, R_0x1b38, R_0x1b3c, R_0x1bcc};
 	u32 rf_reg[GAPK_RF_REG_NUM_8733B] = {
 		RF_0x00, RF_0x1, RF_0x83, RF_0x8c, RF_0x8f,
 		RF_0x9e, RF_0xdf, RF_0x5};

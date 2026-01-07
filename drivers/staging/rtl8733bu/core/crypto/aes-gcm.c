@@ -154,7 +154,7 @@ static void aes_gctr(void *aes, const u8 *icb, const u8 *x, size_t xlen, u8 *y)
 	os_memcpy(cb, icb, AES_BLOCK_SIZE);
 	/* Full blocks */
 	for (i = 0; i < n; i++) {
-		rtl_aes_encryp(aes, cb, ypos);
+		wpa_aes_encrypt(aes, cb, ypos);
 		xor_block(ypos, xpos);
 		xpos += AES_BLOCK_SIZE;
 		ypos += AES_BLOCK_SIZE;
@@ -164,7 +164,7 @@ static void aes_gctr(void *aes, const u8 *icb, const u8 *x, size_t xlen, u8 *y)
 	last = x + xlen - xpos;
 	if (last) {
 		/* Last, partial block */
-		rtl_aes_encryp(aes, cb, tmp);
+		wpa_aes_encrypt(aes, cb, tmp);
 		for (i = 0; i < last; i++)
 			*ypos++ = *xpos++ ^ tmp[i];
 	}
@@ -175,13 +175,13 @@ static void * aes_gcm_init_hash_subkey(const u8 *key, size_t key_len, u8 *H)
 {
 	void *aes;
 
-	aes = rtl_aes_encryp_init(key, key_len);
+	aes = aes_encrypt_init(key, key_len);
 	if (aes == NULL)
 		return NULL;
 
 	/* Generate hash subkey H = AES_K(0^128) */
 	os_memset(H, 0, AES_BLOCK_SIZE);
-	rtl_aes_encryp(aes, H, H);
+	wpa_aes_encrypt(aes, H, H);
 	wpa_hexdump_key(_MSG_EXCESSIVE_, "Hash subkey H for GHASH",
 			H, AES_BLOCK_SIZE);
 	return aes;
@@ -275,7 +275,7 @@ int aes_gcm_ae(const u8 *key, size_t key_len, const u8 *iv, size_t iv_len,
 
 	/* Return (C, T) */
 
-	rtl_aes_encryp_deinit(aes);
+	aes_encrypt_deinit(aes);
 
 	return 0;
 }
@@ -307,7 +307,7 @@ int aes_gcm_ad(const u8 *key, size_t key_len, const u8 *iv, size_t iv_len,
 	/* T' = MSB_t(GCTR_K(J_0, S)) */
 	aes_gctr(aes, J0, S, sizeof(S), T);
 
-	rtl_aes_encryp_deinit(aes);
+	aes_encrypt_deinit(aes);
 
 	if (os_memcmp_const(tag, T, 16) != 0) {
 		wpa_printf(_MSG_EXCESSIVE_, "GCM: Tag mismatch");

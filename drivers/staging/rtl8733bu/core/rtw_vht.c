@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2017 Realtek Corporation.
+ * Copyright(c) 2007 - 2021 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -237,7 +237,8 @@ void rtw_vht_use_default_setting(_adapter *padapter)
 	BOOLEAN bHwSupportBeamformer = _FALSE, bHwSupportBeamformee = _FALSE;
 	u8 mu_bfer, mu_bfee;
 #endif /* CONFIG_BEAMFORMING */
-	u8 tx_nss, rx_nss;
+	/*u8 tx_nss;*/
+	u8 rx_nss;
 	u8 rf_type = 0;
 	struct mlme_ext_priv *pmlmeext = &(padapter->mlmeextpriv);
 	struct mlme_ext_info *pmlmeinfo = &(pmlmeext->mlmext_info);
@@ -347,7 +348,7 @@ void rtw_vht_use_default_setting(_adapter *padapter)
 
 	pvhtpriv->ampdu_len = pregistrypriv->ampdu_factor;
 
-	tx_nss = GET_HAL_TX_NSS(padapter);
+	/*tx_nss = GET_HAL_TX_NSS(padapter);*/
 	rx_nss = GET_HAL_RX_NSS(padapter);
 
 	/* for now, vhtpriv.vht_mcs_map comes from RX NSS */
@@ -751,7 +752,7 @@ void rtw_process_vht_op_mode_notify(_adapter *padapter, u8 *pframe, void *sta)
 	}
 
 	if (update_ra)
-		rtw_dm_ra_mask_wk_cmd(padapter, (u8 *)psta);
+		rtw_dm_ra_mask_wk_cmd(padapter, psta);
 }
 
 u32	rtw_build_vht_operation_ie(_adapter *padapter, u8 *pbuf, u8 channel)
@@ -813,7 +814,7 @@ u32	rtw_build_vht_op_mode_notify_ie(_adapter *padapter, u8 *pbuf, u8 bw)
 	return len;
 }
 
-u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf)
+u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf, bool log)
 {
 	u8 bw, rf_num;
 	u16 HighestRate;
@@ -840,24 +841,30 @@ u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf)
 
 	if ((max_recvbuf_sz - rx_packet_offset) >= 11454) {
 		SET_VHT_CAPABILITY_ELE_MAX_MPDU_LENGTH(pcap, 2);
-		RTW_INFO("[VHT] Declare supporting MAX MPDU len = 11454 bytes\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting MAX MPDU len = 11454 bytes\n");
 	} else if ((max_recvbuf_sz - rx_packet_offset) >= 7991) {
 		SET_VHT_CAPABILITY_ELE_MAX_MPDU_LENGTH(pcap, 1);
-		RTW_INFO("[VHT] Declare supporting MAX MPDU len = 7991 bytes\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting MAX MPDU len = 7991 bytes\n");
 	} else if ((max_recvbuf_sz - rx_packet_offset) >= 3895) {
 		SET_VHT_CAPABILITY_ELE_MAX_MPDU_LENGTH(pcap, 0);
-		RTW_INFO("[VHT] Declare supporting MAX MPDU len = 3895 bytes\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting MAX MPDU len = 3895 bytes\n");
 	} else
-		RTW_ERR("[VHT] Error!! Available RX buf size < 3895 bytes\n");
+		if (log)
+			RTW_ERR("[VHT] Error!! Available RX buf size < 3895 bytes\n");
 
 	/* B2 B3 Supported Channel Width Set */
 	if (hal_chk_bw_cap(padapter, BW_CAP_160M) && REGSTY_IS_BW_5G_SUPPORT(pregistrypriv, CHANNEL_WIDTH_160)) {
 		if (hal_chk_bw_cap(padapter, BW_CAP_80_80M) && REGSTY_IS_BW_5G_SUPPORT(pregistrypriv, CHANNEL_WIDTH_80_80)) {
 			SET_VHT_CAPABILITY_ELE_CHL_WIDTH(pcap, 2);
-			RTW_INFO("[VHT] Declare supporting 160MHz and 80+80MHz\n");
+			if (log)
+				RTW_INFO("[VHT] Declare supporting 160MHz and 80+80MHz\n");
 		} else {
 			SET_VHT_CAPABILITY_ELE_CHL_WIDTH(pcap, 1);
-			RTW_INFO("[VHT] Declare supporting 160MHz\n");
+			if (log)
+				RTW_INFO("[VHT] Declare supporting 160MHz\n");
 		}
 	} else
 		SET_VHT_CAPABILITY_ELE_CHL_WIDTH(pcap, 0);
@@ -865,51 +872,59 @@ u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf)
 	/* B4 Rx LDPC */
 	if (TEST_FLAG(pvhtpriv->ldpc_cap, LDPC_VHT_ENABLE_RX)) {
 		SET_VHT_CAPABILITY_ELE_RX_LDPC(pcap, 1);
-		RTW_INFO("[VHT] Declare supporting RX LDPC\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting RX LDPC\n");
 	}
 
 	/* B5 ShortGI for 80MHz */
 	SET_VHT_CAPABILITY_ELE_SHORT_GI80M(pcap, pvhtpriv->sgi_80m ? 1 : 0);
 	if (pvhtpriv->sgi_80m)
-		RTW_INFO("[VHT] Declare supporting SGI 80MHz\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting SGI 80MHz\n");
 
 	/* B6 Short GI for 160 and 80+80 MHz */
 	SET_VHT_CAPABILITY_ELE_SHORT_GI160M(pcap, pvhtpriv->sgi_160m ? 1 : 0);
 	if (pvhtpriv->sgi_160m) {
-		RTW_INFO("[VHT] Declare supporting SGI 160MHz and 80+80MHz\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting SGI 160MHz and 80+80MHz\n");
 	}
 
 	/* B7 Tx STBC */
 	if (TEST_FLAG(pvhtpriv->stbc_cap, STBC_VHT_ENABLE_TX)) {
 		SET_VHT_CAPABILITY_ELE_TX_STBC(pcap, 1);
-		RTW_INFO("[VHT] Declare supporting TX STBC\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting TX STBC\n");
 	}
 
 	/* B8 B9 B10 Rx STBC */
 	if (TEST_FLAG(pvhtpriv->stbc_cap, STBC_VHT_ENABLE_RX)) {
 		SET_VHT_CAPABILITY_ELE_RX_STBC(pcap, pvhtpriv->rx_stbc_nss);
-		RTW_INFO("[VHT] Declare supporting %uSS RX STBC\n", pvhtpriv->rx_stbc_nss);
+		if (log)
+			RTW_INFO("[VHT] Declare supporting %uSS RX STBC\n", pvhtpriv->rx_stbc_nss);
 	}
 
 	#ifdef CONFIG_BEAMFORMING
 	/* B11 SU Beamformer Capable */
 	if (TEST_FLAG(pvhtpriv->beamform_cap, BEAMFORMING_VHT_BEAMFORMER_ENABLE)) {
 		SET_VHT_CAPABILITY_ELE_SU_BFER(pcap, 1);
-		RTW_INFO("[VHT] Declare supporting SU Beamformer\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting SU Beamformer\n");
 		/* B16 17 18 Number of Sounding Dimensions */
 		rtw_hal_get_def_var(padapter, HAL_DEF_BEAMFORMER_CAP, (u8 *)&rf_num);
 		SET_VHT_CAPABILITY_ELE_SOUNDING_DIMENSIONS(pcap, rf_num);
 		/* B19 MU Beamformer Capable */
 		if (TEST_FLAG(pvhtpriv->beamform_cap, BEAMFORMING_VHT_MU_MIMO_AP_ENABLE)) {
 			SET_VHT_CAPABILITY_ELE_MU_BFER(pcap, 1);
-			RTW_INFO("[VHT] Declare supporting MU Beamformer\n");
+			if (log)
+				RTW_INFO("[VHT] Declare supporting MU Beamformer\n");
 		}
 	}
 
 	/* B12 SU Beamformee Capable */
 	if (TEST_FLAG(pvhtpriv->beamform_cap, BEAMFORMING_VHT_BEAMFORMEE_ENABLE)) {
 		SET_VHT_CAPABILITY_ELE_SU_BFEE(pcap, 1);
-		RTW_INFO("[VHT] Declare supporting SU Beamformee\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting SU Beamformee\n");
 
 		rtw_hal_get_def_var(padapter, HAL_DEF_BEAMFORMEE_CAP, (u8 *)&rf_num);
 
@@ -925,7 +940,8 @@ u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf)
 		/* B20 MU Beamformee Capable */
 		if (TEST_FLAG(pvhtpriv->beamform_cap, BEAMFORMING_VHT_MU_MIMO_STA_ENABLE)) {
 			SET_VHT_CAPABILITY_ELE_MU_BFEE(pcap, 1);
-			RTW_INFO("[VHT] Declare supporting MU Beamformee\n");
+			if (log)
+				RTW_INFO("[VHT] Declare supporting MU Beamformee\n");
 		}
 	}
 	#endif/*CONFIG_BEAMFORMING*/
@@ -933,35 +949,41 @@ u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf)
 	/* B21 VHT TXOP PS */
 	if (pvhtpriv->txop_ps) {
 		SET_VHT_CAPABILITY_ELE_TXOP_PS(pcap, 1);
-		RTW_INFO("[VHT] Declare supporting VHT TXOP power save\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting VHT TXOP power save\n");
 	}
 
 	/* B22 +HTC-VHT Capable */
 	if (pvhtpriv->htc_vht) {
 		SET_VHT_CAPABILITY_ELE_HTC_VHT(pcap, 1);
-		RTW_INFO("[VHT] Declare supporting VHT variant HT Control\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting VHT variant HT Control\n");
 	}
 
 	/* B23 24 25 Maximum A-MPDU Length Exponent */
 	SET_VHT_CAPABILITY_ELE_MAX_RXAMPDU_FACTOR(pcap, pvhtpriv->ampdu_len);
-	RTW_INFO("[VHT] Declare supporting RX A-MPDU Length Exponent = %u\n", pvhtpriv->ampdu_len);
+	if (log)
+		RTW_INFO("[VHT] Declare supporting RX A-MPDU Length Exponent = %u\n", pvhtpriv->ampdu_len);
 
 	/* B26 27 VHT Link Adaptation Capable */
 	if (pvhtpriv->link_adap_cap) {
 		SET_VHT_CAPABILITY_ELE_LINK_ADAPTION(pcap, 1);
-		RTW_INFO("[VHT] Declare supporting link adaptation using VHT variant HT Control\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting link adaptation using VHT variant HT Control\n");
 	}
 
 	/* B28 Rx Antenna Pattern Consistency */
 	if (pvhtpriv->rx_ant_pattern) {
 		SET_VHT_CAPABILITY_ELE_RX_ANT_PATTERN(pcap, 1);
-		RTW_INFO("[VHT] Declare supporting RX Antenna Pattern Consistency\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting RX Antenna Pattern Consistency\n");
 	}
 
 	/* B29 Tx Antenna Pattern Consistency */
 	if (pvhtpriv->tx_ant_pattern) {
 		SET_VHT_CAPABILITY_ELE_TX_ANT_PATTERN(pcap, 1);
-		RTW_INFO("[VHT] Declare supporting TX Antenna Pattern Consistency\n");
+		if (log)
+			RTW_INFO("[VHT] Declare supporting TX Antenna Pattern Consistency\n");
 	}
 
 	/* B30 B31 Extended NSS BW Support */
@@ -979,7 +1001,11 @@ u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf)
 	/* find the largest bw supported by both registry and hal */
 	bw = hal_largest_bw(padapter, REGSTY_BW_5G(pregistrypriv));
 
-	HighestRate = VHT_MCS_DATA_RATE[bw][pvhtpriv->sgi_80m][((pvhtpriv->vht_highest_rate - MGN_VHT1SS_MCS0) & 0x3f)];
+	if(bw >= ARRAY_SIZE(VHT_MCS_DATA_RATE)){
+		RTW_WARN("BW parameter value is out of range:%u\n", bw);
+		bw = ARRAY_SIZE(VHT_MCS_DATA_RATE) - 1;
+	}
+	HighestRate = VHT_MCS_DATA_RATE[bw][0][((pvhtpriv->vht_highest_rate - MGN_VHT1SS_MCS0) & 0x3f)];
 	HighestRate = (HighestRate + 1) >> 1;
 
 	SET_VHT_CAPABILITY_ELE_MCS_RX_HIGHEST_RATE(pcap, HighestRate); /* indicate we support highest rx rate is 600Mbps. */
@@ -987,17 +1013,17 @@ u32	rtw_build_vht_cap_ie(_adapter *padapter, u8 *pbuf)
 
 	pbuf = rtw_set_ie(pbuf, EID_VHTCapability, 12, pcap, &len);
 
+
 	return len;
 }
 
-u32 rtw_restructure_vht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, uint in_len, uint *pout_len)
+u32 rtw_restructure_vht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, uint in_len, uint *pout_len, u8 channel)
 {
-	struct rf_ctl_t *rfctl = adapter_to_rfctl(padapter);
-	RT_CHANNEL_INFO *chset = rfctl->channel_set;
 	u32	ielen;
 	u8 max_bw;
 	u8 oper_ch, oper_bw = CHANNEL_WIDTH_20, oper_offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
 	u8 *out_vht_op_ie, *ht_op_ie, *vht_cap_ie, *vht_op_ie;
+	BAND_TYPE band = rtw_is_2g_ch(channel) ? BAND_ON_2_4G : BAND_ON_5G;
 	struct registry_priv *pregistrypriv = &padapter->registrypriv;
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
 	struct vht_priv	*pvhtpriv = &pmlmepriv->vhtpriv;
@@ -1015,7 +1041,7 @@ u32 rtw_restructure_vht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, uint in_le
 		goto exit;
 
 	/* VHT Capabilities element */
-	*pout_len += rtw_build_vht_cap_ie(padapter, out_ie + *pout_len);
+	*pout_len += rtw_build_vht_cap_ie(padapter, out_ie + *pout_len, _TRUE);
 
 
 	/* VHT Operation element */
@@ -1026,7 +1052,10 @@ u32 rtw_restructure_vht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, uint in_le
 	oper_ch = GET_HT_OP_ELE_PRI_CHL(ht_op_ie + 2);
 
 	/* find the largest bw supported by both registry and hal */
-	max_bw = hal_largest_bw(padapter, REGSTY_BW_5G(pregistrypriv));
+	if (band == BAND_ON_5G)
+		max_bw = hal_largest_bw(padapter, REGSTY_BW_5G(pregistrypriv));
+	else if (band == BAND_ON_2_4G)
+		max_bw = hal_largest_bw(padapter, REGSTY_BW_2G(pregistrypriv));
 
 	if (max_bw >= CHANNEL_WIDTH_40) {
 		/* get bw offset form HT_OP_IE */
@@ -1053,25 +1082,13 @@ u32 rtw_restructure_vht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, uint in_le
 			}
 
 			oper_bw = rtw_min(oper_bw, max_bw);
-
-			/* try downgrage bw to fit in channel plan setting */
-			while (!rtw_chset_is_chbw_valid(chset, oper_ch, oper_bw, oper_offset, 1, 1)
-				|| (IS_DFS_SLAVE_WITH_RD(rfctl)
-					&& !rtw_rfctl_dfs_domain_unknown(rfctl)
-					&& rtw_chset_is_chbw_non_ocp(chset, oper_ch, oper_bw, oper_offset))
-			) {
-				oper_bw--;
-				if (oper_bw == CHANNEL_WIDTH_20) {
-					oper_offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
-					break;
-				}
-			}
 		}
 	}
 
-	rtw_warn_on(!rtw_chset_is_chbw_valid(chset, oper_ch, oper_bw, oper_offset, 1, 1));
-	if (IS_DFS_SLAVE_WITH_RD(rfctl) && !rtw_rfctl_dfs_domain_unknown(rfctl))
-		rtw_warn_on(rtw_chset_is_chbw_non_ocp(chset, oper_ch, oper_bw, oper_offset));
+	/* try downgrage bw to fit in channel plan setting */
+	oper_bw = adapter_adjust_linking_bw_by_regd(padapter, band, oper_ch, oper_bw, oper_offset);
+	if (oper_bw == CHANNEL_WIDTH_20)
+		oper_offset = HAL_PRIME_CHNL_OFFSET_DONT_CARE;
 
 	/* update VHT_OP_IE */
 	if (oper_bw < CHANNEL_WIDTH_80) {
@@ -1145,7 +1162,7 @@ void rtw_vht_ies_attach(_adapter *padapter, WLAN_BSSID_EX *pnetwork)
 		, &(pnetwork->IELength), _BEACON_IE_OFFSET_);
 
 	/* VHT Capabilities element */
-	cap_len = rtw_build_vht_cap_ie(padapter, pnetwork->IEs + pnetwork->IELength);
+	cap_len = rtw_build_vht_cap_ie(padapter, pnetwork->IEs + pnetwork->IELength, _TRUE);
 	pnetwork->IELength += cap_len;
 
 	/* VHT Operation element */
@@ -1211,7 +1228,7 @@ void rtw_update_drv_vht_cap(_adapter *padapter, u8 *vht_cap_ie)
 	rtw_vht_use_default_setting(padapter);
 
 	RTW_INFO("Don't setting VHT capability IE from hostap, builded by driver temporarily\n");
-	rtw_build_vht_cap_ie(padapter, vht_cap_ie);
+	rtw_build_vht_cap_ie(padapter, vht_cap_ie, _TRUE);
 }
 
 void rtw_set_vht_ext_cap(_adapter *padapter, WLAN_BSSID_EX *pnetwork)
@@ -1264,15 +1281,13 @@ void rtw_reattach_vht_ies(_adapter *padapter, WLAN_BSSID_EX *pnetwork)
 
 	RTW_INFO(FUNC_ADPT_FMT"\n", FUNC_ADPT_ARG(padapter));
 
-	if (pnetwork->IEs != NULL) {
-		vht_op_ie = rtw_set_ie(vht_cap_ie, EID_VHTCapability, VHT_CAP_IE_LEN,
-			pvhtpriv->vht_cap_ie_backup, &(pnetwork->IELength));
+	vht_op_ie = rtw_set_ie(vht_cap_ie, EID_VHTCapability, VHT_CAP_IE_LEN,
+		pvhtpriv->vht_cap_ie_backup, &(pnetwork->IELength));
 
-		rtw_set_ie(vht_op_ie, EID_VHTOperation, VHT_OP_IE_LEN,
-			pvhtpriv->vht_op_ie_backup, &(pnetwork->IELength));
+	rtw_set_ie(vht_op_ie, EID_VHTOperation, VHT_OP_IE_LEN,
+		pvhtpriv->vht_op_ie_backup, &(pnetwork->IELength));
 
-		rtw_set_vht_ext_cap(padapter, pnetwork);
-	}
+	rtw_set_vht_ext_cap(padapter, pnetwork);
 
 	pmlmepriv->vhtpriv.vht_option = _TRUE;
 }

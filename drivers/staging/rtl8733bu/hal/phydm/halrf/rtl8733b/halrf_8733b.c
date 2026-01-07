@@ -89,6 +89,10 @@ void halrf_rf_lna_setting_8733b(struct dm_struct *dm_void,
 void odm_tx_pwr_track_set_pwr8733b(void *dm_void, enum pwrtrack_method method,
 				   u8 rf_path, u8 channel_mapped_index)
 {
+#if 1
+	//[TBD]
+	return;
+#else
 	struct dm_struct *dm = (struct dm_struct *)dm_void;
 	struct dm_rf_calibration_struct *cali_info = &dm->rf_calibrate_info;
 	struct _hal_rf_ *rf = &dm->rf_table;
@@ -167,7 +171,7 @@ void odm_tx_pwr_track_set_pwr8733b(void *dm_void, enum pwrtrack_method method,
 			break;
 		}
 	}
-
+#endif
 }
 
 void get_delta_swing_table_8733b(void *dm_void,
@@ -439,13 +443,13 @@ void halrf_spur_compensation_8733b(void *dm_void)
 	reg_rf5 = odm_get_rf_reg(dm, path, RF_0x5, 0xfffff);
 	//0x818[11]=0x1940[31]=0x1CE8[28]=0xDB4[0]=0,Turn off NBI/CSI
 	RF_DBG(dm, DBG_RF_LCK, "[RF][spur]Turn off NBI/CSI!!!!!!!\n");
+	odm_set_bb_reg(dm, R_0x818, BIT(11), 0);
+	odm_set_bb_reg(dm, R_0x1940, BIT(31), 0);
+	odm_set_bb_reg(dm, R_0x1ce8, BIT(28), 0);
+	odm_set_bb_reg(dm, R_0xdb4, BIT(0), 0);
 	backup_bb_register_8733b(dm, bb_backup, backup_bb_reg, 10);
 	switch (band) {
 	case 0:  //2G
-		odm_set_bb_reg(dm, R_0x818, BIT(11), 0);
-		odm_set_bb_reg(dm, R_0x1940, BIT(31), 0);
-		odm_set_bb_reg(dm, R_0x1ce8, BIT(28), 0);
-		odm_set_bb_reg(dm, R_0xdb4, BIT(0), 0);
 		if (dm->rfe_type <= 2 || dm->rfe_type == 4 || dm->rfe_type == 9) {//only pathA or pathB
 			odm_set_bb_reg(dm, 0x1884, BIT(20), path);
 			odm_set_rf_reg(dm, RF_PATH_A, RF_0x5, BIT(0), 0x0);
@@ -461,9 +465,9 @@ void halrf_spur_compensation_8733b(void *dm_void)
 			halrf_spur_compensation_2G_8733b(dm, RF_PATH_B);
 		}
 		break;
-//	case 1:  //5G
-//		halrf_spur_compensation_5G_8733b(dm);
-//		break;
+	case 1:  //5G
+		halrf_spur_compensation_5G_8733b(dm);
+		break;
 	default:
 		RF_DBG(dm, DBG_RF_LCK, "[RF]invalid band!!!!!!!\n");
 		break;

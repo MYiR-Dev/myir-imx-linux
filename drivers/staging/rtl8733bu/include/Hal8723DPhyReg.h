@@ -270,6 +270,8 @@
 #define		rOFDM0_TxCoeff4				0xcb0
 #define		rOFDM0_TxCoeff5				0xcb4
 #define		rOFDM0_TxCoeff6				0xcb8
+#define		rOFDM0_TxFlexCoeff0			0xcc0
+#define		rOFDM0_TxFlexCoeff5			0xcc4
 #define		rOFDM0_RxHPParameter			0xce0
 #define		rOFDM0_TxPseudoNoiseWgt		0xce4
 #define		rOFDM0_FrameSync				0xcf0

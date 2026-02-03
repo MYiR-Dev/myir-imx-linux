@@ -241,6 +241,11 @@ static const struct watchdog_info imx7ulp_wdt_info = {
 		    WDIOF_MAGICCLOSE,
 };
 
+static bool imx7ulp_wdt_is_running(struct imx7ulp_wdt_device *wdt)
+{
+	return readl(wdt->base + WDOG_CS) & WDOG_CS_EN;
+}
+
 static int _imx7ulp_wdt_init(struct imx7ulp_wdt_device *wdt, unsigned int timeout, unsigned int cs)
 {
 	u32 val;
@@ -276,7 +281,7 @@ init_out:
 	return ret;
 }
 
-static int imx7ulp_wdt_init(struct imx7ulp_wdt_device *wdt, unsigned int timeout)
+static int imx7ulp_wdt_init(struct imx7ulp_wdt_device *wdt, unsigned int timeout, bool keep_enable)
 {
 	/* enable 32bit command sequence and reconfigure */
 	u32 val = WDOG_CS_CMD32EN | WDOG_CS_CLK | WDOG_CS_UPDATE |
@@ -290,6 +295,9 @@ static int imx7ulp_wdt_init(struct imx7ulp_wdt_device *wdt, unsigned int timeout
 
 	if (wdt->ext_reset)
 		val |= WDOG_CS_INT_EN;
+
+	if (keep_enable)
+		val |= WDOG_CS_EN;
 
 	do {
 		ret = _imx7ulp_wdt_init(wdt, timeout, val);
@@ -314,6 +322,7 @@ static int imx7ulp_wdt_probe(struct platform_device *pdev)
 	struct imx7ulp_wdt_device *imx7ulp_wdt;
 	struct device *dev = &pdev->dev;
 	struct watchdog_device *wdog;
+	bool hw_running;
 	int ret;
 
 	imx7ulp_wdt = devm_kzalloc(dev, sizeof(*imx7ulp_wdt), GFP_KERNEL);
@@ -356,6 +365,8 @@ static int imx7ulp_wdt_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	hw_running = imx7ulp_wdt_is_running(imx7ulp_wdt);
+
 	wdog = &imx7ulp_wdt->wdd;
 	wdog->info = &imx7ulp_wdt_info;
 	wdog->ops = &imx7ulp_wdt_ops;
@@ -370,9 +381,15 @@ static int imx7ulp_wdt_probe(struct platform_device *pdev)
 	watchdog_set_drvdata(wdog, imx7ulp_wdt);
 
 	imx7ulp_wdt->hw = of_device_get_match_data(dev);
-	ret = imx7ulp_wdt_init(imx7ulp_wdt, wdog->timeout * imx7ulp_wdt->hw->wdog_clock_rate);
+	ret = imx7ulp_wdt_init(imx7ulp_wdt, wdog->timeout * imx7ulp_wdt->hw->wdog_clock_rate, hw_running);
 	if (ret)
 		return ret;
+
+	if (hw_running) {
+		set_bit(WDOG_HW_RUNNING, &imx7ulp_wdt->wdd.status);
+		set_bit(WDOG_ACTIVE, &imx7ulp_wdt->wdd.status);
+		imx7ulp_wdt_ping(&imx7ulp_wdt->wdd);
+	}
 
 	return devm_watchdog_register_device(dev, wdog);
 }
@@ -400,7 +417,7 @@ static int __maybe_unused imx7ulp_wdt_resume_noirq(struct device *dev)
 		return ret;
 
 	if (watchdog_active(&imx7ulp_wdt->wdd)) {
-		imx7ulp_wdt_init(imx7ulp_wdt, timeout);
+		imx7ulp_wdt_init(imx7ulp_wdt, timeout, true);
 		imx7ulp_wdt_start(&imx7ulp_wdt->wdd);
 		imx7ulp_wdt_ping(&imx7ulp_wdt->wdd);
 	}

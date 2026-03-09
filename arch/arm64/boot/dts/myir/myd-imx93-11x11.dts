@@ -428,6 +428,11 @@
 		status = "okay";
 	};
 
+	eeprom: 24c32@50 {
+		compatible = "atmel,24c32";
+		reg = <0x50>;
+		pagesize = <32>;
+	};
 	       extcon_usbotg1: typec@3d {
                 compatible = "nxp,ptn5150";
                 reg = <0x3d>;

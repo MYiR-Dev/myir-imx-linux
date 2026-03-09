@@ -690,10 +690,6 @@
 
 				port@0 {
 					reg = <0>;
-
-					typec2_dr_sw: endpoint {
-						remote-endpoint = <&usb2_drd_sw>;
-					};
 				};
 			};
 		};
@@ -780,21 +776,9 @@
 };
 
 &usbotg2 {
-	dr_mode = "otg";
-	hnp-disable;
-	srp-disable;
-	adp-disable;
-	usb-role-switch;
+	dr_mode = "host";
 	disable-over-current;
-	samsung,picophy-pre-emp-curr-control = <3>;
-	samsung,picophy-dc-vol-level-adjust = <7>;
-	status = "disabled";
-
-	port {
-		usb2_drd_sw: endpoint {
-			remote-endpoint = <&typec2_dr_sw>;
-		};
-	};
+	status = "okay";
 };
 
 &usdhc1 {

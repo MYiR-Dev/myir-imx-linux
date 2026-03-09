@@ -578,6 +578,17 @@
 		#pwm-cells = <3>;
 		status = "disabled";
 	};
+
+	at9555: at9555@20 {
+		compatible = "nxp,pca9555";
+		reg = <0x20>;
+		#gpio-cells = <2>;
+		gpio_base = <130>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		status = "okay";
+	};
+
 };
 
 &lpi2c3 {

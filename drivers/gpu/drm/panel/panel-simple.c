@@ -578,7 +578,6 @@ static int panel_simple_probe(struct device *dev, const struct panel_desc *desc)
 	int connector_type;
 	u32 bus_flags;
 	int err;
-
 	panel = devm_kzalloc(dev, sizeof(*panel), GFP_KERNEL);
 	if (!panel)
 		return -ENOMEM;
@@ -1451,6 +1450,33 @@ static const struct panel_desc boe_ev121wxm_n10_1850 = {
 	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
 	.connector_type = DRM_MODE_CONNECTOR_LVDS,
 };
+
+static const struct display_timing myir_tft_7inch_mode = {
+	.pixelclock = {33000000,33000000,33000000},
+	.hactive = {800,800,800},
+	.hfront_porch = {210,210,210},
+	.hback_porch = {46,46,46},
+	.hsync_len = {1,1,1},
+	.vactive = {481,481,481},
+	.vfront_porch = {23,23,23},
+	.vback_porch = {22,22,22},
+	.vsync_len = {20,20,20},
+};
+
+static const struct panel_desc myir_tft_7inch = {
+	.timings = &myir_tft_7inch_mode,
+	.num_timings = 1,
+	.bpc = 6,
+	.size = {
+		.width = 154,
+		.height = 86,
+
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X24,
+    .bus_flags = DRM_BUS_FLAG_DE_HIGH | DRM_BUS_FLAG_PIXDATA_SAMPLE_NEGEDGE,
+	.connector_type = DRM_MODE_CONNECTOR_DPI,
+};
+
 
 static const struct drm_display_mode boe_hv070wsa_mode = {
 	.clock = 42105,
@@ -4738,6 +4764,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "boe,ev121wxm-n10-1850",
 		.data = &boe_ev121wxm_n10_1850,
+		}, {
+		.compatible = "myirtft_panel_7inch",
+		.data = &myir_tft_7inch,
 	}, {
 		.compatible = "boe,hv070wsa-100",
 		.data = &boe_hv070wsa

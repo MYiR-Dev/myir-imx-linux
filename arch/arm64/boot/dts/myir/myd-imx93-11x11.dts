@@ -441,6 +441,13 @@
 		compatible = "st,lsm6dso";
 		reg = <0x6a>;
 	};
+	
+	rtc: rtc@32 {
+		compatible = "epson,rx8025t";
+		reg = <0x32>;
+		status = "okay";
+	};
+
 };
 
 &lpi2c2 {
@@ -692,13 +699,6 @@
 		};
 	};
 
-	pcf2131: rtc@53 {
-		compatible = "nxp,pcf2131";
-		status = "disabled";
-		reg = <0x53>;
-		interrupt-parent = <&pcal6524>;
-		interrupts = <1 IRQ_TYPE_EDGE_FALLING>;
-	};
 };
 
 &lpuart1 { /* console */

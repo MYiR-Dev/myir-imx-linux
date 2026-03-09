@@ -92,14 +92,7 @@
 		power-domains = <&mlmix>;
 	};*/
 
-	reg_can2_stby: regulator-can2-stby {
-		compatible = "regulator-fixed";
-		regulator-name = "can2-stby";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&adp5585 6 GPIO_ACTIVE_LOW>;
-		enable-active-low;
-	};
+
 
 	reg_vdd_12v: regulator-vdd-12v {
 		compatible = "regulator-fixed";
@@ -338,6 +331,12 @@
 	};
 };
 
+&flexcan1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan1>;
+	status = "okay";
+};
+
 &eqos {
 	pinctrl-names = "default", "sleep";
 	pinctrl-0 = <&pinctrl_eqos>;
@@ -383,10 +382,6 @@
 };
 
 &flexcan2 {
-	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&pinctrl_flexcan2>;
-	pinctrl-1 = <&pinctrl_flexcan2_sleep>;
-	xceiver-supply = <&reg_can2_stby>;
 	status = "disabled";
 };
 
@@ -783,6 +778,13 @@
 		>;
 	};
 
+	pinctrl_flexcan1: flexcan1grp {
+		fsl,pins = <
+		MX93_PAD_PDM_BIT_STREAM0__CAN1_RX          0x0000057E
+            	MX93_PAD_PDM_CLK__CAN1_TX  				   0x0000057E
+		>;
+	};
+
 	pinctrl_fec: fecgrp {
 		fsl,pins = <
 			MX93_PAD_ENET2_MDC__ENET1_MDC			0x57e
@@ -837,18 +839,7 @@
 		>;
 	};
 
-	pinctrl_flexcan2: flexcan2grp {
-		fsl,pins = <
-			MX93_PAD_GPIO_IO25__CAN2_TX	0x139e
-			MX93_PAD_GPIO_IO27__CAN2_RX	0x139e
-		>;
-	};
-	pinctrl_flexcan2_sleep: flexcan2sleepgrp {
-		fsl,pins = <
-			MX93_PAD_GPIO_IO25__GPIO2_IO25  0x31e
-			MX93_PAD_GPIO_IO27__GPIO2_IO27	0x31e
-		>;
-	};
+
 
 
 	pinctrl_uart1: uart1grp {

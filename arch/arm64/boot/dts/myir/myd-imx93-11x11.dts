@@ -117,7 +117,7 @@
 		regulator-max-microvolt = <1800000>;
 	};
 
-	reg_usdhc2_vmmc: regulator-usdhc2 {
+	/* reg_usdhc2_vmmc: regulator-usdhc2 {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_reg_pmic>;
@@ -127,7 +127,7 @@
 		gpio = <&gpio3 7 GPIO_ACTIVE_HIGH>;
 		off-on-delay-us = <12000>;
 		enable-active-high;
-	};
+	}; */
 
 	backlight_lvds: backlight-lvds {
 		compatible = "pwm-backlight";
@@ -480,9 +480,6 @@
 	pmic@25 {
 		compatible = "nxp,pca9451a";
 		reg = <0x25>;
-		pinctrl = <&pinctrl_reg_pmic>;
-		interrupt-parent = <&gpio3>;
-		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
 
 		regulators {
 			buck1: BUCK1 {

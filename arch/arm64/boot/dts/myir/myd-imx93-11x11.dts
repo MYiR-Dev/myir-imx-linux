@@ -181,21 +181,37 @@
 		regulator-always-on;
 	};
 
-	sound-wm8962 {
-		compatible = "fsl,imx-audio-wm8962";
-		status = "disabled";
-		model = "wm8962-audio";
-		audio-cpu = <&sai3>;
-		audio-codec = <&codec>;
-		hp-det-gpio = <&pcal6524 4 GPIO_ACTIVE_HIGH>;
-		audio-routing =
-			"Headphone Jack", "HPOUTL",
-			"Headphone Jack", "HPOUTR",
-			"Ext Spk", "SPKOUTL",
-			"Ext Spk", "SPKOUTR",
-			"AMIC", "MICBIAS",
-			"IN3R", "AMIC",
-			"IN1R", "AMIC";
+	reg_vdd_3v3: regulator-vdd {
+		compatible = "regulator-fixed";
+		regulator-name = "VDD_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <4000>;
+		enable-active-high;
+	};
+
+		sgtl5000_mclk: sgtl5000-mclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <11289600>;
+	};
+	sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "SGTL5000-Card";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,bitclock-master = <&codec_dai>;
+		simple-audio-card,frame-master = <&codec_dai>;
+		simple-audio-card,widgets = "Headphone", "Headphone Jack";
+		simple-audio-card,routing = "Headphone Jack", "HP_OUT";
+
+		cpu_dai: simple-audio-card,cpu {
+			sound-dai = <&sai1>;
+		};
+
+		codec_dai: simple-audio-card,codec {
+			sound-dai = <&sgtl5000>;
+			clocks = <&sgtl5000_mclk>;
+		};
 	};
 
 	bt_sco_codec: bt-sco-codec {
@@ -421,6 +437,16 @@
                 pinctrl-0 = <&pinctrl_tyint>;
                 status = "okay";
         };
+
+		sgtl5000: audio-codec@a {
+		compatible = "fsl,sgtl5000";
+		reg = <0xa>;
+		#sound-dai-cells = <0>;
+		clocks = <&sgtl5000_mclk>;
+		VDDA-supply = <&reg_vdd_3v3>;
+		VDDIO-supply = <&reg_vdd_3v3>;
+		VDDD-supply = <&reg_vref_1v8>;
+	};
 };
 
 &lpi2c2 {
@@ -591,7 +617,7 @@
 	assigned-clock-parents = <&clk IMX93_CLK_AUDIO_PLL>;
 	assigned-clock-rates = <12288000>;
 	fsl,sai-mclk-direction-output;
-	status = "disabled";
+	status = "okay";
 };
 
 &sai3 {

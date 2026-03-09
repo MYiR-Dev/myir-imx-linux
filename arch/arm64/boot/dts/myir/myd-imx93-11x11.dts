@@ -195,6 +195,20 @@
 		#clock-cells = <0>;
 		clock-frequency = <11289600>;
 	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		autorepeat;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_key>;
+
+		user: user {
+			label = "GPIO Key USER1";
+			linux,code = <KEY_HOME>;
+			gpios = <&gpio3 26 GPIO_ACTIVE_LOW>;
+		};
+
+	};
 	sound {
 		compatible = "simple-audio-card";
 		simple-audio-card,name = "SGTL5000-Card";
@@ -684,10 +698,10 @@
 
 &usdhc3 {
 	pinctrl-names = "default", "state_100mhz", "state_200mhz", "sleep";
-	pinctrl-0 = <&pinctrl_usdhc3>, <&pinctrl_usdhc3_wlan>;
-	pinctrl-1 = <&pinctrl_usdhc3_100mhz>, <&pinctrl_usdhc3_wlan>;
-	pinctrl-2 = <&pinctrl_usdhc3_200mhz>, <&pinctrl_usdhc3_wlan>;
-	pinctrl-3 = <&pinctrl_usdhc3_sleep>, <&pinctrl_usdhc3_wlan>;
+	pinctrl-0 = <&pinctrl_usdhc3>;
+	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
+	pinctrl-3 = <&pinctrl_usdhc3_sleep>;
 	mmc-pwrseq = <&usdhc3_pwrseq>;
 	vmmc-supply = <&reg_usdhc3_vmmc>;
 	bus-width = <4>;
@@ -778,6 +792,11 @@
 		>;
 	};
 
+	pinctrl_key: pinctrlkey {
+		fsl,pins = <
+                MX93_PAD_CCM_CLKO1__GPIO3_IO26             0x0000051E
+			>;
+    };
 	pinctrl_tyint: typecint {
 		fsl,pins = <
                 MX93_PAD_GPIO_IO29__GPIO2_IO29             0x0000051E
@@ -1075,11 +1094,6 @@
 		>;
 	};
 
-	pinctrl_usdhc3_wlan: usdhc3wlangrp {
-		fsl,pins = <
-			MX93_PAD_CCM_CLKO1__GPIO3_IO26		0x31e
-		>;
-	};
 
 	pinctrl_sai3: sai3grp {
 		fsl,pins = <

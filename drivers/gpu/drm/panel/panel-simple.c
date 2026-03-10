@@ -1477,6 +1477,35 @@ static const struct panel_desc myir_tft_7inch = {
 	.connector_type = DRM_MODE_CONNECTOR_DPI,
 };
 
+static const struct drm_display_mode myir_7_inch_lvds_mode = {
+	.clock = 74600,
+	.hdisplay = 1025,
+	.hsync_start = 1025 + 49,
+	.hsync_end = 1025 + 49 + 33,
+	.htotal = 1025 + 49 + 33 + 17,
+	.vdisplay = 600,
+	.vsync_start = 600 + 20,
+	.vsync_end = 600 + 20 + 90,
+	.vtotal = 600 + 20 + 90 + 15,
+	.flags = DRM_MODE_FLAG_NVSYNC | DRM_MODE_FLAG_NHSYNC,
+};
+
+static const struct panel_desc myir_7_inch_lvds = {
+	.modes = &myir_7_inch_lvds_mode,
+	.bpc = 8,
+	.num_modes = 1,
+	.size = {
+		.width = 154,
+		.height = 85,
+	},
+	.delay = {
+		.prepare = 50,
+		.disable = 50,
+	},
+	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
+	.connector_type = DRM_MODE_CONNECTOR_LVDS,
+};
 
 static const struct drm_display_mode boe_hv070wsa_mode = {
 	.clock = 42105,
@@ -4767,6 +4796,9 @@ static const struct of_device_id platform_of_match[] = {
 		}, {
 		.compatible = "myirtft_panel_7inch",
 		.data = &myir_tft_7inch,
+	}, {
+		.compatible = "myir,7-inch-lvds",
+		.data = &myir_7_inch_lvds,
 	}, {
 		.compatible = "boe,hv070wsa-100",
 		.data = &boe_hv070wsa

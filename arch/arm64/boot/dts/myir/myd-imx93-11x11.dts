@@ -162,6 +162,15 @@
 		enable-active-high;
 	};
 
+	reg_vddio_1v8: regulator-vddo {
+		compatible = "regulator-fixed";
+		regulator-name = "VDDIO_1V8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		startup-delay-us = <4000>;
+		enable-active-high;
+		vin-supply = <&reg_vdd_3v3>;
+	};
 
 		sgtl5000_mclk: sgtl5000-mclk {
 		compatible = "fixed-clock";
@@ -308,18 +317,20 @@
 };
 
 &dsi {
-	status = "disabled";
+ 	status = "okay";
+ 	ports{
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
 
-	ports {
-		port@1 {
-			reg = <1>;
-
-			dsi_to_adv7535: endpoint {
-				remote-endpoint = <&adv7535_to_dsi>;
-			};
-		};
-	};
-};
+ 		hdmi:port@1 {
+ 			reg = <1>;
+ 			mipi_dsi_bridge1_out: endpoint {
+ 				remote-endpoint = <&lt9611_1_in>;
+ 				};
+ 			};
+ 		};
+ 		
+ };
 
 &flexcan1 {
 	pinctrl-names = "default";
@@ -376,7 +387,7 @@
 };
 
 &lcdif {
-	status = "disabled";
+	status = "okay";
 	assigned-clock-rates = <445333333>, <148444444>, <400000000>, <133333333>;
 };
 
@@ -416,20 +427,6 @@
 			0x0000 /* 5:Default */
 		>;
 		status = "disabled";
-	};
-
-	adv7535: hdmi@3d {
-		compatible = "adi,adv7535";
-		reg = <0x3d>;
-		adi,addr-cec = <0x3b>;
-		adi,dsi-lanes = <4>;
-		status = "disabled";
-
-		port {
-			adv7535_to_dsi: endpoint {
-				remote-endpoint = <&dsi_to_adv7535>;
-			};
-		};
 	};
 
 	inertial-meter@6a {
@@ -508,6 +505,45 @@
 	pinctrl-1 = <&pinctrl_lpi2c2>;
 	status = "okay";
 
+hdmi@39 {
+	compatible = "myir,lt9611";
+	pinctrl-0 = <&pinctrl_lt9611>;
+	pinctrl-names = "default";
+	vdd-supply = <&reg_vddio_1v8>;
+	vcc-supply = <&reg_vdd_3v3>;
+	
+	// ddc-i2c-bus = <&lpi2c2>;
+	// hpd-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+	// dsi-lanes = <4>;
+	reg = <0x39>;
+	reset-gpios = <&at9555 9 GPIO_ACTIVE_HIGH>;
+	enable-gpios = <&at9555 13 GPIO_ACTIVE_HIGH>;
+	interrupts-extended = <&gpio3 23 IRQ_TYPE_EDGE_FALLING>;
+    // lvds-enabled = <0>;
+    status = "okay";	    
+
+	 ports {
+	 	#address-cells = <1>;
+	 	#size-cells = <0>;
+
+	 	hdmi_disp: port@0 {
+	 		reg = <0>;
+
+	 		lt9611_1_in: endpoint {
+	 			remote-endpoint = <&mipi_dsi_bridge1_out>;
+	 		};
+	 	};
+/*
+		 	port@2 {
+		 		reg = <2>;
+		 		lt9611_out: endpoint {
+		 			remote-endpoint = <&hdmi_con>;
+		 		};
+		 	};
+		 	*/
+		 	
+		 };
+	};
 
 
 	pmic@25 {
@@ -637,7 +673,7 @@
 };
 
 &media_blk_ctrl {
-	status = "disabled";
+	status = "okay";
 };
 
 &micfil {
@@ -777,6 +813,13 @@
             MX93_PAD_GPIO_IO15__LPUART3_RX             0x0000057E
 		>;
 	};
+
+	pinctrl_lt9611: pinctrl9611 {
+		fsl,pins = <
+            MX93_PAD_SD3_DATA1__GPIO3_IO23             0x0000057E
+			>;
+        };
+
 	pinctrl_eqos: eqosgrp {
 		fsl,pins = <
 			MX93_PAD_ENET1_MDC__ENET_QOS_MDC			0x57e
@@ -929,8 +972,6 @@
 			MX93_PAD_GPIO_IO29__LPI2C3_SCL			0x40000b9e
 		>;
 	};
-
-
 
 	pinctrl_pdm: pdmgrp {
 		fsl,pins = <

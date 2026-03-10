@@ -21,6 +21,20 @@ config DRM_AUX_BRIDGE
 	  Simple transparent bridge that is used by several non-DRM drivers to
 	  build bridges chain.
 
+config DRM_LT9611
+       tristate "LT9611 DSI/HDMI bridge"
+       depends on OF
+       select DRM_PANEL_BRIDGE
+       select DRM_KMS_HELPER
+       select DRM_MIPI_DSI
+       select REGMAP_I2C
+       help
+         Driver for Lontium LT9611 DSI to HDMI bridge
+         chip driver that converts dual DSI and I2S to
+         HDMI signals
+         Please say Y if you have such hardware.
+
+
 config DRM_AUX_HPD_BRIDGE
 	tristate
 	depends on DRM_BRIDGE && OF

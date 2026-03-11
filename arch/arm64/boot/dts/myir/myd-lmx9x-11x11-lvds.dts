@@ -3,9 +3,10 @@
  * Copyright 2026 MYIR
  */
 
-#include "myd-imx93-11x11.dts"
+#include "myd-lmx9x-11x11.dts"
 
 / {
+	model = "MYIR myd_lmx9x lvds ";
 	lvds_backlight: lvds_backlight {
 		compatible = "pwm-backlight";
 		pwms = <&tpm4 0 100000 0>;

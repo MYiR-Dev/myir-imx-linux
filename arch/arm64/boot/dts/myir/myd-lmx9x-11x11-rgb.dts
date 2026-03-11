@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
- * Copyright 2022 NXP
+ * Copyright 2026 MYIR
  */
 
-#include "myd-imx93-11x11.dts"
+#include "myd-lmx9x-11x11.dts"
 / {
-	model = "MYIR myd_lmx93x RGB ";
+	model = "MYIR myd_lmx9x rgb ";
 	panel {
 		compatible = "myirtft_panel_7inch";
 		power-supply = <&reg_vdd_3v3>;

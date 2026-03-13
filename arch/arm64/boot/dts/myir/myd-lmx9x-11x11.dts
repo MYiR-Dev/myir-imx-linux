@@ -35,15 +35,15 @@
 			compatible = "shared-dma-pool";
 			reusable;
 			alloc-ranges = <0 0x80000000 0 0x40000000>;
-			size = <0 0x10000000>;
+			size = <0 0x08000000>; /* 2GDDR set to 0x1000000 */
 			linux,cma-default;
 		};
 
-		 ethosu_mem: ethosu_region@B0000000 {
-		 	compatible = "shared-dma-pool";
-		 	reusable;
-		 	reg = <0x0 0xB0000000 0x0 0x8000000>;
-		 };
+		ethosu_mem: ethosu_region@B0000000 {  /* 2GDDR set to C0000000*/
+			compatible = "shared-dma-pool";
+			reusable;
+			reg = <0x0 0xB0000000 0x0 0x08000000>; /*2GDDR set to 0x10000000 */
+		};
 
 		vdev0vring0: vdev0vring0@a4000000 {
 			reg = <0 0xa4000000 0 0x8000>;
@@ -55,7 +55,7 @@
 			no-map;
 		};
 
-		vdev1vring0: vdev1vring0@a4000000 {
+		vdev1vring0: vdev1vring0@a4010000 {
 			reg = <0 0xa4010000 0 0x8000>;
 			no-map;
 		};
@@ -83,14 +83,12 @@
 		};
 	}; 
 
-	
-/*
 	ethosu {
 		compatible = "arm,ethosu";
 		fsl,cm33-proc = <&cm33>;
 		memory-region = <&ethosu_mem>;
 		power-domains = <&mlmix>;
-	};*/
+	};
 
 	reg_panel_powr2: regulator-panel {
 		compatible = "regulator-fixed";

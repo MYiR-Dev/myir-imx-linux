@@ -145,7 +145,6 @@
 		regulator-name = "audio-pwr";
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&adp5585 1 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		regulator-always-on;
 	};
@@ -201,7 +200,7 @@
 		status = "okay";
 		led-user {
 			label = "93x:led1";
-			gpios = <&at9555 10 GPIO_ACTIVE_HIGH>;
+			gpios = <&at9555 10 GPIO_ACTIVE_LOW>;
 			max-brightness = <255>;
 			linux,default-trigger = "heartbeat";
 		};
@@ -209,8 +208,8 @@
 		led-sys {
 			label = "93x:led2";
 			pinctrl-names = "default";
-			pinctrl-1 = <&pinctrl_sysled>;
-			gpios = <&gpio3 21 GPIO_ACTIVE_HIGH>;
+			pinctrl-0 = <&pinctrl_sysled>;
+			gpios = <&gpio3 21 GPIO_ACTIVE_LOW>;
 			linux,default-trigger = "heartbeat";
 		};
 	};
@@ -310,25 +309,7 @@
 	status = "okay";
 };
 
-&dphy {
-	status = "okay";
-};
 
-&dsi {
- 	status = "okay";
- 	ports{
- 		#address-cells = <1>;
- 		#size-cells = <0>;
-
- 		hdmi:port@1 {
- 			reg = <1>;
- 			mipi_dsi_bridge1_out: endpoint {
- 				remote-endpoint = <&lt9611_1_in>;
- 				};
- 			};
- 		};
- 		
- };
 
 &flexcan1 {
 	pinctrl-names = "default";
@@ -350,7 +331,7 @@
 		#size-cells = <0>;
 		clock-frequency = <5000000>;
 
-		ethphy1: ethernet-phy@1 {
+		ethphy1: ethernet-phy@4 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <4>;
 			eee-broken-1000t;
@@ -372,7 +353,7 @@
 		#size-cells = <0>;
 		clock-frequency = <5000000>;
 
-		ethphy2: ethernet-phy@2 {
+		ethphy2: ethernet-phy@6 {
 			reg = <6>;
 			eee-broken-1000t;
 
@@ -386,7 +367,7 @@
 
 &lcdif {
 	status = "okay";
-	assigned-clock-rates = <445333333>, <148444444>, <400000000>, <133333333>;
+	
 };
 
 &lpm {
@@ -443,17 +424,17 @@
 		reg = <0x50>;
 		pagesize = <32>;
 	};
-	       extcon_usbotg1: typec@3d {
-                compatible = "nxp,ptn5150";
-                reg = <0x3d>;
-                interrupt-parent = <&gpio2>;
-                interrupts = <29 IRQ_TYPE_LEVEL_LOW>;
-                pinctrl-names = "default";
-                pinctrl-0 = <&pinctrl_tyint>;
-                status = "okay";
-        };
+	extcon_usbotg1: typec@3d {
+		compatible = "nxp,ptn5150";
+		reg = <0x3d>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <29 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_tyint>;
+		status = "okay";
+	};
 
-		sgtl5000: audio-codec@a {
+	sgtl5000: audio-codec@a {
 		compatible = "fsl,sgtl5000";
 		reg = <0xa>;
 		#sound-dai-cells = <0>;
@@ -500,45 +481,7 @@
 	pinctrl-1 = <&pinctrl_lpi2c2>;
 	status = "okay";
 
-hdmi@39 {
-	compatible = "myir,lt9611";
-	pinctrl-0 = <&pinctrl_lt9611>;
-	pinctrl-names = "default";
-	vdd-supply = <&reg_vddio_1v8>;
-	vcc-supply = <&reg_vdd_3v3>;
-	
-	// ddc-i2c-bus = <&lpi2c2>;
-	// hpd-gpios = <&gpio1 8 GPIO_ACTIVE_HIGH>;
-	// dsi-lanes = <4>;
-	reg = <0x39>;
-	reset-gpios = <&at9555 9 GPIO_ACTIVE_HIGH>;
-	enable-gpios = <&at9555 13 GPIO_ACTIVE_HIGH>;
-	interrupts-extended = <&gpio3 23 IRQ_TYPE_EDGE_FALLING>;
-    // lvds-enabled = <0>;
-    status = "okay";	    
 
-	 ports {
-	 	#address-cells = <1>;
-	 	#size-cells = <0>;
-
-	 	hdmi_disp: port@0 {
-	 		reg = <0>;
-
-	 		lt9611_1_in: endpoint {
-	 			remote-endpoint = <&mipi_dsi_bridge1_out>;
-	 		};
-	 	};
-/*
-		 	port@2 {
-		 		reg = <2>;
-		 		lt9611_out: endpoint {
-		 			remote-endpoint = <&hdmi_con>;
-		 		};
-		 	};
-		 	*/
-		 	
-		 };
-	};
 
 
 	pmic@25 {
@@ -614,16 +557,7 @@ hdmi@39 {
 		};
 	};
 
-	adp5585: io-expander@34 {
-		compatible = "adi,adp5585-00", "adi,adp5585";
-		reg = <0x34>;
-		vdd-supply = <&buck4>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-reserved-ranges = <5 1>;
-		#pwm-cells = <3>;
-		status = "disabled";
-	};
+
 
 	at9555: at9555@20 {
 		compatible = "nxp,pca9555";
@@ -638,9 +572,7 @@ hdmi@39 {
 };
 
 &lpi2c3 {
-	clock-frequency = <400000>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_lpi2c3>;
+
 	status = "disabled";
 
 };
@@ -701,13 +633,7 @@ hdmi@39 {
 };
 
 &sai3 {
-	pinctrl-names = "default", "sleep";
-	pinctrl-0 = <&pinctrl_sai3>;
-	pinctrl-1 = <&pinctrl_sai3_sleep>;
-	assigned-clocks = <&clk IMX93_CLK_SAI3>;
-	assigned-clock-parents = <&clk IMX93_CLK_AUDIO_PLL>;
-	assigned-clock-rates = <12288000>;
-	fsl,sai-mclk-direction-output;
+
 	status = "disabled";
 };
 
@@ -731,7 +657,7 @@ hdmi@39 {
 	samsung,picophy-dc-vol-level-adjust = <7>;
 	status = "okay";
 
-	extcon = <&extcon_usbotg1>, <&extcon_usbotg1>;
+	extcon = <&extcon_usbotg1>;
 };
 
 &usbotg2 {
@@ -788,7 +714,7 @@ hdmi@39 {
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>, <&pinctrl_usdhc2_gpio>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>, <&pinctrl_usdhc2_gpio>;
 	pinctrl-3 = <&pinctrl_usdhc2_sleep>, <&pinctrl_usdhc2_gpio_sleep>;
-	cd-gpios = <&gpio3 00 GPIO_ACTIVE_LOW>;
+	cd-gpios = <&gpio3 0 GPIO_ACTIVE_LOW>;
 	fsl,cd-gpio-wakeup-disable;
 	/* vmmc-supply = <&reg_usdhc2_vmmc>; */
 	bus-width = <4>;
@@ -826,11 +752,7 @@ hdmi@39 {
 		>;
 	};
 
-	pinctrl_lt9611: pinctrl9611 {
-		fsl,pins = <
-            MX93_PAD_SD3_DATA1__GPIO3_IO23             0x0000057E
-			>;
-        };
+
 
 	pinctrl_eqos: eqosgrp {
 		fsl,pins = <
@@ -978,12 +900,7 @@ hdmi@39 {
 		>;
 	};
 
-	pinctrl_lpi2c3: lpi2c3grp {
-		fsl,pins = <
-			MX93_PAD_GPIO_IO28__LPI2C3_SDA			0x40000b9e
-			MX93_PAD_GPIO_IO29__LPI2C3_SCL			0x40000b9e
-		>;
-	};
+
 
 	pinctrl_pdm: pdmgrp {
 		fsl,pins = <
@@ -1156,25 +1073,7 @@ hdmi@39 {
 	
 
 
-	pinctrl_sai3: sai3grp {
-		fsl,pins = <
-			MX93_PAD_GPIO_IO26__SAI3_TX_SYNC		0x31e
-			MX93_PAD_GPIO_IO16__SAI3_TX_BCLK		0x31e
-			MX93_PAD_GPIO_IO17__SAI3_MCLK			0x31e
-			MX93_PAD_GPIO_IO19__SAI3_TX_DATA00		0x31e
-			MX93_PAD_GPIO_IO20__SAI3_RX_DATA00		0x31e
-		>;
-	};
 
-	pinctrl_sai3_sleep: sai3grpsleep {
-		fsl,pins = <
-			MX93_PAD_GPIO_IO26__GPIO2_IO26			0x51e
-			MX93_PAD_GPIO_IO16__GPIO2_IO16			0x51e
-			MX93_PAD_GPIO_IO17__GPIO2_IO17			0x51e
-			MX93_PAD_GPIO_IO19__GPIO2_IO19			0x51e
-			MX93_PAD_GPIO_IO20__GPIO2_IO20			0x51e
-		>;
-	};
 };
 
 &epxp {

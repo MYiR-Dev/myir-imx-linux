@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2026 MYIR
+ */
+
+#include "myd-lmx9x-11x11.dts"
+/ {
+	model = "MYIR myd_lmx9x hdmi ";
+
+};
+
+&lcdif {
+	status = "okay";
+	assigned-clock-rates = <445333333>, <148444444>, <400000000>, <133333333>;
+};
+
+&dphy {
+	status = "okay";
+};
+
+
+&dsi {
+ 	status = "okay";
+ 	ports{
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
+
+ 		hdmi:port@1 {
+ 			reg = <1>;
+ 			mipi_dsi_bridge1_out: endpoint {
+ 				remote-endpoint = <&lt9611_1_in>;
+ 				};
+ 			};
+ 		};
+ 		
+ };
+
+
+
+&lpi2c2 {
+	status = "okay";
+
+	hdmi@39 {
+		compatible = "myir,lt9611";
+		pinctrl-0 = <&pinctrl_lt9611>;
+		pinctrl-names = "default";
+		vdd-supply = <&reg_vddio_1v8>;
+		vcc-supply = <&reg_vdd_3v3>;
+
+		reg = <0x39>;
+		reset-gpios = <&at9555 9 GPIO_ACTIVE_HIGH>;
+		enable-gpios = <&at9555 13 GPIO_ACTIVE_HIGH>;
+		interrupts-extended = <&gpio3 23 IRQ_TYPE_EDGE_FALLING>;
+
+	  status = "okay";	    
+	
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			
+			hdmi_disp: port@0 {
+				reg = <0>;
+				
+				lt9611_1_in: endpoint {
+					remote-endpoint = <&mipi_dsi_bridge1_out>;
+				};
+			};
+			
+		
+		};
+	};
+};
+
+
+
+
+
+
+
+
+&iomuxc {
+
+
+	pinctrl_lt9611: pinctrl9611 {
+		fsl,pins = <
+            MX93_PAD_SD3_DATA1__GPIO3_IO23             0x0000057E
+			>;
+        };
+
+
+};
+
+
+
+

@@ -19,6 +19,15 @@
 	};
 };
 
+&lcdif {
+	status = "okay";
+	assigned-clock-rates = <445333333>, <148444444>, <400000000>, <133333333>;
+};
+
+&mediamix {
+	status = "okay";
+};
+
 &parallel_disp_fmt {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_lcdif>;
@@ -38,10 +47,7 @@
 
 
 
-&lcdif {
-	assigned-clock-rates = <484000000>, <121000000>, <400000000>, <133333333>;
-	status = "okay";
-};
+
 
 
 &lpi2c2 {
@@ -101,13 +107,7 @@
 	};
 };
 
-&media_blk_ctrl {
-	status = "okay";
-};
 
-// &lt9611_hdmi {
-// 	status = "disabled";
-// };
 
 /* pin conflicts */
 &lpuart6{
@@ -115,8 +115,5 @@
 };
 
 &lpuart3{
-	status = "disabled";
-};
-&lpuart8{
 	status = "disabled";
 };

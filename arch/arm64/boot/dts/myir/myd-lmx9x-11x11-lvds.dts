@@ -42,28 +42,14 @@
 
 &tpm4 {
         status = "okay";
-      };
-
-
-&dphy {
-	status = "disabled";
 };
 
-&dphy_rx {
-	status = "disabled";
-};
-&dsi {
-	status = "disabled";
-};
 
 &lcdif {
 	assigned-clock-rates = <498000000>, <71142857>, <400000000>, <133333333>;
 	status = "okay";
 };
 
-&media_blk_ctrl {
-	status = "okay";
-};
 
 &ldb {
 	status = "okay";

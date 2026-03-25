@@ -657,7 +657,7 @@
 	samsung,picophy-dc-vol-level-adjust = <7>;
 	status = "okay";
 
-	extcon = <&extcon_usbotg1>;
+	extcon = <&extcon_usbotg1>,<&extcon_usbotg1>;
 };
 
 &usbotg2 {

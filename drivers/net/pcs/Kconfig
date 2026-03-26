@@ -1,0 +1,46 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# PCS Layer Configuration
+#
+
+menu "PCS device drivers"
+
+config MTIP_BACKPLANE_PHY
+	tristate "MoreThanIP copper backplane PHYs"
+	select PHYLINK
+	select MII
+	help
+	  Enable support for the MoreThanIP copper backplane Auto-Negotiation
+	  and Link Training blocks, as implemented on the QorIQ and Layerscape
+	  SoCs.
+
+config PCS_XPCS
+	tristate "Synopsys DesignWare Ethernet XPCS"
+	select PHYLINK
+	help
+	  This module provides a driver and helper functions for Synopsys
+	  DesignWare XPCS controllers.
+
+config PCS_LYNX
+	depends on MTIP_BACKPLANE_PHY || MTIP_BACKPLANE_PHY=n
+	tristate
+	help
+	  This module provides helpers to phylink for managing the Lynx PCS
+	  which is part of the Layerscape and QorIQ Ethernet SERDES.
+
+config PCS_MTK_LYNXI
+	tristate
+	select REGMAP
+	help
+	  This module provides helpers to phylink for managing the LynxI PCS
+	  which is part of MediaTek's SoC and Ethernet switch ICs.
+
+config PCS_RZN1_MIIC
+	tristate "Renesas RZ/N1 MII converter"
+	depends on OF && (ARCH_RZN1 || COMPILE_TEST)
+	help
+	  This module provides a driver for the MII converter that is available
+	  on RZ/N1 SoCs. This PCS converts MII to RMII/RGMII or can be set in
+	  pass-through mode for MII.
+
+endmenu

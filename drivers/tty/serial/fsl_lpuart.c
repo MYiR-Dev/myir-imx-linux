@@ -21,6 +21,8 @@
 #include <linux/of.h>
 #include <linux/of_dma.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/gpio/consumer.h>
+#include <linux/workqueue.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/serial_core.h>

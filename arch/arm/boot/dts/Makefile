@@ -24,6 +24,7 @@ subdir-y += nspire
 subdir-y += nuvoton
 subdir-y += nvidia
 subdir-y += nxp
+subdir-y += myir
 subdir-y += qcom
 subdir-y += realtek
 subdir-y += renesas

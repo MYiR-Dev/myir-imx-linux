@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * MYD-Y6ULX (i.MX6ULL) baseboard + eMMC variant
+ */
+
+/dts-v1/;
+
+#include "imx6ull.dtsi"
+#include "myd-y6ull-base.dtsi"
+/ {
+	model = "MYiR MYD-Y6ULX i.MX6ULL (eMMC)";
+	compatible = "myir,myd-y6ulx", "fsl,imx6ull";
+};

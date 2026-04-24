@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0
+//
+// MYiR MYD-Y6ULX board support (local copy for myir/myd-y6ull/)
+//
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/input/input.h>
+#include "imx6ul-pinfunc.h"
+#include "imx6ull-pinfunc.h"
+#include "imx6ull-pinfunc-snvs.h"

@@ -13,6 +13,13 @@
 	chosen {
 		stdout-path = &uart1;
 	};
+	reg_can_3v3: regulator-can-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "can-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+	};
 };
 &fec1 {
 	pinctrl-names = "default";
@@ -49,9 +56,27 @@
 		};
 	};
 };
+&can2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan2>;
+	xceiver-supply = <&reg_can_3v3>;
+	status = "okay";
+};
 &uart1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart1>;
+	status = "okay";
+};
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart2>;
+	uart-has-rtscts;
+	status = "okay";
+};
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>;
+	rts-gpios = <&gpio1 18 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 &usdhc1 {
@@ -100,10 +125,29 @@
 				MX6UL_PAD_ENET2_TX_CLK__ENET2_REF_CLK2 0x4001b031
 			>;
 		};
+		pinctrl_flexcan2: flexcan2grp {
+			fsl,pins = <
+				MX6UL_PAD_UART2_RTS_B__FLEXCAN2_RX 0x1b020
+				MX6UL_PAD_UART2_CTS_B__FLEXCAN2_TX 0x1b020
+			>;
+		};
 		pinctrl_uart1: uart1grp {
 			fsl,pins = <
 				MX6UL_PAD_UART1_TX_DATA__UART1_DCE_TX 0x1b0b1
 				MX6UL_PAD_UART1_RX_DATA__UART1_DCE_RX 0x1b0b1
+			>;
+		};
+		pinctrl_uart2: uart2grp {
+			fsl,pins = <
+				MX6UL_PAD_UART2_TX_DATA__UART2_DCE_TX 0x1b0b1
+				MX6UL_PAD_UART2_RX_DATA__UART2_DCE_RX 0x1b0b1
+			>;
+		};
+		pinctrl_uart4: uart4grp {
+			fsl,pins = <
+				MX6UL_PAD_UART4_TX_DATA__UART4_DCE_TX 0x1b0b1
+				MX6UL_PAD_UART4_RX_DATA__UART4_DCE_RX 0x1b0b1
+				MX6UL_PAD_UART1_CTS_B__GPIO1_IO18 0x1b0b1
 			>;
 		};
 		pinctrl_usdhc1: usdhc1grp {

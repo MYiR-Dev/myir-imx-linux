@@ -73,10 +73,20 @@
 	uart-has-rtscts;
 	status = "okay";
 };
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3>;
+	status = "okay";
+};
 &uart4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
 	rts-gpios = <&gpio1 18 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+&uart7 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart7>;
 	status = "okay";
 };
 &usdhc1 {
@@ -148,6 +158,20 @@
 				MX6UL_PAD_UART4_TX_DATA__UART4_DCE_TX 0x1b0b1
 				MX6UL_PAD_UART4_RX_DATA__UART4_DCE_RX 0x1b0b1
 				MX6UL_PAD_UART1_CTS_B__GPIO1_IO18 0x1b0b1
+			>;
+		};
+		pinctrl_uart3: uart3grp {
+			fsl,pins = <
+				MX6UL_PAD_UART3_TX_DATA__UART3_DCE_TX 0x1b0b1
+				MX6UL_PAD_UART3_RX_DATA__UART3_DCE_RX 0x1b0b1
+				MX6UL_PAD_UART3_RTS_B__UART3_DCE_RTS 0x1b0b1
+				MX6UL_PAD_UART3_CTS_B__UART3_DCE_CTS 0x1b0b1
+			>;
+		};
+		pinctrl_uart7: uart7grp {
+			fsl,pins = <
+			MX6UL_PAD_LCD_DATA17__UART7_DCE_RX 0x000010B0
+			MX6UL_PAD_LCD_DATA16__UART7_DCE_TX 0x000010B0
 			>;
 		};
 		pinctrl_usdhc1: usdhc1grp {

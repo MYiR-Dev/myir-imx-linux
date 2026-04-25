@@ -20,6 +20,16 @@
 		regulator-max-microvolt = <3300000>;
 		regulator-always-on;
 	};
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		heartbeat {
+			label = "heartbeat";
+			gpios = <&gpio5 1 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "heartbeat";
+			default-state = "off";
+		};
+	};
 };
 &fec1 {
 	pinctrl-names = "default";
@@ -107,6 +117,10 @@
 	wakeup-source;
 	status = "okay";
 };
+&iomuxc_snvs {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_snvs_keys_leds>;
+};
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog_1>;
@@ -116,6 +130,11 @@
 				MX6UL_PAD_UART1_RTS_B__GPIO1_IO19 0x17059
 
 				
+			>;
+		};
+		pinctrl_snvs_keys_leds: snvs-keys-leds {
+			fsl,pins = <
+				MX6ULL_PAD_SNVS_TAMPER1__GPIO5_IO01 0x80000000
 			>;
 		};
 		pinctrl_enet1: enet1grp {

@@ -151,6 +151,9 @@
 	wakeup-source;
 	status = "okay";
 };
+&wdog1 {
+	status = "okay";
+};
 &iomuxc_snvs {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_snvs_keys_leds>;

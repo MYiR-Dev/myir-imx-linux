@@ -20,6 +20,16 @@
 		regulator-max-microvolt = <3300000>;
 		regulator-always-on;
 	};
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		key-home {
+			label = "HOME";
+			gpios = <&gpio5 0 GPIO_ACTIVE_HIGH>;
+			linux,code = <KEY_HOME>;
+			gpio-key,wakeup;
+		};
+	};
 	gpio-leds {
 		compatible = "gpio-leds";
 
@@ -70,6 +80,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan2>;
 	xceiver-supply = <&reg_can_3v3>;
+	status = "okay";
+};
+&snvs_poweroff {
+	status = "okay";
+};
+
+&snvs_pwrkey {
 	status = "okay";
 };
 &uart1 {
@@ -134,6 +151,7 @@
 		};
 		pinctrl_snvs_keys_leds: snvs-keys-leds {
 			fsl,pins = <
+				MX6ULL_PAD_SNVS_TAMPER0__GPIO5_IO00 0x80000000
 				MX6ULL_PAD_SNVS_TAMPER1__GPIO5_IO01 0x80000000
 			>;
 		};

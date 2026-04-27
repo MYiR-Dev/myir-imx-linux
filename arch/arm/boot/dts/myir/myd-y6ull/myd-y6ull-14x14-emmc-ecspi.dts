@@ -1,16 +1,24 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * MYD-Y6ULX (i.MX6ULL) baseboard + eMMC variant
+ * MYD-Y6ULX (i.MX6ULL) baseboard + eMMC variant with ECSPI enabled.
  */
 
 /dts-v1/;
 
 #include "imx6ull.dtsi"
 #include "myd-y6ull-base.dtsi"
+
 / {
-	model = "MYiR MYD-Y6ULX i.MX6ULL (eMMC)";
+	model = "MYiR MYD-Y6ULX i.MX6ULL (eMMC, ECSPI)";
 	compatible = "myir,myd-y6ulx", "fsl,imx6ull";
 };
-&ecspi1 {
+
+
+&csi {
 	status = "disabled";
 };
+
+&ecspi1 {
+	status = "okay";
+};
+

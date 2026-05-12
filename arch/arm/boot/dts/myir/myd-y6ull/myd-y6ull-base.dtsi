@@ -74,6 +74,20 @@
 			default-state = "off";
 		};
 	};
+       sound-wm8904 {
+               compatible = "fsl,imx-audio-wm8904";
+               model = "wm8904-audio";
+               audio-cpu = <&sai2>;
+               audio-asrc = <&asrc>;
+               audio-codec = <&wm8904>;
+               audio-routing =
+                       "Headphone Jack", "HPOUTL",
+                       "Headphone Jack", "HPOUTR",
+                       "IN2L", "Line In Jack",
+                       "IN2R", "Line In Jack",
+                       "AMIC", "MICBIAS",
+                       "IN2L", "AMIC";
+       };
 };
 &clks {
 	assigned-clocks = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
@@ -84,6 +98,13 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
+       wm8904: codec@1a {
+
+               compatible = "wlf,wm8904";
+               reg = <0x1a>;
+               clocks = <&clks IMX6UL_CLK_SAI2>;
+               clock-names = "mclk";
+       };
 	ft5x06: ft5x06@38 {
 		compatible = "edt,edt-ft5406", "edt,edt-ft5x06";
 		reg = <0x38>;
@@ -200,6 +221,15 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm1>;
 	status = "okay";
+};
+&sai2 {
+       pinctrl-names = "default";
+       pinctrl-0 = <&pinctrl_sai2>;
+       assigned-clocks = <&clks IMX6UL_CLK_SAI2_SEL>,<&clks IMX6UL_CLK_SAI2>;
+       assigned-clock-parents = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
+       assigned-clock-rates = <0>, <12288000>;
+       fsl,sai-mclk-direction-output;
+       status = "okay";
 };
 &snvs_poweroff {
 	status = "okay";
@@ -366,6 +396,15 @@
 				MX6UL_PAD_LCD_RESET__GPIO3_IO04 0x1b0b0
 			>;
 		};
+               pinctrl_sai2: sai2grp {
+                       fsl,pins = <
+                               MX6UL_PAD_JTAG_TDI__SAI2_TX_BCLK        0x17088
+                               MX6UL_PAD_JTAG_TDO__SAI2_TX_SYNC        0x17088
+                               MX6UL_PAD_JTAG_TRST_B__SAI2_TX_DATA     0x11088
+                               MX6UL_PAD_JTAG_TCK__SAI2_RX_DATA        0x11088
+                               MX6UL_PAD_JTAG_TMS__SAI2_MCLK           0x17088
+                       >;
+               };
 		pinctrl_pwm1: pwm1grp {
 			fsl,pins = <
 				MX6UL_PAD_GPIO1_IO08__PWM1_OUT 0x110b0

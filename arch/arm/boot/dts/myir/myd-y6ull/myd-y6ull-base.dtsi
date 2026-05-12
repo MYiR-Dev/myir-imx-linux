@@ -37,6 +37,10 @@
 		default-brightness-level = <6>;
 		status = "okay";
 	};
+        pxp_v4l2 {
+               compatible = "fsl,imx6ul-pxp-v4l2", "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
+               status = "okay";
+       };
 	reg_usb_ltemodule: regulator-ltemodule {
 		compatible = "regulator-fixed";
 		regulator-name = "ltemodule-pwr";
@@ -93,6 +97,16 @@
 	assigned-clocks = <&clks IMX6UL_CLK_PLL4_AUDIO_DIV>;
 	assigned-clock-rates = <786432000>;
 };
+&csi {
+       status = "okay";
+
+	port {
+        	csi1_ep: endpoint {
+            	remote-endpoint = <&ov2659_ep>;
+        };
+    };
+};
+
 &i2c2 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
@@ -105,6 +119,24 @@
                clocks = <&clks IMX6UL_CLK_SAI2>;
                clock-names = "mclk";
        };
+       ov2659: ov2659@30 {
+               compatible = "ovti,ov2659";
+               reg = <0x30>;
+               pinctrl-names = "default";
+               pinctrl-0 = <&pinctrl_csi1>;
+               clocks = <&clks IMX6UL_CLK_CSI>;
+               clock-names = "xvclk";
+               powerdown-gpios = <&gpio5 4 GPIO_ACTIVE_HIGH>;
+               reset-gpios = <&gpio5 3 GPIO_ACTIVE_LOW>;
+               status = "okay";
+               port {
+                       ov2659_ep: endpoint {
+                               remote-endpoint = <&csi1_ep>;
+                               link-frequencies = /bits/ 64 <70000000>;
+                       };
+               };
+       };
+
 	ft5x06: ft5x06@38 {
 		compatible = "edt,edt-ft5406", "edt,edt-ft5x06";
 		reg = <0x38>;
@@ -222,6 +254,10 @@
 	pinctrl-0 = <&pinctrl_pwm1>;
 	status = "okay";
 };
+&pxp {
+	status = "okay";
+};
+
 &sai2 {
        pinctrl-names = "default";
        pinctrl-0 = <&pinctrl_sai2>;
@@ -330,6 +366,25 @@
 				MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02 0x80000000
 			>;
 		};
+               pinctrl_csi1: csi1grp {
+                       fsl,pins = <
+                               MX6UL_PAD_CSI_MCLK__CSI_MCLK            0x1b088
+                               MX6UL_PAD_CSI_PIXCLK__CSI_PIXCLK        0x1b088
+                               MX6UL_PAD_CSI_VSYNC__CSI_VSYNC          0x1b088
+                               MX6UL_PAD_CSI_HSYNC__CSI_HSYNC          0x1b088
+                               MX6UL_PAD_CSI_DATA00__CSI_DATA02        0x1b088
+                               MX6UL_PAD_CSI_DATA01__CSI_DATA03        0x1b088
+                               MX6UL_PAD_CSI_DATA02__CSI_DATA04        0x1b088
+                               MX6UL_PAD_CSI_DATA03__CSI_DATA05        0x1b088
+                               MX6UL_PAD_CSI_DATA04__CSI_DATA06        0x1b088
+                               MX6UL_PAD_CSI_DATA05__CSI_DATA07        0x1b088
+                               MX6UL_PAD_CSI_DATA06__CSI_DATA08        0x1b088
+                               MX6UL_PAD_CSI_DATA07__CSI_DATA09        0x1b088
+                               MX6UL_PAD_SNVS_TAMPER3__GPIO5_IO03  0x1b0b0
+                               MX6UL_PAD_SNVS_TAMPER4__GPIO5_IO04  0x1b0b0
+                       >;
+               };
+
 		pinctrl_enet1: enet1grp {
 			fsl,pins = <
 				MX6UL_PAD_ENET1_RX_DATA0__ENET1_RDATA00 0x1b0b0

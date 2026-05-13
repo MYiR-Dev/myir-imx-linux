@@ -11,6 +11,7 @@
 #include <linux/sched/task_stack.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/mtd/mtd.h>
 #include <linux/mtd/partitions.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -2722,20 +2723,50 @@ static const struct nand_controller_ops gpmi_nand_controller_ops = {
 	.exec_op = gpmi_nfc_exec_op,
 };
 
+/*
+ * Prefer DT partitions first so a stray mtdparts= on the kernel cmdline cannot
+ * shadow fixed-partitions under the GPMI controller node.
+ */
+static const char *const gpmi_mtd_part_probe_types[] = {
+	"ofpart",
+	"cmdlinepart",
+	NULL,
+};
+
+/* NAND chip node per nand-controller.yaml (nand@0); else legacy partitions on controller */
+static struct device_node *gpmi_flash_np(struct device *dev)
+{
+	struct device_node *np = dev_of_node(dev);
+	struct device_node *chip;
+
+	if (!np)
+		return NULL;
+
+	chip = of_get_child_by_name(np, "nand@0");
+
+	return chip ? chip : np;
+}
+
 static int gpmi_nand_init(struct gpmi_nand_data *this)
 {
 	struct nand_chip *chip = &this->nand;
 	struct mtd_info  *mtd = nand_to_mtd(chip);
+	struct device_node *flash_np = gpmi_flash_np(this->dev);
 	u32 max_cs;
 	int ret;
 
 	/* init the MTD data structures */
 	mtd->name		= "gpmi-nand";
 	mtd->dev.parent		= this->dev;
+	/*
+	 * mtd_part_of_parse() does of_get_child_by_name(mtd_get_of_node(), "partitions").
+	 * The partition table must hang off the controller node, not nand@0.
+	 */
+	mtd_set_of_node(mtd, dev_of_node(this->dev));
 
 	/* init the nand_chip{}, we don't support a 16-bit NAND Flash bus. */
 	nand_set_controller_data(chip, this);
-	nand_set_flash_node(chip, this->pdev->dev.of_node);
+	nand_set_flash_node(chip, flash_np);
 	chip->legacy.block_markbad = gpmi_block_markbad;
 	chip->badblock_pattern	= &gpmi_bbt_descr;
 	chip->options		|= NAND_NO_SUBPAGE_WRITE;
@@ -2773,7 +2804,8 @@ static int gpmi_nand_init(struct gpmi_nand_data *this)
 	if (ret)
 		goto err_nand_cleanup;
 
-	ret = mtd_device_register(mtd, NULL, 0);
+	ret = mtd_device_parse_register(mtd, gpmi_mtd_part_probe_types, NULL, NULL,
+					0);
 	if (ret)
 		goto err_nand_cleanup;
 	return 0;

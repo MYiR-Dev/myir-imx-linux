@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * MYD-Y6ULX (i.MX6ULL) baseboard + NAND (GPMI), DDR256.
+ */
+
+/dts-v1/;
+
+#include "imx6ull.dtsi"
+#include "myd-y6ull-base.dtsi"
+#include "myd-y6ull-nand-ddr256.dtsi"
+
+/ {
+	model = "MYiR MYD-Y6ULX i.MX6ULL (NAND)";
+	compatible = "myir,myd-y6ulx", "fsl,imx6ull";
+};
+
+&ecspi1 {
+	status = "disabled";
+};
+
+&ecspi1 {
+	status = "disabled";
+};

@@ -1,0 +1,24 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * MYD-Y6ULX (i.MX6ULL) + NAND (GPMI) + ECSPI1, DDR256.
+ * GPMI / WiFi / partitions: myd-y6ull-nand-ddr256.dtsi
+ */
+
+/dts-v1/;
+
+#include "imx6ull.dtsi"
+#include "myd-y6ull-base.dtsi"
+#include "myd-y6ull-nand-ddr256.dtsi"
+
+/ {
+	model = "MYiR MYD-Y6ULX i.MX6ULL (NAND, ECSPI)";
+	compatible = "myir,myd-y6ulx", "fsl,imx6ull";
+};
+
+&csi {
+	status = "disabled";
+};
+
+&ecspi1 {
+	status = "okay";
+};

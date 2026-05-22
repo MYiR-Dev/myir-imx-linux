@@ -777,6 +777,16 @@
 	status = "okay";
 };
 
+&gpio3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_gpio3_hog>;
+};
+
+&gpio4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_gpio4_hog>;
+};
+
 &scmi_misc {
 	nxp,ctrl-ids = <BRD_SM_CTRL_SD3_WAKE		1
 			BRD_SM_CTRL_PCIE1_WAKE		1
@@ -786,12 +796,16 @@
 };
 
 &scmi_iomuxc {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_hog>;
-	pinctrl_hog: hoggrp {
+	pinctrl_gpio3_hog: gpio3hoggrp {
 		fsl,pins = <
-			IMX95_PAD_XSPI1_SS0_B__GPIO5_IO_BIT10		0x31e
-			IMX95_PAD_GPIO_IO10__GPIO2_IO_BIT10  		0x31e
+			IMX95_PAD_CCM_CLKO1__GPIO3_IO_BIT26			0x31e
+			IMX95_PAD_CCM_CLKO2__GPIO3_IO_BIT27			0x31e
+		>;
+	};
+
+	pinctrl_gpio4_hog: gpio4hoggrp {
+		fsl,pins = <
+			IMX95_PAD_CCM_CLKO4__GPIO4_IO_BIT29			0x31e
 		>;
 	};
 

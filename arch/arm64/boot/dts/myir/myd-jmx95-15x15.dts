@@ -48,7 +48,7 @@
 		cooling-max-state = <3>;
 		fan-supply = <&reg_vcc_12v>;
 		#cooling-cells = <2>;
-		pwms = <&tpm6 2 4000000 PWM_POLARITY_INVERTED>;
+		pwms = <&tpm6 2 4000000 0>;
 		cooling-levels = <64 128 192 255>;
 	};
 
@@ -384,8 +384,8 @@
 	ptn5110: tcpc@52 {
 		compatible = "nxp,ptn5110";
 		reg = <0x52>;
-		interrupt-parent = <&gpio4>;
-		interrupts = <29 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-parent = <&gpio5>;
+		interrupts = <10 IRQ_TYPE_LEVEL_LOW>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_ptn5110>;
 		vbus-supply = <&reg_usb_vbus>;
@@ -957,7 +957,7 @@
 
 	pinctrl_ptn5110: ptn5110grp {
 		fsl,pins = <
-			IMX95_PAD_CCM_CLKO4__GPIO4_IO_BIT29			0x31e
+			IMX95_PAD_XSPI1_SS0_B__GPIO5_IO_BIT10		0x31e
 		>;
 	};
 

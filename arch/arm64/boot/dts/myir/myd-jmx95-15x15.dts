@@ -251,17 +251,14 @@
 
 	codec_audio: sound {
 		compatible = "simple-audio-card";
-		simple-audio-card,name = "ES8388";
+		simple-audio-card,name = "ES8390";
 		simple-audio-card,widgets =
 			"Headphone",	"Headphone Jack",
 			"Line",		"Line In",
 			"Microphone",	"Microphone Jack";
 		simple-audio-card,routing =
-			"Headphone Jack", "LOUT1",
-			"Headphone Jack", "ROUT1",
-			"Headphone Jack", "LINPUT1",
-			"Headphone Jack", "RINPUT1",
-			"Microphone Jack",	"Mic Bias";
+			"Headphone Jack", "HPOL",
+			"Headphone Jack", "HPOR";
 		simple-audio-card,format = "i2s";
 		simple-audio-card,bitclock-master = <&sound_master>;
 		simple-audio-card,frame-master = <&sound_master>;
@@ -273,7 +270,7 @@
 		};
 
 		simple-audio-card,codec {
-			sound-dai = <&es8388>;
+			sound-dai = <&es8390>;
 			clocks = <&scmi_clk IMX95_CLK_SAI3>;
 		};
 	};
@@ -357,11 +354,11 @@
 		};
 	};
 
-	es8388: es8388@10 {
+	es8390: es8390@12 {
 		status = "okay";
 		#sound-dai-cells = <0>;
-		compatible = "everest,es8388";
-		reg = <0x10>;
+		compatible = "everest,es8390", "everest,es8389";
+		reg = <0x12>;
 		clocks = <&scmi_clk IMX95_CLK_SAI3>;
 		clock-names = "mclk";
 		assigned-clocks = <&scmi_clk IMX95_CLK_SAI3>;

@@ -455,13 +455,16 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 				       RTL8211FVD_CLKOUT_EN, priv->phycr2);
 	else
 		ret = phy_modify_paged(phydev, 0xa43, RTL8211F_PHYCR2,
-tret = phy_write_paged(phydev, 0xd04, RTL8211F_LEDCR, 0xAD70);
-	if (ret < 0) {
-		dev_err(dev, LEDCR
 				       RTL8211F_CLKOUT_EN, priv->phycr2);
 	if (ret < 0) {
 		dev_err(dev, "clkout configuration failed: %pe\n",
 			ERR_PTR(ret));
+		return ret;
+	}
+
+	ret = phy_write_paged(phydev, 0xd04, RTL8211F_LEDCR, 0xAD70);
+	if (ret < 0) {
+		dev_err(dev, "LEDCR Write Failed : %d\n", ret);
 		return ret;
 	}
 

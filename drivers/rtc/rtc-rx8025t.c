@@ -23,6 +23,7 @@
 #include <linux/slab.h>
 #include <linux/init.h>
 #include <linux/bcd.h>
+#include <linux/delay.h>
 #include <linux/i2c.h>
 #include <linux/list.h>
 #include <linux/rtc.h>
@@ -218,6 +219,36 @@ static int rx8025_init_client(struct i2c_client *client, int *need_reset)
 		flag &= ~(RX8025_BIT_FLAG_VLF | RX8025_BIT_FLAG_VDET);
 		err = rx8025_write_reg(client, RX8025_REG_FLAG, flag);
 	}
+
+	/* RX-8025T extended initialization */
+	rx8025_write_reg(client, 0x30, 0xd1);
+	rx8025_write_reg(client, 0x40, 0);
+	rx8025_write_reg(client, 0x32, 0x81);
+	mdelay(50);
+	rx8025_write_reg(client, 0x32, 0x80);
+	mdelay(50);
+	rx8025_write_reg(client, 0x32, 0x04);
+	rx8025_write_reg(client, 0x32, 0x04);
+	err = rx8025_read_reg(client, 0x5c, &flag);
+	if (err)
+		goto out;
+	if (flag >= 0) {
+		flag = (flag & ~0x0f) | 0x0c;
+		err = rx8025_write_reg(client, 0x5c, (u8)flag);
+		if (err < 0)
+			goto out;
+	}
+	err = rx8025_read_reg(client, 0x5a, &flag);
+	if (err)
+		goto out;
+	if (flag >= 0) {
+		flag |= 0xE0;
+		err = rx8025_write_reg(client, 0x5a, (u8)flag);
+		if (err < 0)
+			goto out;
+	}
+	rx8025_write_reg(client, 0x30, 0);
+
 out:
 	return err;
 }

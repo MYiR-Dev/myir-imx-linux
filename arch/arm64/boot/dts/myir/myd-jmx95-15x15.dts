@@ -480,7 +480,9 @@
 	status = "okay";
 
 	bluetooth {
-		compatible = "nxp,88w8997-bt";
+		compatible = "nxp,aw-xm729-bt";
+		firmware-name = "uartiw693_bt_v1.bin.se";
+		max-speed = <3000000>;
 	};
 };
 

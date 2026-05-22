@@ -56,6 +56,7 @@
 #define FIRMWARE_SECURE_AW693	"uartaw693_bt.bin.se"
 #define FIRMWARE_AW693_A1		"uartaw693_bt_v1.bin"
 #define FIRMWARE_SECURE_AW693_A1	"uartaw693_bt_v1.bin.se"
+#define FIRMWARE_AW_XM729		"uartiw693_bt_v1.bin.se"
 #define FIRMWARE_HELPER		"helper_uart_3000000.bin"
 
 #define CHIP_ID_W9098		0x5c03
@@ -1998,9 +1999,16 @@ static struct btnxpuart_data w8997_data __maybe_unused = {
 	.fw_name_old = FIRMWARE_W8997_OLD,
 };
 
+static struct btnxpuart_data aw_xm729_data __maybe_unused = {
+	.helper_fw_name = NULL,
+	.fw_name = FIRMWARE_AW_XM729,
+	.fw_name_old = NULL,
+};
+
 static const struct of_device_id nxpuart_of_match_table[] __maybe_unused = {
 	{ .compatible = "nxp,88w8987-bt", .data = &w8987_data },
 	{ .compatible = "nxp,88w8997-bt", .data = &w8997_data },
+	{ .compatible = "nxp,aw-xm729-bt", .data = &aw_xm729_data },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, nxpuart_of_match_table);

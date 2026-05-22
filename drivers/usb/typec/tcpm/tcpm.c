@@ -367,6 +367,8 @@ struct tcpm_port {
 	bool vbus_source;
 	bool vbus_charge;
 
+	bool default_mode;
+
 	/* Set to true when Discover_Identity Command is expected to be sent in Ready states. */
 	bool send_discover;
 	bool op_vsafe5v;
@@ -4435,6 +4437,12 @@ static void tcpm_set_partner_usb_comm_capable(struct tcpm_port *port, bool capab
 
 static void tcpm_reset_port(struct tcpm_port *port)
 {
+	enum usb_role default_role = USB_ROLE_NONE;
+
+	if (port->default_mode){
+		default_role = USB_ROLE_HOST;
+	}
+
 	tcpm_enable_auto_vbus_discharge(port, false);
 	port->in_ams = false;
 	port->ams = NONE_AMS;
@@ -4458,7 +4466,7 @@ static void tcpm_reset_port(struct tcpm_port *port)
 	tcpm_init_vconn(port);
 	tcpm_set_current_limit(port, 0, 0);
 	tcpm_set_polarity(port, TYPEC_POLARITY_CC1);
-	tcpm_mux_set(port, TYPEC_STATE_SAFE, USB_ROLE_NONE,
+	tcpm_mux_set(port, TYPEC_STATE_SAFE, default_role,
 		     TYPEC_ORIENTATION_NONE);
 	tcpm_set_attached_state(port, false);
 	port->try_src_count = 0;
@@ -7683,6 +7691,15 @@ struct tcpm_port *tcpm_register_port(struct device *dev, struct tcpc_dev *tcpc)
 	init_completion(&port->swap_complete);
 	init_completion(&port->pps_complete);
 	tcpm_debugfs_init(port);
+
+	if (tcpc->fwnode) {
+		const char *mode;
+		if (!fwnode_property_read_string(tcpc->fwnode,"default-mode", &mode)) {
+			if (!strcmp(mode, "host")){
+				port->default_mode = true;
+			}
+		}
+	}
 
 	err = tcpm_fw_get_caps(port, tcpc->fwnode);
 	if (err < 0)

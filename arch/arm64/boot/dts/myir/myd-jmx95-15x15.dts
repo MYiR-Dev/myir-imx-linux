@@ -586,8 +586,8 @@
 		realtek,clkout-disable;
 	};
 
-	ethphy1: ethernet-phy@6 {
-		reg = <6>;
+	ethphy1: ethernet-phy@7 {
+		reg = <7>;
 		realtek,clkout-disable;
 	};
 };

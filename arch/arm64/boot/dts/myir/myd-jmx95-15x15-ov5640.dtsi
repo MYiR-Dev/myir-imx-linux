@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2026 MYIR
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	vcc_csi: regulator-csi {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_csi_pwr>;
+		regulator-name = "VDD_CSI";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio5 2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+	clk_camera_fixed: clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+		clock-output-names = "CLK_CAMERA_24MHZ";
+	};
+};
+
+&lpi2c3 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	ov5640_mipi: ov5640_mipi@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_csi_gpio>;
+		clocks = <&clk_camera_fixed>;
+		clock-names = "xclk";
+		assigned-clocks = <&clk_camera_fixed>;
+		assigned-clock-parents = <&osc_24m>;
+		assigned-clock-rates = <24000000>;
+		powerdown-gpios = <&gpio5 13 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio5 8 GPIO_ACTIVE_LOW>;
+		status = "okay";
+
+		port {
+			ov5640_mipi_0_ep: endpoint {
+				remote-endpoint = <&mipi_csi0_ep>;
+				data-lanes = <1 2>;
+				clock-lanes = <0>;
+			};
+		};
+	};
+};
+
+&dphy_rx {
+	status = "okay";
+};
+
+&mipi_csi0 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			mipi_csi0_ep: endpoint {
+				remote-endpoint = <&ov5640_mipi_0_ep>;
+				data-lanes = <1 2>;
+				clock-lanes = <0>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+				mipi_csi0_out: endpoint {
+				remote-endpoint = <&formatter_0_in>;
+			};
+		};
+	};
+};
+
+&csi_pixel_formatter_0 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+
+			formatter_0_in: endpoint {
+				remote-endpoint = <&mipi_csi0_out>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+
+			formatter_0_out: endpoint {
+				remote-endpoint = <&isi_in_2>;
+			};
+		};
+	};
+};
+
+&isi {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@2 {
+			reg = <2>;
+
+			isi_in_2: endpoint {
+				remote-endpoint = <&formatter_0_out>;
+			};
+		};
+	};
+};
+
+&scmi_iomuxc {
+	pinctrl_csi_pwr: csipwrgrp {
+		fsl,pins = <
+			IMX95_PAD_XSPI1_DATA2__GPIO5_IO_BIT2		0x31e
+		>;
+	};
+
+	pinctrl_csi_gpio: csigpiogrp {
+		fsl,pins = <
+			IMX95_PAD_GPIO_IO33__GPIO5_IO_BIT13		0x31e
+			IMX95_PAD_XSPI1_DQS__GPIO5_IO_BIT8		0x31e
+		>;
+	};
+};

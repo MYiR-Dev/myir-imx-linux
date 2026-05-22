@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2026 MYIR
+ */
+
+#include "myd-jmx95-15x15.dts"
+#include "myd-jmx95-15x15-dsi-mipi101c.dtsi"

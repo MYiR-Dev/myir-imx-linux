@@ -1,0 +1,127 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2026 MYIR
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include "imx95-clock.h"
+
+/ {
+	hdmi-connector-dsi {
+		compatible = "hdmi-connector";
+		label = "hdmi";
+		type = "a";
+
+		port {
+			hdmi_lt9611_in: endpoint {
+				remote-endpoint = <&lt9611_out>;
+			};
+		};
+	};
+};
+
+&gpio2 {
+	hdmi-gpio2-io6-hog {
+		gpio-hog;
+		gpios = <6 GPIO_ACTIVE_HIGH>;
+		output-low;
+		status = "okay";
+	};
+};
+
+&lpi2c2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	exp_gpio: gpio@20 {
+		lt9611-eio-p11-hog {
+			gpio-hog;
+			gpios = <9 GPIO_ACTIVE_HIGH>;
+			output-low;
+			status = "okay";
+		};
+	};
+
+	lt9611: hdmi-bridge@39 {
+		compatible = "myir,lt9611";
+		#sound-dai-cells = <1>;
+		reg = <0x39>;
+		reset-gpios = <&exp_gpio 11 GPIO_ACTIVE_LOW>;
+		clocks = <&scmi_clk IMX95_CLK_DISP1PIX>, <&scmi_clk IMX95_CLK_VIDEOPLL1_VCO>, <&scmi_clk IMX95_CLK_VIDEOPLL1>;
+		clock-names = "pix","vco","videopll1";
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+
+				lt9611_to_dsi: endpoint {
+					remote-endpoint = <&dsi_to_lt9611>;
+				};
+			};
+
+			port@2 {
+				reg = <2>;
+
+				lt9611_out: endpoint {
+					remote-endpoint = <&hdmi_lt9611_in>;
+				};
+			};
+		};
+	};
+};
+
+&display_pixel_link {
+	status = "okay";
+};
+
+
+&dpu {
+	assigned-clocks = <&scmi_clk IMX95_CLK_DISP1PIX>,
+			  <&scmi_clk IMX95_CLK_VIDEOPLL1_VCO>,
+			  <&scmi_clk IMX95_CLK_VIDEOPLL1>;
+	assigned-clock-parents = <&scmi_clk IMX95_CLK_VIDEOPLL1>;
+	assigned-clock-rates = <0>, <4008000000>, <445333334>;
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@1 {
+			reg = <1>;
+
+			dsi_to_lt9611: endpoint {
+				remote-endpoint = <&lt9611_to_dsi>;
+			};
+		};
+	};
+};
+
+&pixel_interleaver {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+
+	channel@0 {
+		reg = <0>;
+		status = "okay";
+	};
+};
+
+&scmi_iomuxc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog>;
+	pinctrl_hog: hoggrp {
+		fsl,pins = <
+			IMX95_PAD_GPIO_IO06__GPIO2_IO_BIT6    0x31e
+		>;
+	};
+};

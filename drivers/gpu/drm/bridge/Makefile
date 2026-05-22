@@ -50,3 +50,4 @@ obj-$(CONFIG_DRM_ITE_IT6161) += it6161.o
 obj-$(CONFIG_DRM_SEC_MIPI_DSIM) += sec-dsim.o
 obj-$(CONFIG_DRM_NXP_SEIKO_43WVFIG) += nxp-seiko-43wvfig.o
 obj-$(CONFIG_DRM_WAVESHARE_BRIDGE) += waveshare-dsi.o
+obj-$(CONFIG_DRM_MYIR_LT9611) += myir-lt9611.o

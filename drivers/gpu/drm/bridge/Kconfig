@@ -498,3 +498,12 @@ config DRM_WAVESHARE_BRIDGE
 	  Please say Y if you have such hardware
 
 endmenu
+
+config DRM_MYIR_LT9611
+	tristate "LT9611 DSI/HDMI bridge"
+	depends on OF
+	select DRM_PANEL_BRIDGE
+	select DRM_KMS_HELPER
+	select DRM_MIPI_DSI
+	help
+	  MYIR LT9611 DSI/HDMI bridge driver.

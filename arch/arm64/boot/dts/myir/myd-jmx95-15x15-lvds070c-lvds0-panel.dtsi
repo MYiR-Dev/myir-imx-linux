@@ -46,6 +46,23 @@
 	};
 };
 
+&lpi2c2 {
+	status = "okay";
+
+	ft5x06_ts_0: touchscreen_0@38 {
+		compatible = "edt,edt-ft5406";
+		reg = <0x38>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_lvds0_touch>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <15 IRQ_TYPE_EDGE_FALLING>;
+		reset-gpios = <&exp_gpio 12 GPIO_ACTIVE_LOW>;
+		touchscreen-size-x = <1024>;
+		touchscreen-size-y = <600>;
+		status = "okay";
+	};
+};
+
 &tpm3 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_tpm3>;
@@ -107,6 +124,12 @@
 	pinctrl_tpm3: tpm3grp {
 		fsl,pins = <
 			IMX95_PAD_GPIO_IO12__TPM3_CH2	0x51e
+		>;
+	};
+
+	pinctrl_lvds0_touch: lvds1_touch_grp {
+		fsl,pins = <
+			IMX95_PAD_ENET2_MDIO__GPIO4_IO_BIT15    0x31e
 		>;
 	};
 };

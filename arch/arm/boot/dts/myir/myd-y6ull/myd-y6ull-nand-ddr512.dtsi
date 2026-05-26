@@ -1,0 +1,88 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * NAND + 512MiB DRAM (DDR512 SKU): myd-y6ull-14x14-nand-ddr512(.dts) and -ecspi.
+ * GPMI fixed-partitions (512MiB raw flash), SDIO WiFi on USDHC2.
+ * WiFi pinctrl is here so dtc always resolves the phandle (pinctrl_wifi_nand).
+ */
+
+&iomuxc {
+	myd-y6ulx {
+		pinctrl_wifi_nand: wifigrp-nand {
+			fsl,pins = <
+				MX6UL_PAD_JTAG_MOD__GPIO1_IO10		0x17059 /* WiFi module power */
+			>;
+		};
+	};
+};
+
+&{/memory@80000000} {
+	reg = <0x80000000 0x20000000>;
+};
+
+&{/reserved-memory/linux,cma} {
+	size = <0x0a000000>;
+};
+
+&qspi {
+	status = "disabled";
+};
+
+&gpmi {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_gpmi_nand_1>;
+	fsl,max-nand-cs = <1>;
+	status = "okay";
+
+	nand@0 {
+		reg = <0>;
+		nand-on-flash-bbt;
+		fsl,use-minimum-ecc;
+	};
+
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		partition@0 {
+			label = "boot";
+			reg = <0x00000000 0x00500000>;
+		};
+		partition@500000 {
+			label = "env";
+			reg = <0x00500000 0x00100000>;
+		};
+		partition@600000 {
+			label = "kernel";
+			reg = <0x00600000 0x00a00000>;
+		};
+		partition@1000000 {
+			label = "dtb";
+			reg = <0x01000000 0x00100000>;
+		};
+		/* 512MiB raw: 0x10000000 - 0x20000000 */
+		partition@1100000 {
+			label = "rootfs";
+			reg = <0x01100000 0x1ef00000>;
+		};
+	};
+};
+
+&usdhc2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	max-frequency = <50000000>;
+	pinctrl-0 = <&pinctrl_usdhc2_alt &pinctrl_wifi_nand>;
+	bus-width = <4>;
+	no-1-8-v;
+	non-removable;
+	pm-ignore-notify;
+	cap-power-off-card;
+	status = "okay";
+
+	brcmf: bcrmf@1 {
+		reg = <1>;
+		compatible = "brcm,bcm4329-fmac";
+	};
+};

@@ -39,7 +39,14 @@ config CUSTOMER_LOGO_LINUX_CLUT224
        bool "Customer  224-color Linux logo"
        select CUSTOMER_LOGO
        default n
-       
+
+config CUSTOMER_LOGO_CENTER
+	bool "Center customer boot logo on screen"
+	depends on CUSTOMER_LOGO_LINUX_CLUT224
+	default y
+	help
+	  Place the customer logo at the center of the framebuffer during
+	  boot. Equivalent to the kernel parameter fbcon=logo-pos:center.
 
 config LOGO_DEC_CLUT224
 	bool "224-color Digital Equipment Corporation Linux logo"

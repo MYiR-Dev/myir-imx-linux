@@ -5,7 +5,11 @@
 
 #include "fb_internal.h"
 
+#ifdef CONFIG_CUSTOMER_LOGO_CENTER
+bool fb_center_logo __read_mostly = true;
+#else
 bool fb_center_logo __read_mostly;
+#endif
 int fb_logo_count __read_mostly = -1;
 
 static inline unsigned int safe_shift(unsigned int d, int n)

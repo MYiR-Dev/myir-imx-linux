@@ -333,7 +333,7 @@
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
 	cd-gpios = <&gpio1 19 GPIO_ACTIVE_LOW>;
-	
+
 	keep-power-in-suspend;
 	wakeup-source;
 	status = "okay";
@@ -376,6 +376,11 @@
 			fsl,pins = <
 				MX6UL_PAD_GPIO1_IO05__GPIO1_IO05 0x1b0b0
 				MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02 0x80000000
+			>;
+		};
+		pinctrl_wifi: wifigrp {
+			fsl,pins = <
+				MX6UL_PAD_JTAG_MOD__GPIO1_IO10		0x17059 /* WiFi module power */
 			>;
 		};
                pinctrl_csi1: csi1grp {

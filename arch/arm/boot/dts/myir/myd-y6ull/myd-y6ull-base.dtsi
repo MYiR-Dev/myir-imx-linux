@@ -320,6 +320,15 @@
 	pinctrl-0 = <&pinctrl_uart7>;
 	status = "okay";
 };
+&usbotg1 {
+	dr_mode = "otg";
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usb_otg1>;
+        srp-disable;
+        hnp-disable;
+        adp-disable;
+	status = "okay";
+};
 &usbotg2 {
 	dr_mode = "host";
 	status = "okay";
@@ -513,6 +522,11 @@
 				MX6UL_PAD_UART4_TX_DATA__UART4_DCE_TX 0x1b0b1
 				MX6UL_PAD_UART4_RX_DATA__UART4_DCE_RX 0x1b0b1
 				MX6UL_PAD_UART1_CTS_B__GPIO1_IO18 0x1b0b1
+			>;
+		};
+		pinctrl_usb_otg1: usbotg1grp {
+			fsl,pins = <
+				MX6UL_PAD_GPIO1_IO00__ANATOP_OTG1_ID	0x17059
 			>;
 		};
 		pinctrl_uart3: uart3grp {

@@ -1848,7 +1848,7 @@ config RTC_DRV_BBNSM
 
 config RTC_DRV_IMX_BBM_SCMI
 	depends on IMX_SCMI_BBM_EXT || COMPILE_TEST
-	default y if ARCH_MXC
+	default n if ARCH_MXC
 	tristate "NXP i.MX BBM SCMI RTC support"
 	help
 	  If you say yes here you get support for the NXP i.MX BBSM SCMI

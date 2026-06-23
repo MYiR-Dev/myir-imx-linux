@@ -68,6 +68,15 @@
 	};
 };
 
+&gpio5 {
+	lvds0-gpio5-io14-hog {
+		gpio-hog;
+		gpios = <14 GPIO_ACTIVE_HIGH>;
+		output-low;
+		status = "okay";
+	};
+};
+
 &lpi2c2 {
 	status = "okay";
 	exp_gpio: gpio@20 {
@@ -170,6 +179,7 @@
 		fsl,pins = <
 			IMX95_PAD_GPIO_IO00__GPIO2_IO_BIT0    0x31e
 			IMX95_PAD_GPIO_IO18__GPIO2_IO_BIT18    0x31e
+			IMX95_PAD_GPIO_IO34__GPIO5_IO_BIT14    0x31e
 		>;
 	};
 

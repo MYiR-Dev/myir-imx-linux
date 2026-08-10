@@ -670,7 +670,6 @@ static void es8389_state_delay_work(struct work_struct *work)
 static int es8389_suspend(struct snd_soc_component *codec)
 {
 	//struct es8389_private *es8389 = snd_soc_component_get_drvdata(codec);
-	printk("Enter into %s()\n", __func__);
 	
 	es8389_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
 
@@ -680,7 +679,6 @@ static int es8389_suspend(struct snd_soc_component *codec)
 static int es8389_resume(struct snd_soc_component *codec)
 {
 	//struct es8389_private *es8389 = snd_soc_component_get_drvdata(codec);
-	printk("Enter into %s()\n", __func__);
 	
 	es8389_set_bias_level(codec, SND_SOC_BIAS_ON);
 
@@ -691,7 +689,6 @@ static int es8389_probe(struct snd_soc_component *codec)
 {
 	int ret = 0;
 	struct es8389_private *es8389 = snd_soc_component_get_drvdata(codec);
-	printk("Enter into %s()\n", __func__);
 
 	es8389_codec = codec;
 #if 1
@@ -773,7 +770,6 @@ static void es8389_remove(struct snd_soc_component *codec)
 {
 	struct es8389_private *es8389 = snd_soc_component_get_drvdata(codec);
 
-	printk("Enter into %s()\n", __func__);
 	regmap_write(es8389->regmap, ES8389_MASTER_MODE_REG01, 0x28);
 	regmap_write(es8389->regmap, ES8389_HPSW_REG69, 0x00);
 	regmap_write(es8389->regmap, ES8389_VMID_REG60, 0x00);
@@ -914,7 +910,6 @@ static int es8389_i2c_probe(struct i2c_client *i2c_client)
 	int ret = -1;
 	//unsigned int val;
 
-	printk("Enter into %s\n", __func__);
 	es8389 = devm_kzalloc(&i2c_client->dev,
 			sizeof(*es8389), GFP_KERNEL);
 	if (es8389 == NULL)
@@ -943,14 +938,12 @@ static int es8389_i2c_probe(struct i2c_client *i2c_client)
 		return ret;
 	}
 	
-	printk("Enter into %s-----4\n", __func__);
 	ret = sysfs_create_group(&i2c_client->dev.kobj,
 				&es8389_debug_attr_group);
 	if (ret) {
 		pr_err("failed to create attr group\n");
 	}
 
-	printk("Exit %s\n", __func__);
 	return ret;
 }
 
@@ -975,5 +968,4 @@ module_i2c_driver(es8389_i2c_driver);
 MODULE_DESCRIPTION("ASoC es8389 driver");
 MODULE_AUTHOR("David Yang <yangxiaohua@everest-semi.com>");
 MODULE_LICENSE("GPL");
-
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 
 #include <linux/fb.h>
+#include <linux/of.h>
+#include <linux/string.h>
 #include <linux/vmalloc.h>
 
 #include <drm/drm_crtc_helper.h>
@@ -286,6 +288,18 @@ int drm_fbdev_dma_driver_fbdev_probe(struct drm_fb_helper *fb_helper,
 	u32 format;
 	struct iosys_map map;
 	int ret;
+	const char *name = dev->dev ? dev_name(dev->dev) : "";
+
+	/*
+	 * Reserve a 4K-capable fbdev surface for MYD-JS8MPQ HDMI.  The Linux
+	 * 6.12 and 6.18 DTs use different node names for the same LCDIF3 block.
+	 */
+	if (of_machine_is_compatible("myir,imx8mp-myd-js8mpq") &&
+	    (!strcmp(name, "32fc6000.lcd-controller") ||
+	     !strcmp(name, "32fc6000.display-controller"))) {
+		sizes->surface_width = max_t(u32, sizes->surface_width, 3840);
+		sizes->surface_height = max_t(u32, sizes->surface_height, 2160);
+	}
 
 	drm_dbg_kms(dev, "surface width(%d), height(%d) and bpp(%d)\n",
 		    sizes->surface_width, sizes->surface_height,

@@ -257,7 +257,7 @@ static enum drm_mode_status lcdif_crtc_mode_valid(struct drm_crtc *crtc,
 check_pix_clk:
 	rate = lcdif_pix_clk_round_rate(lcdif, mode->clock * 1000);
 
-	if (rate <= 0 || rate != mode->clock * 1000)
+	if (rate <= 0 || abs(rate - mode->clock * 1000) > mode->clock * 5)
 		return MODE_BAD;
 
 	return MODE_OK;
@@ -394,9 +394,8 @@ static int lcdif_crtc_bind(struct device *dev, struct device *master,
 	if (!drm->mode_config.helper_private)
 		drm->mode_config.helper_private = &lcdif_drm_mode_config_helpers;
 
-	/* limit the max width and height */
-	drm->mode_config.max_width  = 1920;
-	drm->mode_config.max_height = 1920;
+	drm->mode_config.max_width  = 4096;
+	drm->mode_config.max_height = 4096;
 
 	dev_dbg(dev, "%s: lcdif crtc bind end\n", __func__);
 

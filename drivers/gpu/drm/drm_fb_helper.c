@@ -1925,6 +1925,7 @@ EXPORT_SYMBOL(drm_fb_helper_initial_config);
  */
 int drm_fb_helper_hotplug_event(struct drm_fb_helper *fb_helper)
 {
+	struct drm_fb_helper_surface_size sizes;
 	int err = 0;
 
 	if (!drm_fbdev_emulation || !fb_helper)
@@ -1946,11 +1947,19 @@ int drm_fb_helper_hotplug_event(struct drm_fb_helper *fb_helper)
 
 	drm_dbg_kms(fb_helper->dev, "\n");
 
-	drm_client_modeset_probe(&fb_helper->client, fb_helper->fb->width, fb_helper->fb->height);
+	drm_client_modeset_probe(&fb_helper->client,
+				 fb_helper->dev->mode_config.max_width,
+				 fb_helper->dev->mode_config.max_height);
+	err = drm_fb_helper_find_sizes(fb_helper, &sizes);
+	if (!err)
+		drm_fb_helper_fill_var(fb_helper->info, fb_helper,
+					       sizes.fb_width, sizes.fb_height);
 	drm_setup_crtcs_fb(fb_helper);
 	mutex_unlock(&fb_helper->lock);
 
-	drm_fb_helper_set_par(fb_helper->info);
+	err = drm_fb_helper_set_par(fb_helper->info);
+	if (!err)
+		drm_client_modeset_dpms(&fb_helper->client, DRM_MODE_DPMS_ON);
 
 	return 0;
 }

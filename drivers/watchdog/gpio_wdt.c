@@ -10,6 +10,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
+#include <linux/pm.h>
 #include <linux/platform_device.h>
 #include <linux/property.h>
 #include <linux/watchdog.h>
@@ -30,8 +31,11 @@ enum {
 
 struct gpio_wdt_priv {
 	struct gpio_desc	*gpiod;
+	struct gpio_desc	*enable_gpiod;
 	bool			state;
 	bool			always_running;
+	bool			disable_on_suspend;
+	bool			was_running;
 	unsigned int		hw_algo;
 	struct watchdog_device	wdd;
 };
@@ -44,6 +48,9 @@ static void gpio_wdt_disable(struct gpio_wdt_priv *priv)
 	/* Put GPIO back to tristate */
 	if (priv->hw_algo == HW_ALGO_TOGGLE)
 		gpiod_direction_input(priv->gpiod);
+
+	if (priv->enable_gpiod)
+		gpiod_set_value_cansleep(priv->enable_gpiod, 0);
 }
 
 static int gpio_wdt_ping(struct watchdog_device *wdd)
@@ -69,6 +76,9 @@ static int gpio_wdt_ping(struct watchdog_device *wdd)
 static int gpio_wdt_start(struct watchdog_device *wdd)
 {
 	struct gpio_wdt_priv *priv = watchdog_get_drvdata(wdd);
+
+	if (priv->enable_gpiod)
+		gpiod_set_value_cansleep(priv->enable_gpiod, 1);
 
 	priv->state = 0;
 	gpiod_direction_output(priv->gpiod, priv->state);
@@ -136,6 +146,11 @@ static int gpio_wdt_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->gpiod))
 		return PTR_ERR(priv->gpiod);
 
+	priv->enable_gpiod = devm_gpiod_get_optional(dev, "enable",
+						     GPIOD_OUT_LOW);
+	if (IS_ERR(priv->enable_gpiod))
+		return PTR_ERR(priv->enable_gpiod);
+
 	ret = device_property_read_u32(dev, "hw_margin_ms", &hw_margin);
 	if (ret)
 		return ret;
@@ -144,6 +159,8 @@ static int gpio_wdt_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	priv->always_running = device_property_read_bool(dev, "always-running");
+	priv->disable_on_suspend = device_property_read_bool(dev,
+							     "disable-on-suspend");
 
 	watchdog_set_drvdata(&priv->wdd, priv);
 
@@ -165,6 +182,35 @@ static int gpio_wdt_probe(struct platform_device *pdev)
 	return devm_watchdog_register_device(dev, &priv->wdd);
 }
 
+static int __maybe_unused gpio_wdt_suspend(struct device *dev)
+{
+	struct gpio_wdt_priv *priv = dev_get_drvdata(dev);
+
+	if (!priv->disable_on_suspend || !priv->enable_gpiod)
+		return 0;
+
+	priv->was_running = test_bit(WDOG_HW_RUNNING, &priv->wdd.status);
+	gpiod_set_value_cansleep(priv->enable_gpiod, 0);
+
+	return 0;
+}
+
+static int __maybe_unused gpio_wdt_resume(struct device *dev)
+{
+	struct gpio_wdt_priv *priv = dev_get_drvdata(dev);
+
+	if (!priv->disable_on_suspend || !priv->enable_gpiod)
+		return 0;
+
+	if (priv->was_running)
+		gpio_wdt_start(&priv->wdd);
+
+	return 0;
+}
+
+static SIMPLE_DEV_PM_OPS(gpio_wdt_pm_ops, gpio_wdt_suspend,
+			 gpio_wdt_resume);
+
 static const struct of_device_id gpio_wdt_dt_ids[] = {
 	{ .compatible = "linux,wdt-gpio", },
 	{ }
@@ -175,6 +221,7 @@ static struct platform_driver gpio_wdt_driver = {
 	.driver	= {
 		.name		= "gpio-wdt",
 		.of_match_table	= gpio_wdt_dt_ids,
+		.pm		= &gpio_wdt_pm_ops,
 	},
 	.probe	= gpio_wdt_probe,
 };

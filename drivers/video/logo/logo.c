@@ -79,6 +79,9 @@ const struct linux_logo * __ref fb_find_logo(int depth)
                /* Generic Linux logo */
                logo = &customer_logo_linux_clut224;
 #endif
+#ifdef CONFIG_MYD_JS8MPQ_LOGO_LINUX_CLUT224
+		logo = &myd_js8mpq_logo_linux_clut224;
+#endif
 
 #ifdef CONFIG_LOGO_DEC_CLUT224
 		/* DEC Linux logo on MIPS/MIPS64 or ALPHA */

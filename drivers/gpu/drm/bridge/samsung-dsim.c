@@ -1038,7 +1038,15 @@ static void samsung_dsim_set_display_enable(struct samsung_dsim *dsi, bool enabl
 
 static int samsung_dsim_wait_for_hdr_fifo(struct samsung_dsim *dsi)
 {
-	int timeout = 2000;
+	/*
+	 * A live link drains the header FIFO in microseconds and returns
+	 * immediately below. Only a dead link (e.g. no panel attached) ever
+	 * spins here, so cap the wait at ~100ms instead of ~2s: with no panel
+	 * the display bring-up sends several DCS commands and the cumulative
+	 * stall (3x ~2s) otherwise blocks boot long enough that the external
+	 * SGM820B watchdog is not fed in time and resets the board.
+	 */
+	int timeout = 100;
 
 	do {
 		u32 reg = samsung_dsim_read(dsi, DSIM_FIFOCTRL_REG);

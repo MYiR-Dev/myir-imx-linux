@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Common 2G DDR overrides for MYD-JS8MPQ device tree variants.
+ *
+ * Overrides 4 areas for 2GB LPDDR4:
+ *   memory          – 2GB (1GB–3GB)
+ *   linux,cma       – 480MB (down from 960MB)
+ *   gpu_reserved    – 256MB at 0x80000000 (below 4GB)
+ *   mix_gpu_ml      – GPU phys_baseaddr / contiguous_mem for 2GB
+ *
+ * Usage: #include "myd-js8mpq-<variant>.dts" then this file.
+ */
+
+/ {
+	memory@40000000 {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0 0x80000000>;
+	};
+};
+
+&{/reserved-memory} {
+	linux,cma {
+		size = <0 0x1e000000>;
+		alloc-ranges = <0 0x40000000 0 0x40000000>;
+	};
+};
+
+&gpu_reserved {
+	no-map;
+	reg = <0x0 0x80000000 0 0x10000000>;
+};
+
+&mix_gpu_ml {
+	reg = <0x0 0x40000000 0x0 0x80000000>,
+	      <0x0 0x0        0x0 0x10000000>;
+	status = "okay";
+};

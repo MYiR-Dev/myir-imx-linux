@@ -381,6 +381,13 @@ config VIDEO_OV08X40
 	  To compile this driver as a module, choose M here: the
 	  module will be called ov08x40.
 
+config VIDEO_NVP6324
+	bool "NEXTCHIP NVP6324 driver support"
+	depends on VIDEO_DEV && I2C
+	help
+	  Support for the NEXTCHIP NVP6324 4-channel AHD to MIPI-CSI2
+	  video decoder (a.k.a. jaguar1).
+
 config VIDEO_OV13858
 	tristate "OmniVision OV13858 sensor support"
 	help

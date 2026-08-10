@@ -388,6 +388,12 @@ config VIDEO_NVP6324
 	  Support for the NEXTCHIP NVP6324 4-channel AHD to MIPI-CSI2
 	  video decoder (a.k.a. jaguar1).
 
+config VIDEO_OV13855
+	tristate "OmniVision OV13855 sensor support"
+	help
+	  This is a Video4Linux2 sensor driver for the OmniVision
+	  OV13855 camera.
+
 config VIDEO_OV13858
 	tristate "OmniVision OV13858 sensor support"
 	help

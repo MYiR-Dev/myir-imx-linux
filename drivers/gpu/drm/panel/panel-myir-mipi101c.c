@@ -21,6 +21,7 @@
 
 #include <drm/drm_crtc.h>
 #include <drm/drm_mipi_dsi.h>
+#include <drm/drm_modes.h>
 #include <drm/drm_panel.h>
 
 #define COL_FMT_16BPP 0x55
@@ -58,6 +59,12 @@ struct rad_panel {
 	bool prepared;
 	bool enabled;
 
+	/* Optional display mode parsed from a DT "panel-timing" node; lets us
+	 * tune pixel clock / porches / resolution by rebuilding only the dtb
+	 * instead of the kernel.  Falls back to default_mode when absent. */
+	struct drm_display_mode dt_mode;
+	bool dt_mode_valid;
+
 	const struct rad_platform_data *pdata;
 };
 
@@ -66,7 +73,14 @@ struct rad_platform_data {
 };
 
 static const struct drm_display_mode default_mode = {
-	.clock          = 165200,
+	/*
+	 * 173.25 MHz (not the panel's nominal 165.2) so the pixel clock is an
+	 * exact /6 of the default VIDEO_PLL1 (1039.5 MHz) on i.MX8MP.  This keeps
+	 * lcdif1, the Samsung DSIM mode clock and the derived DSI HS clock all
+	 * consistent on one stable PLL — forcing VIDEO_PLL1 to an odd 991.2 MHz
+	 * to hit 165.2 MHz was unstable (flicker/black).  Refresh ~61.5 Hz.
+	 */
+	.clock          = 173250,
 	.hdisplay       = 1200,
 	.hsync_start    = 1200 + 255,
 	.hsync_end      = 1200 + 255 + 1,
@@ -180,12 +194,21 @@ static int mipi101c_enable(struct rad_panel *panel)
 
 	ret = mipi_dsi_dcs_set_tear_on(dsi, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
 	if (ret < 0) {
+		/*
+		 * On a dead link (no panel attached) the very first DCS write
+		 * times out. Bail immediately instead of pushing the rest of the
+		 * init sequence: each further command would stall on the DSI host
+		 * for ~0.1-2s, delaying boot enough that the external SGM820B
+		 * watchdog is not fed in time and resets the board.
+		 */
 		dev_err(dev, "Failed to set tear ON (%d)\n", ret);
+		return ret;
 	}
 
 	ret = mipi_dsi_dcs_set_tear_scanline(dsi, 0x00);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set tear scanline (%d)\n", ret);
+		return ret;
 	}
 
 	usleep_range(50, 100);
@@ -193,11 +216,13 @@ static int mipi101c_enable(struct rad_panel *panel)
 	dev_dbg(dev, "Interface color format set to 0x%x\n", color_format);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set pixel format (%d)\n", ret);
+		return ret;
 	}
 
 	ret = mipi_dsi_dcs_exit_sleep_mode(dsi);
 	if (ret < 0) {
 		dev_err(dev, "Failed to exit sleep mode (%d)\n", ret);
+		return ret;
 	}
 
 	usleep_range(5000, 7000);
@@ -205,6 +230,7 @@ static int mipi101c_enable(struct rad_panel *panel)
 	ret = mipi_dsi_dcs_set_display_on(dsi);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set display ON (%d)\n", ret);
+		return ret;
 	}
 
 	backlight_enable(panel->backlight);
@@ -259,13 +285,16 @@ static int rad_panel_disable(struct drm_panel *panel)
 static int rad_panel_get_modes(struct drm_panel *panel,
 			       struct drm_connector *connector)
 {
+	struct rad_panel *rad = to_rad_panel(panel);
+	const struct drm_display_mode *src = rad->dt_mode_valid ?
+					     &rad->dt_mode : &default_mode;
 	struct drm_display_mode *mode;
 
-	mode = drm_mode_duplicate(connector->dev, &default_mode);
+	mode = drm_mode_duplicate(connector->dev, src);
 	if (!mode) {
 		dev_err(panel->dev, "failed to add mode %ux%u@%u\n",
-			default_mode.hdisplay, default_mode.vdisplay,
-			drm_mode_vrefresh(&default_mode));
+			src->hdisplay, src->vdisplay,
+			drm_mode_vrefresh(src));
 		return -ENOMEM;
 	}
 
@@ -418,26 +447,43 @@ static int rad_panel_probe(struct mipi_dsi_device *dsi)
 		return ret;
 	}
 
-	memset(&bl_props, 0, sizeof(bl_props));
-	bl_props.type = BACKLIGHT_RAW;
-	bl_props.brightness = 255;
-	bl_props.max_brightness = 255;
-
-	panel->backlight = devm_backlight_device_register(dev, dev_name(dev),
-							  dev, dsi, &rad_bl_ops,
-							  &bl_props);
-	if (IS_ERR(panel->backlight)) {
-		ret = PTR_ERR(panel->backlight);
-		dev_err(dev, "Failed to register backlight (%d)\n", ret);
-		return ret;
+	/* Optional: override the hard-coded default_mode with a DT panel-timing
+	 * node, so pixel clock / porches / resolution can be tuned via the dtb
+	 * alone (no kernel rebuild).  Absent -> keep default_mode. */
+	if (!of_get_drm_panel_display_mode(np, &panel->dt_mode, NULL)) {
+		panel->dt_mode_valid = true;
+		dev_info(dev, "using DT panel-timing: " DRM_MODE_FMT "\n",
+			 DRM_MODE_ARG(&panel->dt_mode));
 	}
 
 	ret = rad_init_regulators(panel);
 	if (ret)
 		return ret;
 
+	/* Use DT backlight (e.g. pwm-backlight) if specified; fall back
+	 * to the internal DCS-based backlight otherwise.
+	 * drm_panel_of_backlight() must be called after drm_panel_init().
+	 */
 	drm_panel_init(&panel->panel, dev, &rad_panel_funcs,
 		       DRM_MODE_CONNECTOR_DSI);
+
+	ret = drm_panel_of_backlight(&panel->panel);
+	if (ret)
+		return ret;
+	panel->backlight = panel->panel.backlight;
+	if (!panel->backlight) {
+		memset(&bl_props, 0, sizeof(bl_props));
+		bl_props.type = BACKLIGHT_RAW;
+		bl_props.brightness = 255;
+		bl_props.max_brightness = 255;
+
+		panel->backlight = devm_backlight_device_register(dev, dev_name(dev),
+								  dev, dsi, &rad_bl_ops,
+								  &bl_props);
+		if (IS_ERR(panel->backlight))
+			return PTR_ERR(panel->backlight);
+		panel->panel.backlight = panel->backlight;
+	}
 	dev_set_drvdata(dev, panel);
 
 	drm_panel_add(&panel->panel);

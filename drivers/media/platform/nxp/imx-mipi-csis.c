@@ -330,6 +330,10 @@ struct mipi_csis_device {
 	u32 clk_frequency;
 	u32 hs_settle;
 	u32 clk_settle;
+	bool hs_settle_override;
+	bool clk_settle_override;
+	u32 hs_settle_dt;
+	u32 clk_settle_dt;
 
 	spinlock_t slock;	/* Protect events */
 	struct mipi_csis_event events[MIPI_CSIS_NUM_EVENTS];
@@ -569,6 +573,7 @@ static void __mipi_csis_set_format(struct mipi_csis_device *csis,
 				   const struct v4l2_mbus_framefmt *format,
 				   const struct csis_pix_format *csis_fmt)
 {
+	u32 hresol = format->width;
 	u32 val;
 
 	/* Color format */
@@ -595,8 +600,15 @@ static void __mipi_csis_set_format(struct mipi_csis_device *csis,
 	val |= MIPI_CSIS_ISPCFG_FMT(csis_fmt->data_type);
 	mipi_csis_write(csis, MIPI_CSIS_ISP_CONFIG_CH(0), val);
 
+	/*
+	 * The CSIS frame-size checker counts the packed CSI-2 line payload
+	 * for RAW10, not the unpacked pixel count.
+	 */
+	if (csis_fmt->data_type == MIPI_CSI2_DATA_TYPE_RAW10)
+		hresol = DIV_ROUND_UP(format->width * 10, 8);
+
 	/* Pixel resolution */
-	val = format->width | (format->height << 16);
+	val = hresol | (format->height << 16);
 	mipi_csis_write(csis, MIPI_CSIS_ISP_RESOL_CH(0), val);
 }
 
@@ -639,12 +651,16 @@ static int mipi_csis_calculate_params(struct mipi_csis_device *csis,
 		dev_dbg(csis->dev, "overriding Ths_settle with %u\n",
 			csis->debug.hs_settle);
 		csis->hs_settle = csis->debug.hs_settle;
+	} else if (csis->hs_settle_override) {
+		csis->hs_settle = csis->hs_settle_dt;
 	}
 
 	if (csis->debug.clk_settle < 4) {
 		dev_dbg(csis->dev, "overriding Tclk_settle with %u\n",
 			csis->debug.clk_settle);
 		csis->clk_settle = csis->debug.clk_settle;
+	} else if (csis->clk_settle_override) {
+		csis->clk_settle = csis->clk_settle_dt;
 	}
 
 	return 0;
@@ -1439,6 +1455,18 @@ static int mipi_csis_parse_dt(struct mipi_csis_device *csis)
 	if (of_property_read_u32(node, "clock-frequency",
 				 &csis->clk_frequency))
 		csis->clk_frequency = DEFAULT_SCLK_CSIS_FREQ;
+
+	if (!of_property_read_u32(node, "fsl,csis-hs-settle",
+				  &csis->hs_settle_dt) ||
+	    !of_property_read_u32(node, "csis-hs-settle",
+				  &csis->hs_settle_dt))
+		csis->hs_settle_override = true;
+
+	if (!of_property_read_u32(node, "fsl,csis-clk-settle",
+				  &csis->clk_settle_dt) ||
+	    !of_property_read_u32(node, "csis-clk-settle",
+				  &csis->clk_settle_dt))
+		csis->clk_settle_override = true;
 
 	return 0;
 }

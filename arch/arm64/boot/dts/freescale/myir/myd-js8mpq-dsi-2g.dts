@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * MYD-JS8MPQ 2G DDR variant with MIPI DSI panel.
+ */
+
+#include "myd-js8mpq-dsi.dts"
+#include "myd-js8mpq-2g-memory.dtsi"

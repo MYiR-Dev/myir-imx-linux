@@ -1,0 +1,271 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 MYIR Technology Co., Ltd.
+ *
+ * MYD-JS8MPQ with the MIPI DSI panel (MYIR mipi101c) instead of LVDS.
+ *
+ * Phase 1 (this dtb): DSI host + mux enabled, panel@0 omitted.
+ *   Without a physical DSI panel the DRM fbdev hotplug would trigger a
+ *   modeset that sends DSI DCS commands through a dead link -> DSI host
+ *   hangs -> SGM820B watchdog resets the board.
+ *   Once the panel is plugged in, add panel@0 under &mipi_dsi.
+ *   See docs/02-peripheral-status.md for the DSI entry.
+ *
+ * Display path (when panel added): lcdif1 -> Samsung DSIM -> panel@0
+ *
+ * DSI mux selection (both HIGH, opposite of LVDS1):
+ *   - core module SEL2 = PCA9555 EIO_P12 (gpio_expander line 10)
+ *   - baseboard select = GPIO4_IO21 (SAI2_RXFS pad)
+ * Backlight: PWM2 + enable GPIO5_IO29 (same FPC pins as LVDS1).
+ * Touch: Goodix GT911 @0x14 on I2C4 (INT=GPIO1_IO00, RST=GPIO1_IO06).
+ */
+
+#include "myd-js8mpq.dts"
+
+/ {
+	model = "MYIR MYD-JS8MPQ board (DSI panel)";
+
+	/* DSI panel backlight (PWM2 dimming + enable GPIO5_IO29). */
+	dsi_backlight: backlight-dsi {
+		compatible = "pwm-backlight";
+		pwms = <&pwm2 0 100000 0>;
+		brightness-levels = <0 8 16 32 48 64 80 96 112 128
+				     144 160 176 192 208 224 240 255>;
+		default-brightness-level = <14>;
+		enable-gpios = <&gpio5 29 GPIO_ACTIVE_HIGH>;
+	};
+
+	/* Panel supplies: needed by panel-myir-mipi101c driver probe.
+	 * Always-on regulators. */
+	reg_dsi_v3p3: regulator-dsi-v3p3 {
+		compatible = "regulator-fixed";
+		regulator-name = "dsi-v3p3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	reg_dsi_v1p8: regulator-dsi-v1p8 {
+		compatible = "regulator-fixed";
+		regulator-name = "dsi-v1p8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+};
+
+/* ========== Disable LVDS display path ========== */
+&lcdif2 {
+	status = "disabled";
+};
+
+&ldb {
+	status = "disabled";
+};
+
+&ldb_lvds_ch0 {
+	/delete-property/ remote-endpoint;
+};
+
+&panel_in_lvds {
+	/delete-property/ remote-endpoint;
+};
+
+&panel_lvds {
+	status = "disabled";
+};
+
+&pwm1 {
+	status = "disabled";
+};
+
+&lvds_backlight {
+	status = "disabled";
+};
+
+/* Remove LVDS0 baseboard path select hog. */
+&gpio1 {
+	/delete-node/ lvds0-sel-hog;
+};
+
+/* ========== Disable HDMI (avoid lcdif1+lcdif3 dual-DRM conflict) ========== */
+&hdmi_blk_ctrl {
+	status = "disabled";
+};
+
+&lcdif3 {
+	status = "disabled";
+};
+
+/* ========== Enable DSI host with panel ========== */
+/*
+ * No assigned-clocks here: the panel mode clock is now 173.25 MHz (see
+ * panel-myir-mipi101c default_mode.clock), which is exactly the default
+ * VIDEO_PLL1 (1039.5 MHz) / 6.  lcdif_kms.c's clk_set_rate(pix, mode->clock)
+ * therefore lands on 173.25 MHz with the stable default PLL, with no need to
+ * force VIDEO_PLL1 to an odd value.  lcdif pixel rate, the DSIM mode clock and
+ * the derived HS clock are all consistent on one PLL.
+ */
+&lcdif1 {
+	status = "okay";
+};
+
+&mipi_dsi {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	/*
+	 * HS bit clock is derived from the mode clock: 173.25*24/4 = 1039.5 MHz
+	 * (burst flag set, but rate = pixel rate).  pll-clock matches the base
+	 * PHY1_REF (24 MHz).  No samsung,burst-clock-frequency override — let the
+	 * driver derive HS from the mode so lcdif and DSI stay rate-consistent.
+	 */
+	samsung,pll-clock-frequency = <24000000>;
+	/* Burst headroom sweet spot = 1200 MHz: 1039.5 (line rate) flickers
+	 * badly; 1200 images well with only slight flicker; 1300 regresses to
+	 * black; 1500 SI-corrupts half the frame.  Non-monotonic above 1200. */
+	samsung,burst-clock-frequency = <1200000000>;
+	samsung,esc-clock-frequency = <10000000>;
+	status = "okay";
+
+	panel@0 {
+		compatible = "myir,mipi101c";
+		reg = <0>;
+		dsi-lanes = <4>;
+		video-mode = <0>;		/* BURST — the only mode that lights pixels on this panel via samsung-dsim (sync-pulse/event = fully black) (0=burst 1=sync-event 2=sync-pulse) */
+		panel-width-mm = <135>;
+		panel-height-mm = <216>;
+		backlight = <&dsi_backlight>;
+		v3p3-supply = <&reg_dsi_v3p3>;
+		v1p8-supply = <&reg_dsi_v1p8>;
+
+		/*
+		 * Tunable timing (panel-myir-mipi101c reads this and overrides its
+		 * built-in mode).  Adjust clock-frequency / porches here and rebuild
+		 * ONLY the dtb to sweep — no kernel rebuild.  Pick a clock that the
+		 * default VIDEO_PLL1 (1039.5 MHz) divides cleanly:
+		 *   /6 = 173.25 MHz, /7 = 148.5 MHz, /8 = 129.9 MHz.
+		 * First trial: 148.5 MHz (lower data rate -> more DSI link margin),
+		 * vendor porches preserved (proven on the i.MX95 MYD same panel).
+		 */
+		/* of_get_drm_panel_display_mode() requires these standard-named
+		 * physical-size props (separate from panel-width-mm above). */
+		width-mm = <135>;
+		height-mm = <216>;
+
+		panel-timing {
+			clock-frequency = <148500000>;
+			hactive = <1200>;
+			hfront-porch = <255>;
+			hsync-len = <1>;
+			hback-porch = <4>;
+			vactive = <1920>;
+			vfront-porch = <3>;
+			vsync-len = <1>;
+			vback-porch = <5>;
+			hsync-active = <0>;
+			vsync-active = <0>;
+		};
+
+		port {
+			panel_in_dsi: endpoint {
+				remote-endpoint = <&mipi_dsi_out>;
+			};
+		};
+	};
+
+	port@1 {
+		reg = <1>;
+
+		mipi_dsi_out: endpoint {
+			remote-endpoint = <&panel_in_dsi>;
+		};
+	};
+};
+
+/* ========== DSI mux selection (both HIGH to select DSI path) ========== */
+
+/* Core-module SEL2 = EIO_P12 = GPIO line 10. HIGH = DSI. */
+&gpio_expander {
+	dsi-sel2-hog {
+		gpio-hog;
+		gpios = <10 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "dsi_sel2";
+	};
+};
+
+/* Baseboard select = GPIO4_IO21. HIGH = DSI. */
+&gpio4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_wdt_en &pinctrl_dsi_sel>;
+
+	dsi-sel-hog {
+		gpio-hog;
+		gpios = <21 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "dsi_sel";
+	};
+};
+
+/* ========== Backlight: PWM2 dimming + GPIO5_IO29 enable ========== */
+&pwm2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm2>;
+	status = "okay";
+};
+
+&gpio5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_dsi_bl_en>;
+};
+
+/* ========== Touch: Goodix GT911 @0x14 on I2C4 ========== */
+&lvds_touch {
+	status = "disabled";
+};
+
+&i2c4 {
+	dsi_touch: touchscreen@14 {
+		compatible = "goodix,gt911";
+		reg = <0x14>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_touch_dsi>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
+		irq-gpios = <&gpio1 0 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio1 6 GPIO_ACTIVE_HIGH>;
+		esd-recovery-timeout-ms = <2000>;	/* match i.MX95 MYD same-panel ref */
+		touchscreen-size-x = <1200>;
+		touchscreen-size-y = <1920>;
+	};
+};
+
+/* ========== Pinmux additions ========== */
+&iomuxc {
+	pinctrl_pwm2: pwm2grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO11__PWM2_OUT	0x116
+		>;
+	};
+
+	pinctrl_dsi_sel: dsiselgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21	0x140
+		>;
+	};
+
+	pinctrl_dsi_bl_en: dsiblengrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_UART4_TXD__GPIO5_IO29	0x140
+		>;
+	};
+
+	pinctrl_touch_dsi: touchdsigrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00	0x1c0
+			MX8MP_IOMUXC_GPIO1_IO06__GPIO1_IO06	0x1c0
+		>;
+	};
+};

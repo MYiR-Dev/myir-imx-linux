@@ -1,0 +1,197 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2025 MYIR Technology Co., Ltd.
+ *
+ * MYD-JS8MPQ with a dual-link (dual-channel) LVDS panel.
+ *
+ * One 1280x1024 SXGA panel is driven by BOTH LDB channels in split mode:
+ * channel 0 carries the odd pixels, channel 1 the even pixels (fsl-ldb only
+ * supports the ODD/EVEN order). The 108 MHz pixel clock is halved per channel
+ * (54 MHz), within the LDB limits.
+ *
+ * Because the panel uses both channels, BOTH baseboard/core-module path
+ * switches are selected (i.e. LVDS0 + LVDS1 routing together):
+ *   - ch0 baseboard select  = GPIO1_IO07            low  (inherited from base)
+ *   - ch1 core-module SEL2   = gpio_expander line 12 low  (LVDS1/DSI mux)
+ *   - ch1 baseboard select   = GPIO4_IO21            low
+ *
+ * Backlight: PWM1 on GPIO1_IO08 dimming + enable GPIO1_IO13.
+ *
+ * Shares the one LDB + lcdif2 source with the LVDS0/LVDS1 single-link dtbs,
+ * so it is a separate, mutually exclusive dtb: boot this one for the WUXGA
+ * dual-link panel.
+ */
+
+#include "myd-js8mpq.dts"
+#include <dt-bindings/pwm/pwm.h>
+
+/ {
+	model = "MYIR MYD-JS8MPQ board (dual-link LVDS, SXGA 1280x1024)";
+};
+
+/* Replace the single-link 1024x600 LVDS0 panel with the dual-link panel. */
+/delete-node/ &panel_lvds;
+
+/ {
+	panel_lvds_dual: panel-lvds-dual {
+		compatible = "panel-lvds";
+		backlight = <&lvds_backlight>;
+		data-mapping = "vesa-24";
+		width-mm = <338>;
+		height-mm = <270>;
+
+		/* SXGA 1280x1024@60 (VESA DMT, 108 MHz). Dual-link: each LDB
+		 * channel carries half the pixel clock (54 MHz). Adjust the
+		 * porches here if the image is shifted on the real panel. */
+		panel-timing {
+			clock-frequency = <108000000>;
+			hactive = <1280>;
+			vactive = <1024>;
+			hsync-len = <112>;
+			hfront-porch = <48>;
+			hback-porch = <248>;
+			vsync-len = <3>;
+			vfront-porch = <1>;
+			vback-porch = <38>;
+			hsync-active = <1>;
+			vsync-active = <1>;
+			de-active = <1>;
+		};
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				dual-lvds-odd-pixels;
+				panel_in_odd: endpoint {
+					remote-endpoint = <&ldb_lvds_ch0>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				dual-lvds-even-pixels;
+				panel_in_even: endpoint {
+					remote-endpoint = <&ldb_lvds_ch1>;
+				};
+			};
+		};
+	};
+};
+
+/*
+ * SXGA 1280x1024@60 runs at 108 MHz pixel clock; in dual-link mode the LDB
+ * needs media_ldb_root = 3.5 x pixelclock = 378 MHz. Retune VIDEO_PLL1 to
+ * 756 MHz so it divides exactly: /7 = 108 MHz (lcdif2 pixel) and /2 = 378 MHz
+ * (LDB), avoiding the "Configured clock does not match" deficit.
+ */
+&ldb {
+	assigned-clocks = <&clk IMX8MP_CLK_MEDIA_LDB>, <&clk IMX8MP_VIDEO_PLL1>;
+	assigned-clock-parents = <&clk IMX8MP_VIDEO_PLL1_OUT>;
+	assigned-clock-rates = <0>, <756000000>;
+
+	lvds-channel@1 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			ldb_lvds_ch1: endpoint {
+				remote-endpoint = <&panel_in_even>;
+			};
+		};
+	};
+};
+
+/* LDB: drive both channels so fsl-ldb enters split / dual-link mode. */
+&ldb_lvds_ch0 {
+	remote-endpoint = <&panel_in_odd>;
+};
+
+/*
+ * Backlight enable moves to GPIO1_IO13; dimming stays on PWM1 but the
+ * output pad moves from GPIO1_IO01 to GPIO1_IO08 (see &pinctrl_pwm1).
+ */
+&lvds_backlight {
+	pwms = <&pwm1 0 100000 PWM_POLARITY_INVERTED>;
+	enable-gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;	/* GPIO1_IO13 */
+};
+
+/*
+ * gpio1 still owns the ch0 path-select hog (GPIO1_IO07, inherited from the
+ * base lvds0-sel-hog). Re-mux the pads it drives: keep IO07 (select) and add
+ * IO13 (backlight enable); IO05 is no longer the enable.
+ */
+&pinctrl_lvds0_ctrl {
+	fsl,pins = <
+		MX8MP_IOMUXC_GPIO1_IO13__GPIO1_IO13	0x140	/* backlight enable */
+		MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07	0x140	/* LVDS ch0 path select */
+	>;
+};
+
+/* Move the PWM1 output to GPIO1_IO08. */
+&pinctrl_pwm1 {
+	fsl,pins = <
+		MX8MP_IOMUXC_GPIO1_IO08__PWM1_OUT	0x116
+	>;
+};
+
+/* Core-module SEL2 = PCA9555 EIO12 = GPIO line 10, low routes ch1 to LVDS
+ * (not DSI). Note: chip pin EIO_N maps to GPIO line N-2, so EIO12 = line 10;
+ * line 12 is the CSI0 camera power (reg_csi0_pwr), do not reuse it here. */
+&gpio_expander {
+	lvds-ch1-sel2-hog {
+		gpio-hog;
+		gpios = <10 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "lvds_ch1_sel2";
+	};
+};
+
+/* Baseboard ch1 select = GPIO4_IO21, low selects the LVDS1 path. */
+&gpio4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_wdt_en &pinctrl_lvds_ch1_sel>;
+
+	lvds-ch1-sel-hog {
+		gpio-hog;
+		gpios = <21 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "lvds_ch1_sel";
+	};
+};
+
+/*
+ * LVDS panel data-rail power enable = GPIO5_IO28 (AJ5), must be driven HIGH
+ * to power the panel's LVDS receivers; without it the backlight lights but no
+ * data reaches the panel (white screen).
+ */
+&gpio5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lvds_vdd_en>;
+
+	lvds-vdd-en-hog {
+		gpio-hog;
+		gpios = <28 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "lvds_vdd_en";
+	};
+};
+
+&iomuxc {
+	pinctrl_lvds_ch1_sel: lvdsch1selgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21	0x140
+		>;
+	};
+
+	pinctrl_lvds_vdd_en: lvdsvddengrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_UART4_RXD__GPIO5_IO28	0x140
+		>;
+	};
+};

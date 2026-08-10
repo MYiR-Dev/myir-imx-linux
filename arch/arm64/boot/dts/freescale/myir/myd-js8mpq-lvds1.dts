@@ -1,0 +1,135 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 MYIR Technology Co., Ltd.
+ *
+ * MYD-JS8MPQ with the LVDS1 panel instead of LVDS0.
+ *
+ * LVDS0 and LVDS1 share the one LDB + lcdif2 source and the one touch
+ * controller (FT5x06 @0x38 on i2c4), so they are mutually exclusive:
+ * boot this dtb to use the LVDS1 FPC, the base myd-js8mpq.dtb for LVDS0.
+ *
+ * LVDS1 (LDB channel 1) is muxed with MIPI DSI on the shared PHY through
+ * two switches, both driven LOW to select LVDS1:
+ *   - core module SEL2 = PCA9555 EIO_P12 (gpio_expander line 12)
+ *   - baseboard select = GPIO4_IO21 (SAI2_RXFS pad)
+ * Backlight: PWM2 (GPIO1_IO11) dimming + enable GPIO5_IO29 (UART4_TXD pad,
+ * UART4 is disabled). Touch: same FT5x06 @0x38 on i2c4, INT = GPIO1_IO00.
+ */
+
+#include "myd-js8mpq.dts"
+
+/ {
+	model = "MYIR MYD-JS8MPQ board (LVDS1 panel)";
+};
+
+/* Move the panel from LDB channel 0 (LVDS0) to channel 1 (LVDS1). */
+&ldb_lvds_ch0 {
+	/delete-property/ remote-endpoint;
+};
+
+&ldb {
+	lvds-channel@0 {
+		status = "disabled";
+	};
+
+	lvds-channel@1 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			ldb_lvds_ch1: endpoint {
+				remote-endpoint = <&panel_in_lvds>;
+			};
+		};
+	};
+};
+
+&panel_in_lvds {
+	remote-endpoint = <&ldb_lvds_ch1>;
+};
+
+/* The LVDS0 baseboard path select (GPIO1_IO07) is not used for LVDS1. */
+&gpio1 {
+	/delete-node/ lvds0-sel-hog;
+};
+
+/* Backlight moves to PWM2 + GPIO5_IO29 enable. */
+&lvds_backlight {
+	pwms = <&pwm2 0 100000 0>;
+	enable-gpios = <&gpio5 29 GPIO_ACTIVE_HIGH>;
+};
+
+&pwm1 {
+	status = "disabled";
+};
+
+&pwm2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm2>;
+	status = "okay";
+};
+
+/* Touch INT moves from GPIO1_IO06 to GPIO1_IO00 (same chip @0x38/i2c4). */
+&lvds_touch {
+	pinctrl-0 = <&pinctrl_touch_lvds1>;
+	interrupts = <0 IRQ_TYPE_EDGE_FALLING>;	/* GPIO1_IO00 */
+};
+
+/* Core-module LVDS1/DSI mux: SEL2 = EIO12 = GPIO line 10, low selects LVDS1.
+ * (chip pin EIO_N maps to GPIO line N-2; line 12 is CSI0 camera power.) */
+&gpio_expander {
+	lvds1-sel2-hog {
+		gpio-hog;
+		gpios = <10 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "lvds1_sel2";
+	};
+};
+
+/* Baseboard LVDS1 select = GPIO4_IO21, low selects LVDS1. */
+&gpio4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_wdt_en &pinctrl_lvds1_sel>;
+
+	lvds1-sel-hog {
+		gpio-hog;
+		gpios = <21 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "lvds1_sel";
+	};
+};
+
+/* Backlight enable pad GPIO5_IO29 muxed to GPIO via the gpio5 controller. */
+&gpio5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lvds1_bl_en>;
+};
+
+&iomuxc {
+	pinctrl_pwm2: pwm2grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO11__PWM2_OUT	0x116
+		>;
+	};
+
+	pinctrl_lvds1_sel: lvds1selgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21	0x140
+		>;
+	};
+
+	pinctrl_lvds1_bl_en: lvds1blengrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_UART4_TXD__GPIO5_IO29	0x140
+		>;
+	};
+
+	pinctrl_touch_lvds1: touchlvds1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00	0x1c0
+		>;
+	};
+};

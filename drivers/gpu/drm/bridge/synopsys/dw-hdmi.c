@@ -293,7 +293,7 @@ static bool dw_hdmi_i2c_unwedge(struct dw_hdmi *hdmi)
 	dev_info(hdmi->dev, "Attempting to unwedge stuck i2c bus\n");
 
 	/*
-	 * This is a huge hack to workaround a problem where the dw_hdmi i2c
+	 * Workaround a problem where the dw_hdmi i2c
 	 * bus could sometimes get wedged.  Once wedged there doesn't appear
 	 * to be any way to unwedge it (including the HDMI_I2CM_SOFTRSTZ)
 	 * other than pulsing the SDA line.
@@ -2471,11 +2471,26 @@ static const struct drm_edid *dw_hdmi_edid_read(struct dw_hdmi *hdmi,
 {
 	const struct drm_edid *drm_edid;
 	const struct edid *edid;
+	int retries = 6;
 
 	if (!hdmi->ddc)
 		return NULL;
 
-	drm_edid = drm_edid_read_ddc(connector, hdmi->ddc);
+	/*
+	 * The sink's DDC may not be ready for some tens of ms after HPD
+	 * asserts; an immediate read then returns no EDID and the connector
+	 * falls back to safe modes. Retry a few times so the first probe after
+	 * hotplug reliably reads the sink's EDID.
+	 */
+	do {
+		drm_edid = drm_edid_read_ddc(connector, hdmi->ddc);
+		if (drm_edid)
+			break;
+		if (--retries <= 0)
+			break;
+		msleep(50);
+	} while (1);
+
 	if (!drm_edid) {
 		dev_dbg(hdmi->dev, "failed to get edid\n");
 		return NULL;

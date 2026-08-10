@@ -522,6 +522,13 @@ static int fsl_samsung_hdmi_phy_configure(struct fsl_samsung_hdmi_phy *phy,
 				 val & REG34_PLL_LOCK, 50, 20000);
 	if (ret)
 		dev_dbg(phy->dev, "PLL failed to lock\n");
+	else
+		/*
+		 * PLL_LOCK asserts before the PLL output is fully settled. Let it
+		 * stabilize before the TMDS data is enabled, otherwise the sink
+		 * receives a marginal signal and takes seconds to lock onto it.
+		 */
+		msleep(200);
 
 	return 0;
 }

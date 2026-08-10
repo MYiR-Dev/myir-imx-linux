@@ -979,6 +979,23 @@
 	status = "okay";
 };
 
+/* MYD-JS8MPQ production thermal policy: no throttling below 115C. */
+&cpu_alert0 {
+	temperature = <115000>;
+};
+
+&cpu_crit0 {
+	temperature = <115000>;
+};
+
+&soc_alert0 {
+	temperature = <115000>;
+};
+
+&soc_crit0 {
+	temperature = <115000>;
+};
+
 /*
  * GPIO1_IO07 selects the baseboard LVDS0 path: it must be driven low to
  * route the core-module LVDS0 to the FPC connector. GPIO1_IO05 is the

@@ -67,12 +67,14 @@ enum rx_model {
 	model_rx_unknown,
 	model_rx_8025,
 	model_rx_8035,
+	model_rx_8025t,
 	model_last
 };
 
 static const struct i2c_device_id rx8025_id[] = {
 	{ "rx8025", model_rx_8025 },
 	{ "rx8035", model_rx_8035 },
+	{ "rx8025t", model_rx_8025t },
 	{ }
 };
 MODULE_DEVICE_TABLE(i2c, rx8025_id);
@@ -84,16 +86,29 @@ struct rx8025_data {
 	int is_24;
 };
 
+/*
+ * RX-8025SA/NB carry the register number in the upper nibble of the
+ * command byte (number << 4).  RX-8025T uses plain register addressing
+ * (number << 0).  Pick the shift from the detected model.
+ */
+static u8 rx8025_reg_shift(const struct i2c_client *client)
+{
+	struct rx8025_data *drvdata = i2c_get_clientdata(client);
+
+	return (drvdata && drvdata->model == model_rx_8025t) ? 0 : 4;
+}
+
 static s32 rx8025_read_reg(const struct i2c_client *client, u8 number)
 {
-	return i2c_smbus_read_byte_data(client, number << 4);
+	return i2c_smbus_read_byte_data(client, number << rx8025_reg_shift(client));
 }
 
 static int rx8025_read_regs(const struct i2c_client *client,
 			    u8 number, u8 length, u8 *values)
 {
-	int ret = i2c_smbus_read_i2c_block_data(client, number << 4, length,
-						values);
+	int ret = i2c_smbus_read_i2c_block_data(client,
+						number << rx8025_reg_shift(client),
+						length, values);
 	if (ret != length)
 		return ret < 0 ? ret : -EIO;
 
@@ -103,13 +118,15 @@ static int rx8025_read_regs(const struct i2c_client *client,
 static s32 rx8025_write_reg(const struct i2c_client *client, u8 number,
 			    u8 value)
 {
-	return i2c_smbus_write_byte_data(client, number << 4, value);
+	return i2c_smbus_write_byte_data(client,
+					 number << rx8025_reg_shift(client), value);
 }
 
 static s32 rx8025_write_regs(const struct i2c_client *client,
 			     u8 number, u8 length, const u8 *values)
 {
-	return i2c_smbus_write_i2c_block_data(client, number << 4,
+	return i2c_smbus_write_i2c_block_data(client,
+					      number << rx8025_reg_shift(client),
 					      length, values);
 }
 

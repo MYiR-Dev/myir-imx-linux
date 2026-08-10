@@ -468,7 +468,26 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		return ret;
 	}
 
-	return genphy_soft_reset(phydev);
+	ret = genphy_soft_reset(phydev);
+	if (ret)
+		return ret;
+
+	/*
+	 * MYD-JS8MPQ RJ45 layout: LED0/yellow indicates RX/TX activity,
+	 * LED1/green indicates link at any speed, and LED2 is unused.  Program
+	 * this after the soft reset, which clears LEDCR.
+	 */
+	if (of_machine_is_compatible("myir,imx8mp-myd-js8mpq"))
+		return phy_write_paged(phydev, 0xd04, RTL8211F_LEDCR,
+				       RTL8211F_LEDCR_MODE |
+				       (RTL8211F_LEDCR_ACT_TXRX <<
+					(RTL8211F_LEDCR_SHIFT * 0)) |
+				       ((RTL8211F_LEDCR_LINK_10 |
+					 RTL8211F_LEDCR_LINK_100 |
+					 RTL8211F_LEDCR_LINK_1000) <<
+					(RTL8211F_LEDCR_SHIFT * 1)));
+
+	return 0;
 }
 
 static int rtl821x_suspend(struct phy_device *phydev)

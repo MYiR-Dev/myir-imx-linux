@@ -1,0 +1,1381 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2024 MYIR Technology Co., Ltd.
+ *
+ * MYD-JS8MPQ board:
+ *   Core Module: MYC-JS8MPQ-V01 (i.MX8M Plus + LPDDR4 4GB + eMMC 8GB)
+ *   Baseboard:   MYB-SMARC-V02
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/phy/phy-imx8-pcie.h>
+#include <dt-bindings/usb/pd.h>
+#include <dt-bindings/input/input.h>
+#include "../imx8mp.dtsi"
+
+/ {
+	model = "MYIR MYD-JS8MPQ board";
+	compatible = "myir,imx8mp-myd-js8mpq", "fsl,imx8mp";
+
+	chosen {
+		stdout-path = &uart2;
+	};
+
+	/*
+	 * Fallback 4 GB layout (3 GB below 4G + 1 GB above). U-Boot probes the
+	 * actual DRAM (2 GB or 4 GB) and fixes up this node at boot, so this is
+	 * only the value used if that fixup is skipped.
+	 */
+	memory@40000000 {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0 0xc0000000>,
+		      <0x1 0x00000000 0 0x40000000>;
+	};
+
+	/* ---- User LED: D94 blue, core-module R25 connects QSPIA_DATA0 =
+	 * NAND_DATA00 = GPIO3_IO06. Pin was QSPI(FlexSPI) data0; repurposed as LED, so FlexSPI disabled. Default heartbeat.
+	 */
+	gpio-leds {
+		compatible = "gpio-leds";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_led>;
+
+		led-blue {
+			label = "blue";
+			gpios = <&gpio3 6 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "heartbeat";
+		};
+	};
+
+	/* ---- User key S3: SAI1_TXD7 = GPIO4_IO19, active-low ---- */
+	gpio-keys {
+		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpio_keys>;
+
+		key-user {
+			label = "User";
+			gpios = <&gpio4 19 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_1>;
+			wakeup-source;
+		};
+	};
+
+	/*
+	 * ---- External watchdog SGM820B (core-module U4) ----
+	 * WDI (feed) = SAI2_TXFS = GPIO4_IO24 (toggle)
+	 * WDT_EN     = SAI3_RXFS = GPIO4_IO28 (enable)
+	 */
+	gpio-wdt {
+		compatible = "linux,wdt-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wdt_feed>, <&pinctrl_wdt_en>;
+		gpios = <&gpio4 24 GPIO_ACTIVE_LOW>;
+		enable-gpios = <&gpio4 28 GPIO_ACTIVE_HIGH>;
+		hw_algo = "toggle";
+		hw_margin_ms = <1000>;
+		always-running;
+		disable-on-suspend;
+	};
+
+	/* ---- PWM fan: PWM3 @ 25 kHz, four cooling levels ---- */
+	fan0: pwm-fan {
+		compatible = "pwm-fan";
+		#cooling-cells = <2>;
+		cooling-levels = <64 128 192 255>;
+		pwms = <&pwm3 0 40000 0>;
+	};
+
+	/* ---- PCIe ref clock ---- */
+	pcie0_refclk: pcie0-refclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <100000000>;
+	};
+
+	/* ---- Audio regulators ---- */
+	reg_audio_3v3: regulator-audio-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "audio-3v3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	reg_audio_1v8: regulator-audio-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "audio-1v8";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	/* ---- SD card power: always-on ---- */
+	reg_usdhc2_vmmc: regulator-usdhc2 {
+		compatible = "regulator-fixed";
+		regulator-name = "VSD_3V3";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	/* ---- USB Type-C VBUS (sourced under PTN5110 TCPC control) ---- */
+	reg_usb_vbus: regulator-usb-vbus {
+		compatible = "regulator-fixed";
+		regulator-name = "USB_VBUS";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+	};
+
+	/* ---- Camera 24 MHz master clock (on-board oscillator) ---- */
+	cam_clk_24m: cam-clk-24m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+	};
+
+	/* CSI0 (OV5640) power enable = PCA9555 chip pin EIO14 = GPIO line 12. */
+	reg_csi0_pwr: regulator-csi0-pwr {
+		compatible = "regulator-fixed";
+		regulator-name = "csi0-pwr";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio_expander 12 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	/* CSI1 camera power enable = PCA9555 chip pin EIO15 = GPIO line 13. */
+	reg_csi1_pwr: regulator-csi1-pwr {
+		compatible = "regulator-fixed";
+		regulator-name = "csi1-pwr";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio_expander 13 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	/* ---- WiFi power (AW-XM729 on M.2, USDHC1/SDIO) ----
+	 * WLAN_EN = PCA9555 line 1, supplied as vmmc to usdhc1. */
+	reg_wifi_vmmc: regulator-wifi {
+		compatible = "regulator-fixed";
+		regulator-name = "WLAN_EN";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		startup-delay-us = <20000>;
+		enable-active-high;
+		regulator-always-on;
+		gpio = <&gpio_expander 1 GPIO_ACTIVE_LOW>;
+	};
+
+	/* ES8390 audio (SAI3) via simple-audio-card. SAI3 is I2S master
+	 * and provides MCLK (12.288MHz, see &sai3 assigned-clock-rates). */
+	sound-es8390 {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "es8390-audio";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,widgets =
+			"Headphone", "Headphone Jack",
+			"Microphone", "Mic Jack";
+		simple-audio-card,routing =
+			"Headphone Jack", "HPOL",
+			"Headphone Jack", "HPOR",
+			"INPUT1",         "Mic Jack",
+			"INPUT2",         "Mic Jack";
+		simple-audio-card,bitclock-master = <&sndcpu>;
+		simple-audio-card,frame-master = <&sndcpu>;
+
+		sndcpu: simple-audio-card,cpu {
+			sound-dai = <&sai3>;
+			dai-tdm-slot-num = <2>;
+			dai-tdm-slot-width = <16>;
+		};
+
+		simple-audio-card,codec {
+			sound-dai = <&es8390>;
+			clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>;
+		};
+	};
+
+	/* HDMI audio: aud2htx (SDMA -> AUD2HTX bridge -> HDMI TX) feeds the
+	 * dw-hdmi GP-audio codec (registered as hdmi-audio-codec.1 / i2s-hifi)
+	 * via the fsl,imx-audio-hdmi machine driver. Same wiring as imx8mp-evk. */
+	sound-hdmi {
+		compatible = "fsl,imx-audio-hdmi";
+		model = "audio-hdmi";
+		audio-cpu = <&aud2htx>;
+		hdmi-out;
+	};
+
+	/* ---- HDMI connector (i.MX8MP native HDMI TX) ---- */
+	hdmi-connector {
+		compatible = "hdmi-connector";
+		type = "a";
+
+		port {
+			hdmi_con: endpoint {
+				remote-endpoint = <&hdmi_tx_out>;
+			};
+		};
+	};
+
+	/* ---- LVDS0 panel backlight (PWM1 dimming + enable GPIO) ---- */
+	lvds_backlight: backlight-lvds {
+		compatible = "pwm-backlight";
+		pwms = <&pwm1 0 100000 0>;	/* 100us period = 10kHz */
+		brightness-levels = <0 8 16 32 48 64 80 96 112 128
+				     144 160 176 192 208 224 240 255>;
+		default-brightness-level = <14>;
+		enable-gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;	/* GPIO1_IO05 */
+	};
+
+	/*
+	 * LVDS0 panel (7" 1024x600) on LDB channel 0. The board routes the
+	 * core-module LVDS0 to the FPC through a switch enabled by GPIO1_IO07
+	 * (driven low, see &gpio1 hog). data-mapping/timing are the common
+	 * defaults for this class of panel; tune on-board if the image is
+	 * shifted (porch) or colours are wrong (data-mapping vesa-24 vs
+	 * jeida-24/jeida-18).
+	 */
+	panel_lvds: panel-lvds {
+		compatible = "panel-lvds";
+		backlight = <&lvds_backlight>;
+		data-mapping = "vesa-24";
+		width-mm = <154>;
+		height-mm = <86>;
+
+		panel-timing {
+			/*
+			 * 49.5 MHz = media_ldb_root_clk (346.5 MHz, VIDEO_PLL1
+			 * 1039.5 MHz / 3) / 7. Matching the achievable LDB rate
+			 * avoids the ~3.3% pixel-clock deficit that otherwise
+			 * garbles the right edge of each line. ~57.7 Hz refresh.
+			 */
+			clock-frequency = <49500000>;
+			hactive = <1024>;
+			vactive = <600>;
+			hsync-len = <10>;
+			hfront-porch = <160>;
+			hback-porch = <160>;
+			vsync-len = <3>;
+			vfront-porch = <12>;
+			vback-porch = <23>;
+		};
+
+		port {
+			panel_in_lvds: endpoint {
+				remote-endpoint = <&ldb_lvds_ch0>;
+			};
+		};
+	};
+};
+
+/* ========== I2C1: PMIC PCA9450CHN @0x25 ========== */
+&i2c1 {
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c1>;
+	status = "okay";
+
+	pmic@25 {
+		compatible = "nxp,pca9450c";
+		reg = <0x25>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_pmic>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <3 IRQ_TYPE_LEVEL_LOW>;
+
+		regulators {
+			buck1: BUCK1 {
+				regulator-name = "BUCK1";
+				regulator-min-microvolt = <720000>;
+				regulator-max-microvolt = <1000000>;
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-ramp-delay = <3125>;
+			};
+
+			buck2: BUCK2 {
+				regulator-name = "BUCK2";
+				regulator-min-microvolt = <720000>;
+				regulator-max-microvolt = <1000000>;
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-ramp-delay = <3125>;
+				nxp,dvs-run-voltage = <950000>;
+				nxp,dvs-standby-voltage = <850000>;
+			};
+
+			buck4: BUCK4 {
+				regulator-name = "BUCK4";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			buck5: BUCK5 {
+				regulator-name = "BUCK5";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			buck6: BUCK6 {
+				regulator-name = "BUCK6";
+				regulator-min-microvolt = <1100000>;
+				regulator-max-microvolt = <1100000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			ldo1: LDO1 {
+				regulator-name = "LDO1";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			ldo3: LDO3 {
+				regulator-name = "LDO3";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-boot-on;
+				regulator-always-on;
+			};
+
+			ldo5: LDO5 {
+				regulator-name = "LDO5";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <3300000>;
+			};
+		};
+	};
+};
+
+/* CPU supply from PMIC BUCK2 */
+&A53_0 { cpu-supply = <&buck2>; };
+&A53_1 { cpu-supply = <&buck2>; };
+&A53_2 { cpu-supply = <&buck2>; };
+&A53_3 { cpu-supply = <&buck2>; };
+
+/*
+ * I2C2: TCA9555/PCA9555 GPIO expander @0x20 + BL24C32F EEPROM @0x50 (both verified here).
+ * (RTC verified on i2c3, see dedicated commit; ES8388 tbd audio.)
+ */
+&i2c2 {
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2>;
+	status = "okay";
+
+	/* TCA9555/PCA9555 GPIO expander (no irq line, per audit P1) */
+	gpio_expander: gpio@20 {
+		compatible = "nxp,pca9555";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		/* EIO_P10 (line 8) enables the PI6C557 PCIe refclk gen:
+		 * driving it low turns the gen on via an inverting transistor. */
+		pcie-refclk-en-hog {
+			gpio-hog;
+			gpios = <8 GPIO_ACTIVE_HIGH>;
+			output-low;
+			line-name = "pcie_refclk_en";
+		};
+	};
+
+	/* BL24C32F EEPROM @0x50 (verified on i2c2; audit said i2c1 -- wrong) */
+	eeprom@50 {
+		compatible = "atmel,24c32";
+		reg = <0x50>;
+		pagesize = <32>;
+	};
+
+	/* CSI1 camera: NEXTCHIP NVP6324 ("N4") 4-channel AHD decoder,
+	 * 4-lane MIPI YUV422 single-VC output; select the AHD input via
+	 * /sys/module/jaguar1_drv/parameters/jaguar1_active_ch.
+	 * reset=GPIO4_IO00, pwdn=GPIO4_IO01, power rail reg_csi1_pwr
+	 * (expander line 13, always-on). */
+	n4_csi1: camera@31 {
+		compatible = "jaguar1-v4l2";
+		reg = <0x31>;
+		clocks = <&cam_clk_24m>;
+		clock-names = "xvclk";
+		clock-frequency = <24000000>;
+		rst-gpios = <&gpio4 0 GPIO_ACTIVE_HIGH>;
+		pwd-gpios = <&gpio4 1 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_csi1>;
+		rockchip,camera-module-index = <0>;
+		rockchip,camera-module-facing = "back";
+		rockchip,camera-module-name = "default";
+		rockchip,camera-module-lens-name = "default";
+		rockchip,default_rect = <1920 1080>;
+		status = "okay";
+
+		port {
+			n4_csi1_ep: endpoint {
+				remote-endpoint = <&mipi_csi0_in>;
+				data-lanes = <1 2 3 4>;
+				clock-lanes = <0>;
+			};
+		};
+	};
+};
+
+/* ========== I2C3: RTC RX-8025T @0x32 + ES8390 audio codec ========== */
+&i2c3 {
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c3>;
+	status = "okay";
+
+	/* RX-8025T RTC: standard addressing (rtc-rx8025 driver + rx8025t variant) */
+	rtc@32 {
+		compatible = "epson,rx8025t";
+		reg = <0x32>;
+	};
+
+	/* ES8390 audio codec on i2c3@0x10 (schematic mislabels it ES8388).
+	 * ES8390 is register-compatible with ES8389; the mainline es8389
+	 * driver binds via the es8389 fallback compatible. */
+	es8390: codec@10 {
+		compatible = "everest,es8390", "everest,es8389";
+		reg = <0x10>;
+		#sound-dai-cells = <0>;
+		clocks = <&audio_blk_ctrl IMX8MP_CLK_AUDIOMIX_SAI3_MCLK1>;
+		clock-names = "mclk";
+	};
+
+	/* CSI0 camera: OV5640 (2-lane MIPI). reset=GPIO3_IO25 (SAI5_MCLK),
+	 * powerdown=GPIO5_IO05 (SPDIF_EXT_CLK), 24 MHz xclk from on-board
+	 * oscillator, power rail via reg_csi0_pwr (expander line 14). */
+	ov5640_0: camera@3c {
+		compatible = "ovti,ov5640";
+		reg = <0x3c>;
+		clocks = <&cam_clk_24m>;
+		clock-names = "xclk";
+		DOVDD-supply = <&reg_csi0_pwr>;
+		AVDD-supply = <&reg_csi0_pwr>;
+		DVDD-supply = <&reg_csi0_pwr>;
+		powerdown-gpios = <&gpio5 5 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&gpio3 25 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_csi0>;
+		status = "okay";
+
+		port {
+			ov5640_0_ep: endpoint {
+				remote-endpoint = <&mipi_csi1_in>;
+				data-lanes = <1 2>;
+				clock-lanes = <0>;
+			};
+		};
+	};
+
+	/* PTN5110 USB Type-C / TCPC for the USB3_0 OTG port.
+	 * Same i2c bus as the RTC (i2c3). ALERT/INT = SAI3_RXC = GPIO4_IO29.
+	 * Drives the usb_dwc3_0 role switch so the port follows CC detection
+	 * (host by default, becomes device when attached to a PC host).
+	 * Standard PTN5110 Type-C role-switch configuration. */
+	ptn5110: tcpc@52 {
+		compatible = "nxp,ptn5110";
+		reg = <0x52>;
+		interrupt-parent = <&gpio4>;
+		interrupts = <29 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_ptn5110>;
+		vbus-supply = <&reg_usb_vbus>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				typec_dr_sw: endpoint {
+					remote-endpoint = <&usb3_drd_sw>;
+				};
+			};
+		};
+
+		typec_con: connector {
+			compatible = "usb-c-connector";
+			label = "USB-C";
+			power-role = "dual";
+			data-role = "dual";
+			try-power-role = "source";
+			default-mode = "host";
+			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
+			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
+				     PDO_VAR(5000, 20000, 3000)>;
+			op-sink-microwatt = <15000000>;
+			self-powered;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@1 {
+					reg = <1>;
+					typec_con_ss: endpoint {
+						remote-endpoint = <&usb3_data_ss>;
+					};
+				};
+			};
+		};
+	};
+};
+
+/* ========== UART ========== */
+/* UART2: debug console (USB Type-C CH342F) */
+&uart2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart2>;
+	status = "okay";
+};
+
+/* UART1: RS232 (TPT3232E, U57). TX=UART1_TXD(GPIO5_IO23) RX=UART1_RXD(GPIO5_IO22). */
+&uart1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart1>;
+	assigned-clocks = <&clk IMX8MP_CLK_UART1>;
+	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
+	status = "okay";
+};
+
+/* UART3: RS485 (NSI83085E, U58). TX=SD1_DATA6 RX=SD1_DATA7,
+ * direction (DE) on UART3_RTS = SD1_RESET_B (GPIO2_IO10), DE active-high.
+ * Note: RTS pad is shared with WiFi pwrseq (gpio2_10); WiFi is disabled. */
+&uart3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3>;
+	assigned-clocks = <&clk IMX8MP_CLK_UART3>;
+	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
+	linux,rs485-enabled-at-boot-time;
+	rts-gpios = <&gpio2 10 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+/* UART4: BT (AW-XM729) */
+&uart4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>;
+	assigned-clocks = <&clk IMX8MP_CLK_UART4>;
+	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
+	uart-has-rtscts;
+	status = "okay";
+
+	bluetooth {
+		compatible = "nxp,aw-xm729-bt";
+		firmware-name = "uartiw693_bt_v1.bin.se";
+		fw-init-baudrate = <3000000>;
+		max-speed = <3000000>;
+		vcc-supply = <&reg_wifi_vmmc>;
+	};
+};
+
+/* ========== eMMC: USDHC3 (8-bit, eMMC5.1) ========== */
+&usdhc3 {
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc3>;
+	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
+	bus-width = <8>;
+	non-removable;
+	status = "okay";
+};
+
+/* ========== SD card: USDHC2 (4-bit, UHS-I) ========== */
+&usdhc2 {
+	pinctrl-names = "default", "state_100mhz", "state_200mhz";
+	pinctrl-0 = <&pinctrl_usdhc2>, <&pinctrl_usdhc2_gpio>;
+	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
+	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
+	bus-width = <4>;
+	vmmc-supply = <&reg_usdhc2_vmmc>;
+	vqmmc-supply = <&ldo5>;
+	cd-gpios = <&gpio2 12 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+/* ========== WiFi: USDHC1/SDIO (AW-XM729), powered via WLAN_EN regulator ========== */
+&usdhc1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_usdhc1>;
+	bus-width = <4>;
+	non-removable;
+	keep-power-in-suspend;
+	vmmc-supply = <&reg_wifi_vmmc>;
+	status = "okay";
+};
+
+/* ========== Ethernet ========== */
+/*
+ * FEC (ETH0/GBE1): RTL8211FSI @0x07,RGMII on SAI1, dedicated MDIO (SAI1_RXD2/RXD3).
+ * Board-level hw issue: ENET1_nRST inverted via Q5, net pulled low externally -- PHY dead. Disabled.
+ */
+&fec {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_fec>;
+	phy-mode = "rgmii-id";
+	phy-handle = <&ethphy0>;
+	fsl,magic-packet;
+	status = "okay";
+
+	mdio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		/* RTL8211F strapped at MDIO addr 7. Reset is released by the
+		 * fec_phy_rst_hog below (GPIO4_IO02), not by a PHY-node
+		 * reset-gpios: ENET1_nRST is inverted by Q5, so the PHY boots
+		 * held in reset and phylib would fail to read its ID before it
+		 * ever got to deassert a node-level reset. The hog drives the
+		 * line low at gpio-controller init, before FEC scans MDIO. */
+		ethphy0: ethernet-phy@7 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <7>;
+			eee-broken-1000t;
+		};
+	};
+};
+
+&gpio4 {
+	/* ENET1_nRST release: GPIO4_IO02 low -> Q5 off -> nRST high (PHY out
+	 * of reset). Must be a hog (early, unconditional) so the PHY answers
+	 * MDIO at FEC probe; see ethphy0 above. */
+	fec_phy_rst_hog {
+		gpio-hog;
+		gpios = <2 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "enet1-phy-reset";
+	};
+};
+
+/*
+ * EQOS (ETH1/GBE0): RTL8211FSI @0x05,RGMII. Verified (eth1, SSH debug link).
+ * PHY uses hardware POR; do not drive reset (doing so breaks it).
+ */
+&eqos {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_eqos>;
+	phy-mode = "rgmii-id";
+	phy-handle = <&ethphy1>;
+	status = "okay";
+
+	mdio {
+		compatible = "snps,dwmac-mdio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ethphy1: ethernet-phy@5 {
+			compatible = "ethernet-phy-ieee802.3-c22";
+			reg = <5>;
+			eee-broken-1000t;
+		};
+	};
+};
+
+/* ========== USB ========== */
+&usb3_phy0 {
+	status = "okay";
+
+	/* SuperSpeed data path to the Type-C connector (orientation/SS) */
+	port {
+		usb3_data_ss: endpoint {
+			remote-endpoint = <&typec_con_ss>;
+		};
+	};
+};
+
+&usb3_0 {
+	status = "okay";
+};
+
+/* USB3_0 = Type-C OTG. Role switching is provided by the PTN5110 TCPC
+ * (see &i2c3 ptn5110). hnp/srp/adp-disable: this is a USB Type-C port,
+ * dual-role is handled by CC detection, not by legacy USB-OTG SRP/HNP. */
+&usb_dwc3_0 {
+	dr_mode = "otg";
+	hnp-disable;
+	srp-disable;
+	adp-disable;
+	usb-role-switch;
+	role-switch-default-mode = "host";
+	snps,dis-u1-entry-quirk;
+	snps,dis-u2-entry-quirk;
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			usb3_drd_sw: endpoint {
+				remote-endpoint = <&typec_dr_sw>;
+			};
+		};
+	};
+};
+
+&usb3_phy1 {
+	status = "okay";
+};
+
+&usb3_1 {
+	status = "okay";
+};
+
+&usb_dwc3_1 {
+	dr_mode = "host";
+	status = "okay";
+};
+
+/* ========== CAN (NSI1042C, U62/U64) on SAI2 pins ==========
+ * Transceiver STBY pin not used on this board, so the
+ * xceiver-supply regulators are omitted; internal loopback works
+ * without driving STBY. Add STBY + xceiver-supply for real-bus use. */
+&flexcan1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan1>;
+	status = "okay";
+};
+
+&flexcan2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexcan2>;
+	status = "okay";
+};
+
+/*
+ * QSPI Flash (FlexSPI): disabled -- data0 (NAND_DATA00) repurposed as user LED (D94),
+ * QSPI flash unusable. Confirm hw — QSPI LED pin conflict before re-enabling.
+ */
+&flexspi {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_flexspi0>;
+	status = "disabled";
+
+	flash@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <80000000>;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <4>;
+	};
+};
+
+/* ========== TPM (ECSPI1, ST33KTPM2I3 / NS350): shares pins with UART3/RS485, pick one ========== */
+&ecspi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi1>;
+	cs-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
+	status = "okay";
+
+	tpm@0 {
+		compatible = "tcg,tpm_tis-spi";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+	};
+};
+
+/* ========== Audio SAI3 (ES8390 codec) ========== */
+&sai3 {
+	#sound-dai-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_sai3>;
+	assigned-clocks = <&clk IMX8MP_CLK_SAI3>;
+	assigned-clock-parents = <&clk IMX8MP_AUDIO_PLL1_OUT>;
+	assigned-clock-rates = <12288000>;
+	fsl,sai-mclk-direction-output;
+	status = "okay";
+};
+
+&easrc {
+	status = "disabled";
+};
+
+/* ========== Watchdog ========== */
+/* SoC internal watchdog wdog1 (/dev/watchdog0) */
+&wdog1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_wdog>;
+	fsl,ext-reset-output;
+	status = "okay";
+};
+/* ========== PCIe (M.2), external 100MHz refclk from PI6C557 (U20) ========== */
+&pcie_phy {
+	fsl,refclk-pad-mode = <IMX8_PCIE_REFCLK_PAD_INPUT>;
+	clocks = <&pcie0_refclk>;
+	clock-names = "ref";
+	status = "okay";
+};
+
+&pcie {
+	/* PERST# is driven by the PCA9555 expander line EIO_P07. */
+	reset-gpio = <&gpio_expander 7 GPIO_ACTIVE_LOW>;
+	status = "okay";
+};
+
+/* ========== HDMI: i.MX8MP native HDMI TX (no LT9611) ==========
+ * lcdif3 -> hdmi_pavi -> hdmi is wired inside the 6.12 imx8mp.dtsi; here we
+ * just enable the block and route hdmi_tx output to the connector. */
+&hdmi_blk_ctrl {
+	/*
+	 * The board imx8mp.dtsi strips the "noc" node down to compatible+reg
+	 * (no #interconnect-cells, no OPP), so the NoC never registers as an
+	 * interconnect provider. The mainline "interconnects = <&noc ...>"
+	 * here therefore has no supplier: fw_devlink keeps blk-ctrl (and the
+	 * whole HDMI chain) in deferred probe forever. Drop the NoC QoS hints;
+	 * HDMI does not depend on them. Restore them (plus noc #interconnect-
+	 * cells/OPP + ARM_IMX_BUS_DEVFREQ) only if high-res shows underflow.
+	 */
+	/delete-property/ interconnects;
+	/delete-property/ interconnect-names;
+	/*
+	 * Expose the HDMIMIX reset controller (the mainline node omits this);
+	 * &hdmi_tx references IMX8MP_HDMIBLK_RESET_PAI to release the HDMI
+	 * parallel audio interface for HDMI audio.
+	 */
+	#reset-cells = <1>;
+	status = "okay";
+};
+
+&irqsteer_hdmi {
+	status = "okay";
+};
+
+&hdmi_pavi {
+	status = "okay";
+};
+
+&hdmiphy {
+	status = "okay";
+};
+
+&lcdif3 {
+	status = "okay";
+};
+
+/* HDMI audio transmit path (audio-cpu for sound-hdmi). */
+&aud2htx {
+	status = "okay";
+};
+
+&hdmi {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi>;
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@1 {
+			reg = <1>;
+			hdmi_tx_out: endpoint {
+				remote-endpoint = <&hdmi_con>;
+			};
+		};
+	};
+};
+
+/*
+ * HDMI output mux select: GPIO2_IO11 (SD1_STROBE pad, the UART3_CTS_B
+ * pad, unused by RS485 which only needs TX/RX/RTS) must be driven LOW
+ * to route the on-board mux to the native HDMI TX path. gpio2 applies
+ * pinctrl_hdmi_mux to mux the pad to GPIO, then the hog drives it low.
+ */
+&gpio2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hdmi_mux>;
+
+	hdmi-mux-sel-hog {
+		gpio-hog;
+		gpios = <11 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "hdmi_mux_sel";
+	};
+};
+
+/* ========== I2C4: LVDS0 capacitive touch (dedicated I2C4 pads) ========== */
+&i2c4 {
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c4>;
+	status = "okay";
+
+	/* FocalTech FT5x06-family capacitive touch @0x38, INT = GPIO1_IO06.
+	 * The exact FT variant is auto-identified by the driver at probe.
+	 * Labelled so the LVDS1 variant DT can repoint the INT line. */
+	lvds_touch: touchscreen@38 {
+		compatible = "edt,edt-ft5406";
+		reg = <0x38>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_touch>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <6 IRQ_TYPE_EDGE_FALLING>;	/* GPIO1_IO06 */
+		touchscreen-size-x = <1024>;
+		touchscreen-size-y = <600>;
+	};
+};
+
+/* ========== LVDS0 display: lcdif2 -> LDB ch0 -> panel-lvds ========== */
+&lcdif2 {
+	status = "okay";
+};
+
+&ldb {
+	status = "okay";
+
+	/* LDB channel 0 (LVDS0) output -> panel */
+	lvds-channel@0 {
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			ldb_lvds_ch0: endpoint {
+				remote-endpoint = <&panel_in_lvds>;
+			};
+		};
+	};
+};
+
+&ldb_phy {
+	status = "okay";
+};
+
+/* Backlight dimming PWM */
+&pwm1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm1>;
+	status = "okay";
+};
+
+/* Fan PWM */
+&pwm3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm3>;
+	status = "okay";
+};
+
+/* SNVS ON/OFF power key (S2) */
+&snvs_pwrkey {
+	status = "okay";
+};
+
+/*
+ * GPIO1_IO07 selects the baseboard LVDS0 path: it must be driven low to
+ * route the core-module LVDS0 to the FPC connector. GPIO1_IO05 is the
+ * backlight enable (owned by the pwm-backlight node). gpio1 applies the
+ * pinctrl muxing both pads to GPIO, then the hog drives IO07 low.
+ */
+&gpio1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lvds0_ctrl>;
+
+	lvds0-sel-hog {
+		gpio-hog;
+		gpios = <7 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "lvds0_sel";
+	};
+};
+
+/* ========== Camera CSI0 (OV5640): mipi_csi_1 -> isi_0 ==========
+ * SMARC CSI0 maps to i.MX8MP MIPI_CSI2 = mipi_csi_1 node (try mipi_csi_0
+ * instead if no frames). */
+&mipi_csi_1 {
+	status = "okay";
+
+	ports {
+		port@0 {
+			mipi_csi1_in: endpoint {
+				remote-endpoint = <&ov5640_0_ep>;
+				data-lanes = <1 2>;
+			};
+		};
+	};
+};
+
+&isi_0 {
+	status = "okay";
+};
+
+/* ========== Camera CSI1 (NVP6324/N4): mipi_csi_0 -> isi_0 port@0 ========== */
+&mipi_csi_0 {
+	status = "okay";
+
+	ports {
+		port@0 {
+			mipi_csi0_in: endpoint {
+				remote-endpoint = <&n4_csi1_ep>;
+				data-lanes = <1 2 3 4>;
+			};
+		};
+	};
+};
+
+/* ========== iomuxc pin control ========== */
+&iomuxc {
+	pinctrl_csi0: csi0grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI5_MCLK__GPIO3_IO25	0x19	/* CSI0 reset */
+			MX8MP_IOMUXC_SPDIF_EXT_CLK__GPIO5_IO05	0x19	/* CSI0 powerdown */
+		>;
+	};
+
+	pinctrl_csi1: csi1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00	0x19	/* CSI1 reset */
+			MX8MP_IOMUXC_SAI1_RXC__GPIO4_IO01	0x19	/* CSI1 powerdown */
+		>;
+	};
+
+	pinctrl_pwm1: pwm1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO01__PWM1_OUT	0x116
+		>;
+	};
+
+	pinctrl_pwm3: pwm3grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO14__PWM3_OUT	0x6
+		>;
+	};
+
+	pinctrl_i2c4: i2c4grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_I2C4_SCL__I2C4_SCL		0x400001c3
+			MX8MP_IOMUXC_I2C4_SDA__I2C4_SDA		0x400001c3
+		>;
+	};
+
+	pinctrl_touch: touchgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO06__GPIO1_IO06	0x1c0	/* touch INT */
+		>;
+	};
+
+	pinctrl_lvds0_ctrl: lvds0ctrlgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO05__GPIO1_IO05	0x140	/* backlight enable */
+			MX8MP_IOMUXC_GPIO1_IO07__GPIO1_IO07	0x140	/* LVDS0 path select */
+		>;
+	};
+
+	pinctrl_hdmi: hdmigrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_HDMI_DDC_SCL__HDMIMIX_HDMI_SCL	0x400001c2
+			MX8MP_IOMUXC_HDMI_DDC_SDA__HDMIMIX_HDMI_SDA	0x400001c2
+			MX8MP_IOMUXC_HDMI_HPD__HDMIMIX_HDMI_HPD		0x40000010
+			MX8MP_IOMUXC_HDMI_CEC__HDMIMIX_HDMI_CEC		0x40000010
+		>;
+	};
+
+	pinctrl_hdmi_mux: hdmimuxgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SD1_STROBE__GPIO2_IO11	0x140
+		>;
+	};
+
+	pinctrl_gpio_led: gpio-led-grp {
+		fsl,pins = <
+			/* D94 blue user LED: QSPIA_DATA0 = NAND_DATA00 -> GPIO3_IO06 */
+			MX8MP_IOMUXC_NAND_DATA00__GPIO3_IO06	0x19
+		>;
+	};
+
+	pinctrl_gpio_keys: gpio-keys-grp {
+		fsl,pins = <
+			/* User key S3: SAI1_TXD7 -> GPIO4_IO19 (input, pull-up) */
+			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19	0x1c0
+		>;
+	};
+
+	pinctrl_i2c1: i2c1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_I2C1_SCL__I2C1_SCL	0x400001c3
+			MX8MP_IOMUXC_I2C1_SDA__I2C1_SDA	0x400001c3
+		>;
+	};
+
+	pinctrl_i2c2: i2c2grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_I2C2_SCL__I2C2_SCL	0x400001c3
+			MX8MP_IOMUXC_I2C2_SDA__I2C2_SDA	0x400001c3
+		>;
+	};
+
+	pinctrl_i2c3: i2c3grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_I2C3_SCL__I2C3_SCL	0x400001c3
+			MX8MP_IOMUXC_I2C3_SDA__I2C3_SDA	0x400001c3
+		>;
+	};
+
+	pinctrl_pmic: pmic-grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO03__GPIO1_IO03	0x41
+		>;
+	};
+
+	pinctrl_uart1: uart1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_UART1_RXD__UART1_DCE_RX	0x140
+			MX8MP_IOMUXC_UART1_TXD__UART1_DCE_TX	0x140
+		>;
+	};
+
+	pinctrl_uart2: uart2grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_UART2_RXD__UART2_DCE_RX	0x140
+			MX8MP_IOMUXC_UART2_TXD__UART2_DCE_TX	0x140
+		>;
+	};
+
+	pinctrl_uart3: uart3grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SD1_DATA6__UART3_DCE_TX	0x140
+			MX8MP_IOMUXC_SD1_DATA7__UART3_DCE_RX	0x140
+			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10	0x41
+		>;
+	};
+
+	pinctrl_uart4: uart4grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_ECSPI2_SCLK__UART4_DCE_RX	0x1c4
+			MX8MP_IOMUXC_ECSPI2_MOSI__UART4_DCE_TX	0x1c4
+			MX8MP_IOMUXC_ECSPI2_SS0__UART4_DCE_RTS	0x1c4
+			MX8MP_IOMUXC_ECSPI2_MISO__UART4_DCE_CTS	0x1c4
+		>;
+	};
+
+	pinctrl_usdhc1: usdhc1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SD1_CLK__USDHC1_CLK	0x190
+			MX8MP_IOMUXC_SD1_CMD__USDHC1_CMD	0x1d0
+			MX8MP_IOMUXC_SD1_DATA0__USDHC1_DATA0	0x1d0
+			MX8MP_IOMUXC_SD1_DATA1__USDHC1_DATA1	0x1d0
+			MX8MP_IOMUXC_SD1_DATA2__USDHC1_DATA2	0x1d0
+			MX8MP_IOMUXC_SD1_DATA3__USDHC1_DATA3	0x1d0
+		>;
+	};
+
+	pinctrl_usdhc2: usdhc2grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SD2_CLK__USDHC2_CLK	0x190
+			MX8MP_IOMUXC_SD2_CMD__USDHC2_CMD	0x1d0
+			MX8MP_IOMUXC_SD2_DATA0__USDHC2_DATA0	0x1d0
+			MX8MP_IOMUXC_SD2_DATA1__USDHC2_DATA1	0x1d0
+			MX8MP_IOMUXC_SD2_DATA2__USDHC2_DATA2	0x1d0
+			MX8MP_IOMUXC_SD2_DATA3__USDHC2_DATA3	0x1d0
+		>;
+	};
+
+	pinctrl_usdhc2_gpio: usdhc2-gpio-grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SD2_CD_B__GPIO2_IO12	0x1c4
+		>;
+	};
+
+	pinctrl_usdhc2_100mhz: usdhc2-100mhzgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SD2_CLK__USDHC2_CLK	0x194
+			MX8MP_IOMUXC_SD2_CMD__USDHC2_CMD	0x1d4
+			MX8MP_IOMUXC_SD2_DATA0__USDHC2_DATA0	0x1d4
+			MX8MP_IOMUXC_SD2_DATA1__USDHC2_DATA1	0x1d4
+			MX8MP_IOMUXC_SD2_DATA2__USDHC2_DATA2	0x1d4
+			MX8MP_IOMUXC_SD2_DATA3__USDHC2_DATA3	0x1d4
+		>;
+	};
+
+	pinctrl_usdhc2_200mhz: usdhc2-200mhzgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SD2_CLK__USDHC2_CLK	0x196
+			MX8MP_IOMUXC_SD2_CMD__USDHC2_CMD	0x1d6
+			MX8MP_IOMUXC_SD2_DATA0__USDHC2_DATA0	0x1d6
+			MX8MP_IOMUXC_SD2_DATA1__USDHC2_DATA1	0x1d6
+			MX8MP_IOMUXC_SD2_DATA2__USDHC2_DATA2	0x1d6
+			MX8MP_IOMUXC_SD2_DATA3__USDHC2_DATA3	0x1d6
+		>;
+	};
+
+	pinctrl_usdhc3: usdhc3grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_NAND_WE_B__USDHC3_CLK	0x190
+			MX8MP_IOMUXC_NAND_WP_B__USDHC3_CMD	0x1d0
+			MX8MP_IOMUXC_NAND_DATA04__USDHC3_DATA0	0x1d0
+			MX8MP_IOMUXC_NAND_DATA05__USDHC3_DATA1	0x1d0
+			MX8MP_IOMUXC_NAND_DATA06__USDHC3_DATA2	0x1d0
+			MX8MP_IOMUXC_NAND_DATA07__USDHC3_DATA3	0x1d0
+			MX8MP_IOMUXC_NAND_RE_B__USDHC3_DATA4	0x1d0
+			MX8MP_IOMUXC_NAND_CE2_B__USDHC3_DATA5	0x1d0
+			MX8MP_IOMUXC_NAND_CE3_B__USDHC3_DATA6	0x1d0
+			MX8MP_IOMUXC_NAND_CLE__USDHC3_DATA7	0x1d0
+			MX8MP_IOMUXC_NAND_CE1_B__USDHC3_STROBE	0x190
+		>;
+	};
+
+	pinctrl_usdhc3_100mhz: usdhc3-100mhzgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_NAND_WE_B__USDHC3_CLK	0x194
+			MX8MP_IOMUXC_NAND_WP_B__USDHC3_CMD	0x1d4
+			MX8MP_IOMUXC_NAND_DATA04__USDHC3_DATA0	0x1d4
+			MX8MP_IOMUXC_NAND_DATA05__USDHC3_DATA1	0x1d4
+			MX8MP_IOMUXC_NAND_DATA06__USDHC3_DATA2	0x1d4
+			MX8MP_IOMUXC_NAND_DATA07__USDHC3_DATA3	0x1d4
+			MX8MP_IOMUXC_NAND_RE_B__USDHC3_DATA4	0x1d4
+			MX8MP_IOMUXC_NAND_CE2_B__USDHC3_DATA5	0x1d4
+			MX8MP_IOMUXC_NAND_CE3_B__USDHC3_DATA6	0x1d4
+			MX8MP_IOMUXC_NAND_CLE__USDHC3_DATA7	0x1d4
+			MX8MP_IOMUXC_NAND_CE1_B__USDHC3_STROBE	0x194
+		>;
+	};
+
+	pinctrl_usdhc3_200mhz: usdhc3-200mhzgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_NAND_WE_B__USDHC3_CLK	0x196
+			MX8MP_IOMUXC_NAND_WP_B__USDHC3_CMD	0x1d6
+			MX8MP_IOMUXC_NAND_DATA04__USDHC3_DATA0	0x1d6
+			MX8MP_IOMUXC_NAND_DATA05__USDHC3_DATA1	0x1d6
+			MX8MP_IOMUXC_NAND_DATA06__USDHC3_DATA2	0x1d6
+			MX8MP_IOMUXC_NAND_DATA07__USDHC3_DATA3	0x1d6
+			MX8MP_IOMUXC_NAND_RE_B__USDHC3_DATA4	0x1d6
+			MX8MP_IOMUXC_NAND_CE2_B__USDHC3_DATA5	0x1d6
+			MX8MP_IOMUXC_NAND_CE3_B__USDHC3_DATA6	0x1d6
+			MX8MP_IOMUXC_NAND_CLE__USDHC3_DATA7	0x1d6
+			MX8MP_IOMUXC_NAND_CE1_B__USDHC3_STROBE	0x196
+		>;
+	};
+
+	pinctrl_fec: fecgrp {
+		fsl,pins = <
+			/* FEC dedicated MDIO: MDC=SAI1_RXD2 (AH9), MDIO=SAI1_RXD3 (AJ8), ENET1 ALT4 */
+			MX8MP_IOMUXC_SAI1_RXD2__ENET1_MDC	0x3
+			MX8MP_IOMUXC_SAI1_RXD3__ENET1_MDIO	0x3
+			MX8MP_IOMUXC_SAI1_RXD4__ENET1_RGMII_RD0	0x91
+			MX8MP_IOMUXC_SAI1_RXD5__ENET1_RGMII_RD1	0x91
+			MX8MP_IOMUXC_SAI1_RXD6__ENET1_RGMII_RD2	0x91
+			MX8MP_IOMUXC_SAI1_RXD7__ENET1_RGMII_RD3	0x91
+			MX8MP_IOMUXC_SAI1_TXC__ENET1_RGMII_RXC		0x91
+			MX8MP_IOMUXC_SAI1_TXFS__ENET1_RGMII_RX_CTL	0x91
+			MX8MP_IOMUXC_SAI1_TXD0__ENET1_RGMII_TD0	0x1f
+			MX8MP_IOMUXC_SAI1_TXD1__ENET1_RGMII_TD1	0x1f
+			MX8MP_IOMUXC_SAI1_TXD2__ENET1_RGMII_TD2	0x1f
+			MX8MP_IOMUXC_SAI1_TXD3__ENET1_RGMII_TD3	0x1f
+			MX8MP_IOMUXC_SAI1_TXD4__ENET1_RGMII_TX_CTL	0x1f
+			MX8MP_IOMUXC_SAI1_TXD5__ENET1_RGMII_TXC	0x1f
+			/* FEC PHY reset pad (same as 5.10 factory).
+			 * GPIO4_IO00/01 are reserved for CSI1 camera control, so
+			 * pinctrl_csi1 owns them (FEC only needs GPIO4_IO02). */
+			MX8MP_IOMUXC_SAI1_RXD0__GPIO4_IO02		0x19
+		>;
+	};
+
+	pinctrl_eqos: eqosgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_ENET_MDC__ENET_QOS_MDC		0x3
+			MX8MP_IOMUXC_ENET_MDIO__ENET_QOS_MDIO		0x3
+			MX8MP_IOMUXC_ENET_RD0__ENET_QOS_RGMII_RD0	0x91
+			MX8MP_IOMUXC_ENET_RD1__ENET_QOS_RGMII_RD1	0x91
+			MX8MP_IOMUXC_ENET_RD2__ENET_QOS_RGMII_RD2	0x91
+			MX8MP_IOMUXC_ENET_RD3__ENET_QOS_RGMII_RD3	0x91
+			MX8MP_IOMUXC_ENET_RXC__CCM_ENET_QOS_CLOCK_GENERATE_RX_CLK	0x91
+			MX8MP_IOMUXC_ENET_RX_CTL__ENET_QOS_RGMII_RX_CTL	0x91
+			MX8MP_IOMUXC_ENET_TD0__ENET_QOS_RGMII_TD0	0x1f
+			MX8MP_IOMUXC_ENET_TD1__ENET_QOS_RGMII_TD1	0x1f
+			MX8MP_IOMUXC_ENET_TD2__ENET_QOS_RGMII_TD2	0x1f
+			MX8MP_IOMUXC_ENET_TD3__ENET_QOS_RGMII_TD3	0x1f
+			MX8MP_IOMUXC_ENET_TX_CTL__ENET_QOS_RGMII_TX_CTL	0x1f
+			MX8MP_IOMUXC_ENET_TXC__CCM_ENET_QOS_CLOCK_GENERATE_TX_CLK	0x1f
+		>;
+	};
+
+	pinctrl_sai3: sai3grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI3_TXFS__AUDIOMIX_SAI3_TX_SYNC		0xd6
+			MX8MP_IOMUXC_SAI3_TXC__AUDIOMIX_SAI3_TX_BCLK		0xd6
+			MX8MP_IOMUXC_SAI3_TXD__AUDIOMIX_SAI3_TX_DATA00		0xd6
+			MX8MP_IOMUXC_SAI3_RXD__AUDIOMIX_SAI3_RX_DATA00		0xd6
+			MX8MP_IOMUXC_SAI3_MCLK__AUDIOMIX_SAI3_MCLK		0xd6
+		>;
+	};
+
+	pinctrl_flexcan1: flexcan1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI2_RXC__CAN1_TX	0x154
+			MX8MP_IOMUXC_SAI2_TXC__CAN1_RX	0x154
+		>;
+	};
+
+	pinctrl_flexcan2: flexcan2grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI2_TXD0__CAN2_TX	0x154
+			MX8MP_IOMUXC_SAI2_MCLK__CAN2_RX	0x154
+		>;
+	};
+
+	pinctrl_flexspi0: flexspi0grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_NAND_ALE__FLEXSPI_A_SCLK		0x1c2
+			MX8MP_IOMUXC_NAND_CE0_B__FLEXSPI_A_SS0_B	0x82
+			MX8MP_IOMUXC_NAND_DATA00__FLEXSPI_A_DATA00	0x82
+			MX8MP_IOMUXC_NAND_DATA01__FLEXSPI_A_DATA01	0x82
+			MX8MP_IOMUXC_NAND_DATA02__FLEXSPI_A_DATA02	0x82
+			MX8MP_IOMUXC_NAND_DATA03__FLEXSPI_A_DATA03	0x82
+		>;
+	};
+
+	pinctrl_wdog: wdoggrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO02__WDOG1_WDOG_B	0x166
+		>;
+	};
+
+	/* TPM on ECSPI1 (shared with RS485/UART3, pick one); SS0 uses GPIO chip-select */
+	pinctrl_ecspi1: ecspi1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_ECSPI1_SCLK__ECSPI1_SCLK	0x82
+			MX8MP_IOMUXC_ECSPI1_MOSI__ECSPI1_MOSI	0x82
+			MX8MP_IOMUXC_ECSPI1_MISO__ECSPI1_MISO	0x82
+			MX8MP_IOMUXC_ECSPI1_SS0__GPIO5_IO09	0x19
+		>;
+	};
+
+	/* External SGM820B feed pin WDI = SAI2_TXFS = GPIO4_IO24 */
+	pinctrl_wdt_feed: wdt-feed-grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI2_TXFS__GPIO4_IO24	0x19
+		>;
+	};
+
+	/* External SGM820B enable pin WDT_EN = SAI3_RXFS = GPIO4_IO28 */
+	pinctrl_wdt_en: wdt-en-grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI3_RXFS__GPIO4_IO28	0x19
+		>;
+	};
+
+	/* PTN5110 TCPC ALERT/INT = SAI3_RXC = GPIO4_IO29 (active-low, pull-up) */
+	pinctrl_ptn5110: ptn5110grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI3_RXC__GPIO4_IO29	0x1c4
+		>;
+	};
+};

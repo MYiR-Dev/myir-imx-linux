@@ -12,7 +12,7 @@
 #include <dt-bindings/phy/phy-imx8-pcie.h>
 #include <dt-bindings/usb/pd.h>
 #include <dt-bindings/input/input.h>
-#include "../imx8mp.dtsi"
+#include "imx8mp.dtsi"
 
 / {
 	model = "MYIR MYD-JS8MPQ board";
@@ -213,18 +213,6 @@
 		model = "audio-hdmi";
 		audio-cpu = <&aud2htx>;
 		hdmi-out;
-	};
-
-	/* ---- HDMI connector (i.MX8MP native HDMI TX) ---- */
-	hdmi-connector {
-		compatible = "hdmi-connector";
-		type = "a";
-
-		port {
-			hdmi_con: endpoint {
-				remote-endpoint = <&hdmi_tx_out>;
-			};
-		};
 	};
 
 	/* ---- LVDS0 panel backlight (PWM1 dimming + enable GPIO) ---- */
@@ -809,6 +797,11 @@
 	status = "disabled";
 };
 
+/* DMA provider for SAI3 and the HDMI AUD2HTX playback path. */
+&sdma2 {
+	status = "okay";
+};
+
 /* ========== Watchdog ========== */
 /* SoC internal watchdog wdog1 (/dev/watchdog0) */
 &wdog1 {
@@ -833,7 +826,7 @@
 
 /* ========== HDMI: i.MX8MP native HDMI TX (no LT9611) ==========
  * lcdif3 -> hdmi_pavi -> hdmi is wired inside the 6.12 imx8mp.dtsi; here we
- * just enable the block and route hdmi_tx output to the connector. */
+ * only enable the blocks. The 6.12 DW-HDMI bridge creates its connector. */
 &hdmi_blk_ctrl {
 	/*
 	 * The board imx8mp.dtsi strips the "noc" node down to compatible+reg
@@ -848,7 +841,7 @@
 	/delete-property/ interconnect-names;
 	/*
 	 * Expose the HDMIMIX reset controller (the mainline node omits this);
-	 * &hdmi_tx references IMX8MP_HDMIBLK_RESET_PAI to release the HDMI
+	 * &hdmi_pavi references IMX8MP_HDMIBLK_RESET_PAI to release the HDMI
 	 * parallel audio interface for HDMI audio.
 	 */
 	#reset-cells = <1>;
@@ -880,18 +873,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hdmi>;
 	status = "okay";
-
-	ports {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		port@1 {
-			reg = <1>;
-			hdmi_tx_out: endpoint {
-				remote-endpoint = <&hdmi_con>;
-			};
-		};
-	};
 };
 
 /*

@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
 
-subdir-y += myir
 
 dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls1012a-2g5rdb.dtb
 dtb-$(CONFIG_ARCH_LAYERSCAPE) += fsl-ls1012a-frdm.dtb

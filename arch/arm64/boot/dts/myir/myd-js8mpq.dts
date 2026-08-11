@@ -357,6 +357,23 @@
 &A53_2 { cpu-supply = <&buck2>; };
 &A53_3 { cpu-supply = <&buck2>; };
 
+/* Vivante GPU/NPU cores used by Galcore and Weston's G2D renderer. */
+&gpu_3d {
+	status = "okay";
+};
+
+&gpu_2d {
+	status = "okay";
+};
+
+&ml_vipsi {
+	status = "okay";
+};
+
+&mix_gpu_ml {
+	status = "okay";
+};
+
 /*
  * I2C2: TCA9555/PCA9555 GPIO expander @0x20 + BL24C32F EEPROM @0x50 (both verified here).
  * (RTC verified on i2c3, see dedicated commit; ES8388 tbd audio.)

@@ -172,13 +172,16 @@ imx8mp_ldb_encoder_atomic_check(struct drm_encoder *encoder,
 	}
 
 	/*
-	 * Due to limited video PLL frequency points on i.MX8mp,
-	 * we do mode fixup here in case any mode is unsupported.
+	 * A fixed panel supplies its native pixel clock in the display timing.
+	 * Keep it unchanged, matching mode_valid() which accepts panel modes.
+	 * Retain the downstream PLL frequency fixup for non-panel outputs.
 	 */
-	if (ldb->dual)
-		mode->clock = mode->clock > 100000 ? 148500 : 74250;
-	else
-		mode->clock = 74250;
+	if (!ldb_ch->panel) {
+		if (ldb->dual)
+			mode->clock = mode->clock > 100000 ? 148500 : 74250;
+		else
+			mode->clock = 74250;
+	}
 
 	return 0;
 }

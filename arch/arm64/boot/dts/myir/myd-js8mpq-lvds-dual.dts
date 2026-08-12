@@ -4,21 +4,22 @@
  *
  * MYD-JS8MPQ with a dual-link (dual-channel) LVDS panel.
  *
- * One 1280x1024 SXGA panel is driven by BOTH LDB channels in split mode:
- * channel 0 carries the odd pixels, channel 1 the even pixels (fsl-ldb only
- * supports the ODD/EVEN order). The 108 MHz pixel clock is halved per channel
- * (54 MHz), within the LDB limits.
+ * One 1280x1024 SXGA panel is driven by both LDB channels in split mode.
+ * Match the NXP i.MX8MP vendor-driver binding: channel 0 owns the logical
+ * panel connection and fsl,dual-channel makes channel 1 an auxiliary link.
+ * The 108 MHz pixel clock is halved per channel (54 MHz), within the LDB
+ * limits.
  *
  * Because the panel uses both channels, BOTH baseboard/core-module path
  * switches are selected (i.e. LVDS0 + LVDS1 routing together):
  *   - ch0 baseboard select  = GPIO1_IO07            low  (inherited from base)
- *   - ch1 core-module SEL2   = gpio_expander line 12 low  (LVDS1/DSI mux)
+ *   - ch1 core-module SEL2   = gpio_expander line 10 low  (LVDS1/DSI mux)
  *   - ch1 baseboard select   = GPIO4_IO21            low
  *
  * Backlight: PWM1 on GPIO1_IO08 dimming + enable GPIO1_IO13.
  *
  * Shares the one LDB + lcdif2 source with the LVDS0/LVDS1 single-link dtbs,
- * so it is a separate, mutually exclusive dtb: boot this one for the WUXGA
+ * so it is a separate, mutually exclusive dtb: boot this one for the SXGA
  * dual-link panel.
  */
 
@@ -58,24 +59,9 @@
 			de-active = <1>;
 		};
 
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {
-				reg = <0>;
-				dual-lvds-odd-pixels;
-				panel_in_odd: endpoint {
-					remote-endpoint = <&ldb_lvds_ch0>;
-				};
-			};
-
-			port@1 {
-				reg = <1>;
-				dual-lvds-even-pixels;
-				panel_in_even: endpoint {
-					remote-endpoint = <&ldb_lvds_ch1>;
-				};
+		port {
+			panel_in_lvds_dual: endpoint {
+				remote-endpoint = <&ldb_lvds_ch0>;
 			};
 		};
 	};
@@ -88,28 +74,15 @@
  * (LDB), avoiding the "Configured clock does not match" deficit.
  */
 &ldb {
+	fsl,dual-channel;
 	assigned-clocks = <&clk IMX8MP_CLK_MEDIA_LDB>, <&clk IMX8MP_VIDEO_PLL1>;
 	assigned-clock-parents = <&clk IMX8MP_VIDEO_PLL1_OUT>;
 	assigned-clock-rates = <0>, <756000000>;
-
-	lvds-channel@1 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		status = "okay";
-
-		port@1 {
-			reg = <1>;
-
-			ldb_lvds_ch1: endpoint {
-				remote-endpoint = <&panel_in_even>;
-			};
-		};
-	};
 };
 
-/* LDB: drive both channels so fsl-ldb enters split / dual-link mode. */
+/* Channel 0 owns the panel; fsl,dual-channel enables channel 1 internally. */
 &ldb_lvds_ch0 {
-	remote-endpoint = <&panel_in_odd>;
+	remote-endpoint = <&panel_in_lvds_dual>;
 };
 
 /*

@@ -569,8 +569,8 @@
 	pinctrl-0 = <&pinctrl_uart3>;
 	assigned-clocks = <&clk IMX8MP_CLK_UART3>;
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
+	uart-has-rtscts;
 	linux,rs485-enabled-at-boot-time;
-	rts-gpios = <&gpio2 10 GPIO_ACTIVE_HIGH>;
 	status = "okay";
 };
 
@@ -904,7 +904,7 @@
 
 	hdmi-mux-sel-hog {
 		gpio-hog;
-		gpios = <11 GPIO_ACTIVE_HIGH>;
+		gpios = <10 GPIO_ACTIVE_HIGH>;
 		output-low;
 		line-name = "hdmi_mux_sel";
 	};
@@ -1105,7 +1105,7 @@
 
 	pinctrl_hdmi_mux: hdmimuxgrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SD1_STROBE__GPIO2_IO11	0x140
+			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10	0x140
 		>;
 	};
 
@@ -1168,7 +1168,7 @@
 		fsl,pins = <
 			MX8MP_IOMUXC_SD1_DATA6__UART3_DCE_TX	0x140
 			MX8MP_IOMUXC_SD1_DATA7__UART3_DCE_RX	0x140
-			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10	0x41
+			MX8MP_IOMUXC_SD1_STROBE__UART3_DTE_RTS	0x140
 		>;
 	};
 

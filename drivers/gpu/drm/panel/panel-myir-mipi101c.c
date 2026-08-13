@@ -70,16 +70,31 @@ struct rad_panel {
 
 struct rad_platform_data {
 	int (*enable)(struct rad_panel *panel);
+	const struct drm_display_mode *default_mode;
+	bool parse_dt_mode;
+	bool use_dt_backlight;
+	bool stop_on_dcs_error;
+	bool recover_disable_state;
 };
 
-static const struct drm_display_mode default_mode = {
-	/*
-	 * 173.25 MHz (not the panel's nominal 165.2) so the pixel clock is an
-	 * exact /6 of the default VIDEO_PLL1 (1039.5 MHz) on i.MX8MP.  This keeps
-	 * lcdif1, the Samsung DSIM mode clock and the derived DSI HS clock all
-	 * consistent on one stable PLL — forcing VIDEO_PLL1 to an odd 991.2 MHz
-	 * to hit 165.2 MHz was unstable (flicker/black).  Refresh ~61.5 Hz.
-	 */
+static const struct drm_display_mode mipi101c_default_mode = {
+	.clock          = 165200,
+	.hdisplay       = 1200,
+	.hsync_start    = 1200 + 255,
+	.hsync_end      = 1200 + 255 + 1,
+	.htotal         = 1200 + 255 + 1 + 4,
+	.vdisplay       = 1920,
+	.vsync_start    = 1920 + 3,
+	.vsync_end      = 1920 + 3 + 1,
+	.vtotal         = 1920 + 3 + 1 + 5,
+	.width_mm = 135,
+	.height_mm = 216,
+	.flags = DRM_MODE_FLAG_NHSYNC |
+		 DRM_MODE_FLAG_NVSYNC,
+};
+
+static const struct drm_display_mode mipi101c_imx8mp_default_mode = {
+	/* Stable fallback when the JS8MP DT does not provide panel-timing. */
 	.clock          = 173250,
 	.hdisplay       = 1200,
 	.hsync_start    = 1200 + 255,
@@ -202,13 +217,15 @@ static int mipi101c_enable(struct rad_panel *panel)
 		 * watchdog is not fed in time and resets the board.
 		 */
 		dev_err(dev, "Failed to set tear ON (%d)\n", ret);
-		return ret;
+		if (panel->pdata->stop_on_dcs_error)
+			return ret;
 	}
 
 	ret = mipi_dsi_dcs_set_tear_scanline(dsi, 0x00);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set tear scanline (%d)\n", ret);
-		return ret;
+		if (panel->pdata->stop_on_dcs_error)
+			return ret;
 	}
 
 	usleep_range(50, 100);
@@ -216,13 +233,15 @@ static int mipi101c_enable(struct rad_panel *panel)
 	dev_dbg(dev, "Interface color format set to 0x%x\n", color_format);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set pixel format (%d)\n", ret);
-		return ret;
+		if (panel->pdata->stop_on_dcs_error)
+			return ret;
 	}
 
 	ret = mipi_dsi_dcs_exit_sleep_mode(dsi);
 	if (ret < 0) {
 		dev_err(dev, "Failed to exit sleep mode (%d)\n", ret);
-		return ret;
+		if (panel->pdata->stop_on_dcs_error)
+			return ret;
 	}
 
 	usleep_range(5000, 7000);
@@ -230,7 +249,8 @@ static int mipi101c_enable(struct rad_panel *panel)
 	ret = mipi_dsi_dcs_set_display_on(dsi);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set display ON (%d)\n", ret);
-		return ret;
+		if (panel->pdata->stop_on_dcs_error)
+			return ret;
 	}
 
 	backlight_enable(panel->backlight);
@@ -266,6 +286,8 @@ static int rad_panel_disable(struct drm_panel *panel)
 	ret = mipi_dsi_dcs_set_display_off(dsi);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set display OFF (%d)\n", ret);
+		if (!rad->pdata->recover_disable_state)
+			return ret;
 		err = ret;
 	}
 
@@ -274,6 +296,8 @@ static int rad_panel_disable(struct drm_panel *panel)
 	ret = mipi_dsi_dcs_enter_sleep_mode(dsi);
 	if (ret < 0) {
 		dev_err(dev, "Failed to enter sleep mode (%d)\n", ret);
+		if (!rad->pdata->recover_disable_state)
+			return ret;
 		if (!err)
 			err = ret;
 	}
@@ -288,7 +312,8 @@ static int rad_panel_get_modes(struct drm_panel *panel,
 {
 	struct rad_panel *rad = to_rad_panel(panel);
 	const struct drm_display_mode *src = rad->dt_mode_valid ?
-					     &rad->dt_mode : &default_mode;
+					     &rad->dt_mode :
+					     rad->pdata->default_mode;
 	struct drm_display_mode *mode;
 
 	mode = drm_mode_duplicate(connector->dev, src);
@@ -389,6 +414,16 @@ static int rad_init_regulators(struct rad_panel *rad)
 
 static const struct rad_platform_data rad_mipi101c = {
 	.enable = &mipi101c_enable,
+	.default_mode = &mipi101c_default_mode,
+};
+
+static const struct rad_platform_data rad_mipi101c_imx8mp = {
+	.enable = &mipi101c_enable,
+	.default_mode = &mipi101c_imx8mp_default_mode,
+	.parse_dt_mode = true,
+	.use_dt_backlight = true,
+	.stop_on_dcs_error = true,
+	.recover_disable_state = true,
 };
 
 static const struct of_device_id rad_of_match[] = {
@@ -397,17 +432,24 @@ static const struct of_device_id rad_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, rad_of_match);
 
+static const struct of_device_id rad_imx8mp_of_match[] = {
+	{ .compatible = "myir,mipi101c-imx8mp",
+	  .data = &rad_mipi101c_imx8mp },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, rad_imx8mp_of_match);
+
 static int rad_panel_probe(struct mipi_dsi_device *dsi)
 {
 	struct device *dev = &dsi->dev;
-	const struct of_device_id *of_id = of_match_device(rad_of_match, dev);
+	const struct rad_platform_data *pdata = of_device_get_match_data(dev);
 	struct device_node *np = dev->of_node;
 	struct rad_panel *panel;
 	struct backlight_properties bl_props;
 	int ret;
 	u32 video_mode;
 
-	if (!of_id || !of_id->data)
+	if (!pdata)
 		return -ENODEV;
 
 	panel = devm_kzalloc(&dsi->dev, sizeof(*panel), GFP_KERNEL);
@@ -417,7 +459,7 @@ static int rad_panel_probe(struct mipi_dsi_device *dsi)
 	mipi_dsi_set_drvdata(dsi, panel);
 
 	panel->dsi = dsi;
-	panel->pdata = of_id->data;
+	panel->pdata = pdata;
 
 	dsi->format = MIPI_DSI_FMT_RGB888;
 	dsi->mode_flags =  MIPI_DSI_MODE_VIDEO_HSE | MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_NO_EOT_PACKET;
@@ -451,28 +493,14 @@ static int rad_panel_probe(struct mipi_dsi_device *dsi)
 	/* Optional: override the hard-coded default_mode with a DT panel-timing
 	 * node, so pixel clock / porches / resolution can be tuned via the dtb
 	 * alone (no kernel rebuild).  Absent -> keep default_mode. */
-	if (!of_get_drm_panel_display_mode(np, &panel->dt_mode, NULL)) {
+	if (pdata->parse_dt_mode &&
+	    !of_get_drm_panel_display_mode(np, &panel->dt_mode, NULL)) {
 		panel->dt_mode_valid = true;
 		dev_info(dev, "using DT panel-timing: " DRM_MODE_FMT "\n",
 			 DRM_MODE_ARG(&panel->dt_mode));
 	}
 
-	ret = rad_init_regulators(panel);
-	if (ret)
-		return ret;
-
-	/* Use DT backlight (e.g. pwm-backlight) if specified; fall back
-	 * to the internal DCS-based backlight otherwise.
-	 * drm_panel_of_backlight() must be called after drm_panel_init().
-	 */
-	drm_panel_init(&panel->panel, dev, &rad_panel_funcs,
-		       DRM_MODE_CONNECTOR_DSI);
-
-	ret = drm_panel_of_backlight(&panel->panel);
-	if (ret)
-		return ret;
-	panel->backlight = panel->panel.backlight;
-	if (!panel->backlight) {
+	if (!pdata->use_dt_backlight) {
 		memset(&bl_props, 0, sizeof(bl_props));
 		bl_props.type = BACKLIGHT_RAW;
 		bl_props.brightness = 255;
@@ -481,9 +509,38 @@ static int rad_panel_probe(struct mipi_dsi_device *dsi)
 		panel->backlight = devm_backlight_device_register(dev, dev_name(dev),
 								  dev, dsi, &rad_bl_ops,
 								  &bl_props);
-		if (IS_ERR(panel->backlight))
-			return PTR_ERR(panel->backlight);
-		panel->panel.backlight = panel->backlight;
+		if (IS_ERR(panel->backlight)) {
+			ret = PTR_ERR(panel->backlight);
+			dev_err(dev, "Failed to register backlight (%d)\n", ret);
+			return ret;
+		}
+	}
+
+	ret = rad_init_regulators(panel);
+	if (ret)
+		return ret;
+
+	drm_panel_init(&panel->panel, dev, &rad_panel_funcs,
+		       DRM_MODE_CONNECTOR_DSI);
+
+	if (pdata->use_dt_backlight) {
+		ret = drm_panel_of_backlight(&panel->panel);
+		if (ret)
+			return ret;
+		panel->backlight = panel->panel.backlight;
+		if (!panel->backlight) {
+			memset(&bl_props, 0, sizeof(bl_props));
+			bl_props.type = BACKLIGHT_RAW;
+			bl_props.brightness = 255;
+			bl_props.max_brightness = 255;
+
+			panel->backlight = devm_backlight_device_register(dev,
+								  dev_name(dev), dev, dsi,
+								  &rad_bl_ops, &bl_props);
+			if (IS_ERR(panel->backlight))
+				return PTR_ERR(panel->backlight);
+			panel->panel.backlight = panel->backlight;
+		}
 	}
 	dev_set_drvdata(dev, panel);
 
@@ -527,22 +584,49 @@ static struct mipi_dsi_driver rad_panel_driver = {
 	.shutdown = rad_panel_shutdown,
 };
 
-/*
- * The i.MX8MP vendor sec-dsim driver registers its DSI host while the DRM
- * component master is binding.  Register this built-in panel driver first so
- * the panel can bind synchronously when the host creates panel@0.
- */
-static int __init rad_panel_driver_init(void)
-{
-	return mipi_dsi_driver_register(&rad_panel_driver);
-}
-subsys_initcall(rad_panel_driver_init);
+static struct mipi_dsi_driver rad_panel_imx8mp_driver = {
+	.driver = {
+		.name = "panel-myir-mipi101c-imx8mp",
+		.of_match_table = rad_imx8mp_of_match,
+	},
+	.probe = rad_panel_probe,
+	.remove = rad_panel_remove,
+	.shutdown = rad_panel_shutdown,
+};
 
-static void __exit rad_panel_driver_exit(void)
+#ifndef MODULE
+static int __init rad_panel_imx8mp_driver_init(void)
+{
+	return mipi_dsi_driver_register(&rad_panel_imx8mp_driver);
+}
+subsys_initcall(rad_panel_imx8mp_driver_init);
+
+/* Keep the legacy i.MX95-compatible driver at the source initcall level. */
+module_mipi_dsi_driver(rad_panel_driver);
+#else
+static int __init rad_panel_drivers_init(void)
+{
+	int ret;
+
+	ret = mipi_dsi_driver_register(&rad_panel_imx8mp_driver);
+	if (ret)
+		return ret;
+
+	ret = mipi_dsi_driver_register(&rad_panel_driver);
+	if (ret)
+		mipi_dsi_driver_unregister(&rad_panel_imx8mp_driver);
+
+	return ret;
+}
+module_init(rad_panel_drivers_init);
+
+static void __exit rad_panel_drivers_exit(void)
 {
 	mipi_dsi_driver_unregister(&rad_panel_driver);
+	mipi_dsi_driver_unregister(&rad_panel_imx8mp_driver);
 }
-module_exit(rad_panel_driver_exit);
+module_exit(rad_panel_drivers_exit);
+#endif
 
 MODULE_DESCRIPTION("DRM Driver for MYIR MIPI101C MIPI DSI panel");
 MODULE_LICENSE("GPL v2");

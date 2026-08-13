@@ -146,7 +146,7 @@
 	status = "okay";
 
 	panel@0 {
-		compatible = "myir,mipi101c";
+		compatible = "myir,mipi101c-imx8mp";
 		reg = <0>;
 		dsi-lanes = <4>;
 		/* 0: burst, 1: sync-event, 2: sync-pulse. */

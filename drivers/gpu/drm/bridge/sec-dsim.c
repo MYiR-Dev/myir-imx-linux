@@ -308,6 +308,7 @@ struct sec_mipi_dsim {
 	uint32_t pix_clk;
 	uint32_t bit_clk;
 	uint32_t pref_clk;			/* phy ref clock rate in KHz */
+	uint32_t burst_clk;			/* optional lane rate in KHz */
 
 	unsigned int lanes;
 	unsigned int channel;			/* virtual channel */
@@ -1263,6 +1264,23 @@ int sec_mipi_dsim_check_pll_out(void *driver_private,
 	pix_clk = mode->clock;
 	bit_clk = DIV_ROUND_UP(pix_clk * bpp, dsim->lanes);
 
+	/*
+	 * Burst mode needs enough lane-rate headroom for packet overhead and
+	 * blanking.  Keep the calculated minimum by default, but allow boards
+	 * with a measured panel/link requirement to request a higher rate.
+	 */
+	if ((dsim->mode_flags & MIPI_DSI_MODE_VIDEO_BURST) &&
+	    dsim->burst_clk) {
+		if (dsim->burst_clk < bit_clk) {
+			dev_err(dsim->dev,
+				"burst lane rate %u kHz is below minimum %u kHz\n",
+				dsim->burst_clk, bit_clk);
+			return -EINVAL;
+		}
+
+		bit_clk = dsim->burst_clk;
+	}
+
 	if (bit_clk * 1000 > pdata->max_data_rate) {
 		dev_err(dsim->dev,
 			"reuest bit clk freq exceeds lane's maximum value\n");
@@ -1454,15 +1472,19 @@ disable:
 	if (!dsim->enabled)
 		return;
 
+	/*
+	 * Stop the video stream before sending panel shutdown commands.  The
+	 * controller is configured with no command slots in video mode, while
+	 * the escape/byte clocks and PLL must remain enabled for DCS transfers.
+	 */
+	sec_mipi_dsim_set_standby(dsim, false);
+
 	/* disable panel if exists */
 	if (dsim->panel) {
 		ret = drm_panel_disable(dsim->panel);
 		if (unlikely(ret))
 			dev_err(dsim->dev, "panel disable failed: %d\n", ret);
 	}
-
-	/* disable data transfer of dsim */
-	sec_mipi_dsim_set_standby(dsim, false);
 
 	/* disable esc clock & byte clock */
 	sec_mipi_dsim_disable_clkctrl(dsim);
@@ -1989,6 +2011,18 @@ int sec_mipi_dsim_bind(struct device *dev, struct device *master, void *data,
 	dsim->base = base;
 	dsim->pdata = pdata;
 	dsim->encoder = encoder;
+
+	ret = of_property_read_u32(dev->of_node,
+				   "samsung,burst-clock-frequency",
+				   &dsim->burst_clk);
+	if (!ret) {
+		dsim->burst_clk = DIV_ROUND_UP(dsim->burst_clk, 1000);
+		dev_info(dev, "burst lane rate override: %u kHz\n",
+			 dsim->burst_clk);
+	} else if (ret != -EINVAL && ret != -ENODATA) {
+		return dev_err_probe(dev, ret,
+				     "failed to read burst lane rate\n");
+	}
 
 	dsim->dsi_host.ops = &sec_mipi_dsim_host_ops;
 	dsim->dsi_host.dev = dev;

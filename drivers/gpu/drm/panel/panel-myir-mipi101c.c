@@ -252,7 +252,7 @@ static int rad_panel_disable(struct drm_panel *panel)
 	struct rad_panel *rad = to_rad_panel(panel);
 	struct mipi_dsi_device *dsi = rad->dsi;
 	struct device *dev = &dsi->dev;
-	int ret;
+	int ret, err = 0;
 
 	if (!rad->enabled)
 		return 0;
@@ -266,7 +266,7 @@ static int rad_panel_disable(struct drm_panel *panel)
 	ret = mipi_dsi_dcs_set_display_off(dsi);
 	if (ret < 0) {
 		dev_err(dev, "Failed to set display OFF (%d)\n", ret);
-		return ret;
+		err = ret;
 	}
 
 	usleep_range(5000, 10000);
@@ -274,12 +274,13 @@ static int rad_panel_disable(struct drm_panel *panel)
 	ret = mipi_dsi_dcs_enter_sleep_mode(dsi);
 	if (ret < 0) {
 		dev_err(dev, "Failed to enter sleep mode (%d)\n", ret);
-		return ret;
+		if (!err)
+			err = ret;
 	}
 
 	rad->enabled = false;
 
-	return 0;
+	return err;
 }
 
 static int rad_panel_get_modes(struct drm_panel *panel,
@@ -525,7 +526,23 @@ static struct mipi_dsi_driver rad_panel_driver = {
 	.remove = rad_panel_remove,
 	.shutdown = rad_panel_shutdown,
 };
-module_mipi_dsi_driver(rad_panel_driver);
+
+/*
+ * The i.MX8MP vendor sec-dsim driver registers its DSI host while the DRM
+ * component master is binding.  Register this built-in panel driver first so
+ * the panel can bind synchronously when the host creates panel@0.
+ */
+static int __init rad_panel_driver_init(void)
+{
+	return mipi_dsi_driver_register(&rad_panel_driver);
+}
+subsys_initcall(rad_panel_driver_init);
+
+static void __exit rad_panel_driver_exit(void)
+{
+	mipi_dsi_driver_unregister(&rad_panel_driver);
+}
+module_exit(rad_panel_driver_exit);
 
 MODULE_DESCRIPTION("DRM Driver for MYIR MIPI101C MIPI DSI panel");
 MODULE_LICENSE("GPL v2");

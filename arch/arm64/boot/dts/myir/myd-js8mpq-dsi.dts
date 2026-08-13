@@ -4,14 +4,8 @@
  *
  * MYD-JS8MPQ with the MIPI DSI panel (MYIR mipi101c) instead of LVDS.
  *
- * Phase 1 (this dtb): DSI host + mux enabled, panel@0 omitted.
- *   Without a physical DSI panel the DRM fbdev hotplug would trigger a
- *   modeset that sends DSI DCS commands through a dead link -> DSI host
- *   hangs -> SGM820B watchdog resets the board.
- *   Once the panel is plugged in, add panel@0 under &mipi_dsi.
- *   See docs/02-peripheral-status.md for the DSI entry.
- *
- * Display path (when panel added): lcdif1 -> Samsung DSIM -> panel@0
+ * Display path: lcdif1 -> Samsung DSIM -> MYIR MIPI101C panel.
+ * The panel uses 1200x1920 sync-pulse video mode at 165.2 MHz.
  *
  * DSI mux selection (both HIGH, opposite of LVDS1):
  *   - core module SEL2 = PCA9555 EIO_P12 (gpio_expander line 10)
@@ -134,34 +128,29 @@
 
 /* ========== Enable DSI host with panel ========== */
 &lcdif1 {
-	/* Keep the stable SoC VIDEO_PLL1 rate; LCDIF selects the closest rate. */
-	assigned-clocks = <&clk IMX8MP_CLK_MEDIA_DISP1_PIX>,
+	/* Generate the 165.2 MHz pixel clock exactly from 991.2 MHz / 6. */
+	assigned-clocks = <&clk IMX8MP_VIDEO_PLL1>,
+			  <&clk IMX8MP_CLK_MEDIA_DISP1_PIX>,
 			  <&clk IMX8MP_CLK_MEDIA_AXI>,
 			  <&clk IMX8MP_CLK_MEDIA_APB>;
-	assigned-clock-parents = <&clk IMX8MP_VIDEO_PLL1_OUT>,
+	assigned-clock-parents = <0>,
+				 <&clk IMX8MP_VIDEO_PLL1_OUT>,
 				 <&clk IMX8MP_SYS_PLL2_1000M>,
 				 <&clk IMX8MP_SYS_PLL1_800M>;
-	assigned-clock-rates = <0>, <500000000>, <200000000>;
+	assigned-clock-rates = <991200000>, <165200000>,
+			       <500000000>, <200000000>;
 	status = "okay";
 };
 
 &mipi_dsi {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	/*
-	 * The 148.5 MHz RGB888 mode needs at least 891 Mbps per lane.  Hardware
-	 * testing shows that this panel loses the image at the minimum rate, so
-	 * provide burst headroom while keeping the pixel timing unchanged.
-	 */
-	samsung,burst-clock-frequency = <1200000000>;
 	status = "okay";
 
 	panel@0 {
 		compatible = "myir,mipi101c";
 		reg = <0>;
 		dsi-lanes = <4>;
-		/* i.MX8MP hardware test: burst mode is required to light pixels. */
-		video-mode = <0>;		/* 0=burst, 1=sync-event, 2=sync-pulse */
+		/* 0: burst, 1: sync-event, 2: sync-pulse. */
+		video-mode = <2>;
 		panel-width-mm = <135>;
 		panel-height-mm = <216>;
 		backlight = <&dsi_backlight>;
@@ -169,24 +158,20 @@
 		v3p3-supply = <&reg_dsi_v3p3>;
 		v1p8-supply = <&reg_dsi_v1p8>;
 
-		/*
-		 * Tunable timing (panel-myir-mipi101c reads this and overrides its
-		 * built-in mode).  Adjust clock-frequency / porches here and rebuild
-		 * ONLY the dtb to sweep — no kernel rebuild.  Use the 148.5 MHz
-		 * i.MX8MP test point with burst mode; the i.MX95 165.2 MHz
-		 * sync-pulse setting leaves this board's panel black.
-		 */
-		/* of_get_drm_panel_display_mode() requires these standard-named
-		 * physical-size props (separate from panel-width-mm above). */
+		/* Standard physical size used by the DT panel-timing parser. */
 		width-mm = <135>;
 		height-mm = <216>;
 
+		/*
+		 * Keep the 260-pixel horizontal blanking total while providing
+		 * enough HSA and HBP space for sync-pulse packet overhead.
+		 */
 		panel-timing {
-			clock-frequency = <148500000>;
+			clock-frequency = <165200000>;
 			hactive = <1200>;
-			hfront-porch = <255>;
-			hsync-len = <1>;
-			hback-porch = <4>;
+			hfront-porch = <228>;
+			hsync-len = <12>;
+			hback-porch = <20>;
 			vactive = <1920>;
 			vfront-porch = <3>;
 			vsync-len = <1>;

@@ -1,0 +1,159 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * MYD-JS8MPQ HDMI + OV13855 ISP camera variant.
+ *
+ * Pipeline: OV13855 (4-lane Bayer RAW10) -> mipi_csi_0 -> isp_0 -> dewarp
+ *
+ * This file deliberately derives from the board base DTS, rather than the
+ * direct-ISI OV13855 variant, so the two camera pipelines remain independent.
+ */
+
+#include "myd-js8mpq.dts"
+
+/ {
+	model = "MYIR MYD-JS8MPQ board (HDMI + OV13855 ISP)";
+};
+
+/* HDMI is inherited from the base DTS; disable the LVDS0 display path. */
+&lcdif2 {
+	status = "disabled";
+};
+
+&ldb {
+	status = "disabled";
+};
+
+&ldb_lvds_ch0 {
+	/delete-property/ remote-endpoint;
+};
+
+&panel_in_lvds {
+	/delete-property/ remote-endpoint;
+};
+
+&panel_lvds {
+	status = "disabled";
+};
+
+&ldb_phy {
+	status = "disabled";
+};
+
+&pwm1 {
+	status = "disabled";
+};
+
+&lvds_backlight {
+	status = "disabled";
+};
+
+&lvds_touch {
+	status = "disabled";
+};
+
+&gpio1 {
+	/delete-node/ lvds0-sel-hog;
+};
+
+/* This single-camera variant replaces both inherited camera paths. */
+&ov5640_0 {
+	status = "disabled";
+};
+
+&ov5640_0_ep {
+	/delete-property/ remote-endpoint;
+};
+
+&mipi_csi_1 {
+	status = "disabled";
+};
+
+&mipi_csi1_in {
+	/delete-property/ remote-endpoint;
+};
+
+/*
+ * OV13855 uses the CSI1 connector resources: i2c2, 24 MHz xclk,
+ * GPIO4_IO00 reset, GPIO4_IO01 power-down and the CSI1 power rail.
+ */
+&i2c2 {
+	/delete-node/ camera@31;
+
+	ov13855_isp: camera@36 {
+		compatible = "ovti,ov13855";
+		reg = <0x36>;
+		clocks = <&cam_clk_24m>;
+		clock-names = "xvclk";
+		clock-frequency = <24000000>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		csi_id = <0>;
+		avdd-supply = <&reg_csi1_pwr>;
+		dovdd-supply = <&reg_csi1_pwr>;
+		dvdd-supply = <&reg_csi1_pwr>;
+		reset-gpios = <&gpio4 0 GPIO_ACTIVE_HIGH>;
+		pwdn-gpios = <&gpio4 1 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_csi1>;
+		status = "okay";
+
+		port {
+			ov13855_isp_ep: endpoint {
+				remote-endpoint = <&mipi_csi0_isp_in>;
+				data-lanes = <1 2 3 4>;
+				clock-lanes = <0>;
+				max-pixel-frequency = /bits/ 64 <500000000>;
+			};
+		};
+	};
+};
+
+&cameradev {
+	status = "okay";
+};
+
+&mipi_csi_0 {
+	status = "okay";
+	/delete-node/ ports;
+	/delete-node/ port;
+
+	port {
+		mipi_csi0_isp_in: endpoint {
+			remote-endpoint = <&ov13855_isp_ep>;
+			/* The NXP host driver interprets this cell as lane count. */
+			data-lanes = <4>;
+			clock-lanes = <0>;
+			csis-hs-settle = <10>;
+			csis-clk-settle = <2>;
+			csis-wclk;
+		};
+	};
+};
+
+&isi_0 {
+	status = "disabled";
+
+	cap_device {
+		status = "disabled";
+	};
+};
+
+&isi_1 {
+	status = "disabled";
+
+	cap_device {
+		status = "disabled";
+	};
+};
+
+&isp_0 {
+	status = "okay";
+};
+
+&isp_1 {
+	status = "disabled";
+};
+
+&dewarp {
+	status = "okay";
+};

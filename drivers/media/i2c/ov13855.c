@@ -19,16 +19,21 @@
 #include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
+#include <linux/of_graph.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/sysfs.h>
 #include <linux/slab.h>
+#include <linux/uaccess.h>
 #include <linux/version.h>
+#include <linux/vmalloc.h>
 #include <media/media-entity.h>
 #include <media/v4l2-async.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-subdev.h>
 #include <linux/pinctrl/consumer.h>
+
+#include "vvsensor.h"
 
 #define DRIVER_VERSION			KERNEL_VERSION(0, 0x01, 0x04)
 
@@ -85,7 +90,7 @@
 #define OF_CAMERA_PINCTRL_STATE_SLEEP	"sleep"
 
 #define OV13855_NAME			"ov13855"
-#define OV13855_MEDIA_BUS_FMT		MEDIA_BUS_FMT_SBGGR8_1X8
+#define OV13855_MEDIA_BUS_FMT		MEDIA_BUS_FMT_SBGGR10_1X10
 
 static const char * const ov13855_supply_names[] = {
 	"avdd",		/* Analog power */
@@ -140,6 +145,9 @@ struct ov13855 {
 	bool			streaming;
 	bool			power_on;
 	const struct ov13855_mode *cur_mode;
+	u32			csi_id;
+	u64			csi_max_pixel_clk;
+	u32			vvcam_fps;
 };
 
 #define to_ov13855(sd) container_of(sd, struct ov13855, subdev)
@@ -1273,11 +1281,11 @@ static const struct ov13855_mode supported_modes[] = {
 			.numerator = 10000,
 			.denominator = 600000,
 		},
-		.exp_def = 0x3a98,
+		.exp_def = 0x0400,
 		.gain_def = 0x0120,
 		.hts_def = 0x0462,
-		.vts_def = 0x3cd0,
-		.bpp = 8,
+		.vts_def = 0x0648,
+		.bpp = 10,
 		.reg_list = ov13855_2112x1568_60fps_regs,
 		.link_freq_idx = 1,
 	},
@@ -1844,6 +1852,235 @@ static int ov13855_get_selection(struct v4l2_subdev *sd,
 	return -EINVAL;
 }
 
+static int ov13855_vvcam_copy_from(void *dst, const void *src, size_t size)
+{
+#ifdef CONFIG_HARDENED_USERCOPY
+	return copy_from_user(dst, src, size) ? -EFAULT : 0;
+#else
+	memcpy(dst, src, size);
+	return 0;
+#endif
+}
+
+static int ov13855_vvcam_copy_to(void *dst, const void *src, size_t size)
+{
+#ifdef CONFIG_HARDENED_USERCOPY
+	return copy_to_user(dst, src, size) ? -EFAULT : 0;
+#else
+	memcpy(dst, src, size);
+	return 0;
+#endif
+}
+
+static void ov13855_vvcam_fill_mode(struct ov13855 *ov13855,
+				    struct vvcam_mode_info_s *mode)
+{
+	const struct ov13855_mode *sensor_mode = &supported_modes[1];
+	u32 fps = 60U << SENSOR_FIX_FRACBITS;
+
+	memset(mode, 0, sizeof(*mode));
+	mode->index = 0;
+	mode->size.bounds_width = sensor_mode->width;
+	mode->size.bounds_height = sensor_mode->height;
+	mode->size.width = sensor_mode->width;
+	mode->size.height = sensor_mode->height;
+	mode->hdr_mode = SENSOR_MODE_LINEAR;
+	mode->bit_width = sensor_mode->bpp;
+	mode->bayer_pattern = BAYER_BGGR;
+	mode->ae_info.def_frm_len_lines = sensor_mode->vts_def;
+	if (ov13855->cur_mode == sensor_mode)
+		mode->ae_info.curr_frm_len_lines = sensor_mode->height +
+						     ov13855->vblank->val;
+	else
+		mode->ae_info.curr_frm_len_lines = sensor_mode->vts_def;
+	mode->ae_info.one_line_exp_time_ns =
+		DIV_ROUND_CLOSEST_ULL(NSEC_PER_SEC,
+				      60ULL * sensor_mode->vts_def);
+	mode->ae_info.max_integration_line =
+		mode->ae_info.curr_frm_len_lines - 4;
+	mode->ae_info.min_integration_line = OV13855_EXPOSURE_MIN;
+	mode->ae_info.max_again = 31U << (SENSOR_FIX_FRACBITS - 1);
+	mode->ae_info.min_again = 1U << SENSOR_FIX_FRACBITS;
+	mode->ae_info.max_dgain = 1U << SENSOR_FIX_FRACBITS;
+	mode->ae_info.min_dgain = 1U << SENSOR_FIX_FRACBITS;
+	mode->ae_info.start_exposure =
+		800U << SENSOR_FIX_FRACBITS;
+	mode->ae_info.gain_step = 1;
+	mode->ae_info.cur_fps = ov13855->vvcam_fps ?: fps;
+	mode->ae_info.max_fps = fps;
+	mode->ae_info.min_fps = 1U << SENSOR_FIX_FRACBITS;
+	mode->ae_info.min_afps = 5U << SENSOR_FIX_FRACBITS;
+	mode->ae_info.int_update_delay_frm = 1;
+	mode->ae_info.gain_update_delay_frm = 1;
+	mode->mipi_info.mipi_lane = OV13855_LANES;
+}
+
+static int ov13855_vvcam_query_cap(struct ov13855 *ov13855, void *arg)
+{
+	struct v4l2_capability *cap = arg;
+
+	memset(cap, 0, sizeof(*cap));
+	strscpy(cap->driver, OV13855_NAME, sizeof(cap->driver));
+	snprintf(cap->bus_info, sizeof(cap->bus_info), "csi%u", ov13855->csi_id);
+	if (ov13855->client->adapter)
+		cap->bus_info[VVCAM_CAP_BUS_INFO_I2C_ADAPTER_NR_POS] =
+			ov13855->client->adapter->nr;
+	else
+		cap->bus_info[VVCAM_CAP_BUS_INFO_I2C_ADAPTER_NR_POS] = 0xff;
+
+	return 0;
+}
+
+static int ov13855_vvcam_query_modes(struct ov13855 *ov13855, void *arg)
+{
+	struct vvcam_mode_info_array_s *modes;
+	int ret;
+
+	modes = vzalloc(sizeof(*modes));
+	if (!modes)
+		return -ENOMEM;
+	modes->count = 1;
+	ov13855_vvcam_fill_mode(ov13855, &modes->modes[0]);
+	ret = ov13855_vvcam_copy_to(arg, modes, sizeof(*modes));
+	vfree(modes);
+
+	return ret;
+}
+
+static int ov13855_vvcam_set_mode(struct ov13855 *ov13855, void *arg)
+{
+	struct v4l2_subdev_format fmt = {
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+		.pad = 0,
+		.format = {
+			.width = 1920,
+			.height = 1080,
+			.code = OV13855_MEDIA_BUS_FMT,
+		},
+	};
+	struct vvcam_mode_info_s mode;
+	int ret;
+
+	ret = copy_from_user(&mode, arg, sizeof(mode)) ? -EFAULT : 0;
+	if (ret)
+		return ret;
+	if (mode.index != 0)
+		return -EINVAL;
+
+	ov13855->vvcam_fps = 60U << SENSOR_FIX_FRACBITS;
+	return ov13855_set_fmt(&ov13855->subdev, NULL, &fmt);
+}
+
+static int ov13855_vvcam_set_fps(struct ov13855 *ov13855, u32 fps)
+{
+	const struct ov13855_mode *mode = &supported_modes[1];
+	u32 max_fps = 60U << SENSOR_FIX_FRACBITS;
+	u32 min_fps = 1U << SENSOR_FIX_FRACBITS;
+	u32 vts;
+
+	fps = clamp(fps, min_fps, max_fps);
+	vts = div_u64((u64)max_fps * mode->vts_def, fps);
+	vts = clamp_t(u32, vts, mode->vts_def, OV13855_VTS_MAX);
+	ov13855->vvcam_fps = fps;
+
+	return v4l2_ctrl_s_ctrl(ov13855->vblank, vts - mode->height);
+}
+
+static long ov13855_vvcam_ioctl(struct v4l2_subdev *sd,
+				unsigned int cmd, void *arg)
+{
+	struct ov13855 *ov13855 = to_ov13855(sd);
+	struct vvcam_sccb_data_s reg;
+	struct vvcam_clk_s clk;
+	struct sensor_test_pattern_s test_pattern;
+	struct vvcam_mode_info_s mode;
+	u32 value;
+	int on;
+	int ret;
+
+	switch (cmd) {
+	case VIDIOC_QUERYCAP:
+		return ov13855_vvcam_query_cap(ov13855, arg);
+	case VVSENSORIOC_RESET:
+	case VVSENSORIOC_S_CLK:
+	case VVSENSORIOC_S_INIT:
+		return 0;
+	case VVSENSORIOC_S_POWER:
+		ret = ov13855_vvcam_copy_from(&on, arg, sizeof(on));
+		return ret ?: ov13855_s_power(sd, on);
+	case VVSENSORIOC_G_POWER:
+		value = ov13855->power_on;
+		return ov13855_vvcam_copy_to(arg, &value, sizeof(value));
+	case VVSENSORIOC_G_CLK:
+		memset(&clk, 0, sizeof(clk));
+		clk.status = ov13855->power_on;
+		clk.sensor_mclk = clk_get_rate(ov13855->xvclk);
+		clk.csi_max_pixel_clk = ov13855->csi_max_pixel_clk;
+		return copy_to_user(arg, &clk, sizeof(clk)) ? -EFAULT : 0;
+	case VVSENSORIOC_QUERY:
+		return ov13855_vvcam_query_modes(ov13855, arg);
+	case VVSENSORIOC_G_SENSOR_MODE:
+		ov13855_vvcam_fill_mode(ov13855, &mode);
+		return copy_to_user(arg, &mode, sizeof(mode)) ? -EFAULT : 0;
+	case VVSENSORIOC_S_SENSOR_MODE:
+		return ov13855_vvcam_set_mode(ov13855, arg);
+	case VVSENSORIOC_G_CHIP_ID:
+		value = CHIP_ID;
+		return copy_to_user(arg, &value, sizeof(value)) ? -EFAULT : 0;
+	case VVSENSORIOC_G_RESERVE_ID:
+		value = CHIP_ID;
+		return copy_to_user(arg, &value, sizeof(value)) ? -EFAULT : 0;
+	case VVSENSORIOC_S_STREAM:
+		ret = ov13855_vvcam_copy_from(&on, arg, sizeof(on));
+		return ret ?: ov13855_s_stream(sd, on);
+	case VVSENSORIOC_WRITE_REG:
+		ret = copy_from_user(&reg, arg, sizeof(reg)) ? -EFAULT : 0;
+		if (ret)
+			return ret;
+		return ov13855_write_reg(ov13855->client, reg.addr,
+					 OV13855_REG_VALUE_08BIT, reg.data);
+	case VVSENSORIOC_READ_REG:
+		ret = copy_from_user(&reg, arg, sizeof(reg)) ? -EFAULT : 0;
+		if (ret)
+			return ret;
+		ret = ov13855_read_reg(ov13855->client, reg.addr,
+					OV13855_REG_VALUE_08BIT, &reg.data);
+		return ret ?: (copy_to_user(arg, &reg, sizeof(reg)) ? -EFAULT : 0);
+	case VVSENSORIOC_S_EXP:
+		ret = ov13855_vvcam_copy_from(&value, arg, sizeof(value));
+		if (ret)
+			return ret;
+		return v4l2_ctrl_s_ctrl(ov13855->exposure,
+			clamp_t(u32, value, ov13855->exposure->minimum,
+				ov13855->exposure->maximum));
+	case VVSENSORIOC_S_GAIN:
+		ret = ov13855_vvcam_copy_from(&value, arg, sizeof(value));
+		if (ret)
+			return ret;
+		value = div_u64((u64)value * OV13855_GAIN_MIN,
+				BIT(SENSOR_FIX_FRACBITS));
+		return v4l2_ctrl_s_ctrl(ov13855->anal_gain,
+			clamp_t(u32, value, OV13855_GAIN_MIN, OV13855_GAIN_MAX));
+	case VVSENSORIOC_S_FPS:
+		ret = ov13855_vvcam_copy_from(&value, arg, sizeof(value));
+		return ret ?: ov13855_vvcam_set_fps(ov13855, value);
+	case VVSENSORIOC_G_FPS:
+		value = ov13855->vvcam_fps;
+		return ov13855_vvcam_copy_to(arg, &value, sizeof(value));
+	case VVSENSORIOC_S_TEST_PATTERN:
+		ret = ov13855_vvcam_copy_from(&test_pattern, arg,
+					       sizeof(test_pattern));
+		if (ret)
+			return ret;
+		value = test_pattern.enable ? test_pattern.pattern + 1 : 0;
+		return v4l2_ctrl_s_ctrl(ov13855->test_pattern,
+			clamp_t(u32, value, 0,
+				ARRAY_SIZE(ov13855_test_pattern_menu) - 1));
+	default:
+		return -ENOIOCTLCMD;
+	}
+}
+
 static const struct dev_pm_ops ov13855_pm_ops = {
 	SET_RUNTIME_PM_OPS(ov13855_runtime_suspend,
 			   ov13855_runtime_resume, NULL)
@@ -1857,6 +2094,7 @@ static const struct v4l2_subdev_internal_ops ov13855_internal_ops = {
 
 static const struct v4l2_subdev_core_ops ov13855_core_ops = {
 	.s_power = ov13855_s_power,
+	.ioctl = ov13855_vvcam_ioctl,
 };
 
 static const struct v4l2_subdev_video_ops ov13855_video_ops = {
@@ -2066,6 +2304,7 @@ static int ov13855_configure_regulators(struct ov13855 *ov13855)
 static int ov13855_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
+	struct device_node *endpoint;
 	struct ov13855 *ov13855;
 	struct v4l2_subdev *sd;
 	int ret;
@@ -2081,6 +2320,14 @@ static int ov13855_probe(struct i2c_client *client)
 
 	ov13855->client = client;
 	ov13855->cur_mode = &supported_modes[0];
+	ov13855->vvcam_fps = 60U << SENSOR_FIX_FRACBITS;
+	of_property_read_u32(dev->of_node, "csi_id", &ov13855->csi_id);
+	endpoint = of_graph_get_next_endpoint(dev->of_node, NULL);
+	if (endpoint) {
+		of_property_read_u64(endpoint, "max-pixel-frequency",
+				     &ov13855->csi_max_pixel_clk);
+		of_node_put(endpoint);
+	}
 
 	ov13855->xvclk = devm_clk_get(dev, "xvclk");
 	if (IS_ERR(ov13855->xvclk)) {

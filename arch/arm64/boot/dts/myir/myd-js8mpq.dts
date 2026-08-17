@@ -221,7 +221,7 @@
 		pwms = <&pwm1 0 100000 0>;	/* 100us period = 10kHz */
 		brightness-levels = <0 8 16 32 48 64 80 96 112 128
 				     144 160 176 192 208 224 240 255>;
-		default-brightness-level = <14>;
+		default-brightness-level = <144>;
 		enable-gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;	/* GPIO1_IO05 */
 	};
 
@@ -256,6 +256,7 @@
 			vsync-len = <3>;
 			vfront-porch = <12>;
 			vback-porch = <23>;
+			de-active = <1>;
 		};
 
 		port {
@@ -408,36 +409,6 @@
 		pagesize = <32>;
 	};
 
-	/* CSI1 camera: NEXTCHIP NVP6324 ("N4") 4-channel AHD decoder,
-	 * 4-lane MIPI YUV422 single-VC output; select the AHD input via
-	 * /sys/module/jaguar1_drv/parameters/jaguar1_active_ch.
-	 * reset=GPIO4_IO00, pwdn=GPIO4_IO01, power rail reg_csi1_pwr
-	 * (expander line 13, always-on). */
-	n4_csi1: camera@31 {
-		compatible = "jaguar1-v4l2";
-		reg = <0x31>;
-		clocks = <&cam_clk_24m>;
-		clock-names = "xvclk";
-		clock-frequency = <24000000>;
-		rst-gpios = <&gpio4 0 GPIO_ACTIVE_HIGH>;
-		pwd-gpios = <&gpio4 1 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_csi1>;
-		rockchip,camera-module-index = <0>;
-		rockchip,camera-module-facing = "back";
-		rockchip,camera-module-name = "default";
-		rockchip,camera-module-lens-name = "default";
-		rockchip,default_rect = <1920 1080>;
-		status = "okay";
-
-		port {
-			n4_csi1_ep: endpoint {
-				remote-endpoint = <&mipi_csi0_in>;
-				data-lanes = <1 2 3 4>;
-				clock-lanes = <0>;
-			};
-		};
-	};
 };
 
 /* ========== I2C3: RTC RX-8025T @0x32 + ES8390 audio codec ========== */
@@ -544,6 +515,10 @@
 	};
 };
 
+&snvs_rtc {
+	status = "disabled";
+};
+
 /* ========== UART ========== */
 /* UART2: debug console (USB Type-C CH342F) */
 &uart2 {
@@ -592,39 +567,44 @@
 	};
 };
 
-/* ========== eMMC: USDHC3 (8-bit, eMMC5.1) ========== */
-&usdhc3 {
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-	pinctrl-0 = <&pinctrl_usdhc3>;
-	pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
-	pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
-	bus-width = <8>;
-	non-removable;
-	status = "okay";
-};
-
-/* ========== SD card: USDHC2 (4-bit, UHS-I) ========== */
-&usdhc2 {
-	pinctrl-names = "default", "state_100mhz", "state_200mhz";
-	pinctrl-0 = <&pinctrl_usdhc2>, <&pinctrl_usdhc2_gpio>;
-	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
-	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
-	bus-width = <4>;
-	vmmc-supply = <&reg_usdhc2_vmmc>;
-	vqmmc-supply = <&ldo5>;
-	cd-gpios = <&gpio2 12 GPIO_ACTIVE_LOW>;
-	status = "okay";
-};
-
-/* ========== WiFi: USDHC1/SDIO (AW-XM729), powered via WLAN_EN regulator ========== */
 &usdhc1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usdhc1>;
-	bus-width = <4>;
-	non-removable;
-	keep-power-in-suspend;
-	vmmc-supply = <&reg_wifi_vmmc>;
-	status = "okay";
+        pinctrl-names = "default", "state_100mhz", "state_200mhz";
+        pinctrl-0 = <&pinctrl_usdhc1>;
+        pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
+        pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
+        keep-power-in-suspend;
+        non-removable;
+        wakeup-source;
+        //mmc-pwrseq = <&usdhc1_pwrseq>;
+        vmmc-supply = <&reg_wifi_vmmc>;
+        status = "okay";
+};
+
+&usdhc2 {
+        assigned-clocks = <&clk IMX8MP_CLK_USDHC2>;
+        assigned-clock-rates = <400000000>;
+        pinctrl-names = "default", "state_100mhz", "state_200mhz";
+        pinctrl-0 = <&pinctrl_usdhc2>, <&pinctrl_usdhc2_gpio>;
+        pinctrl-1 = <&pinctrl_usdhc2_100mhz>, <&pinctrl_usdhc2_gpio>;
+        pinctrl-2 = <&pinctrl_usdhc2_200mhz>, <&pinctrl_usdhc2_gpio>;
+        cd-gpios = <&gpio2 12 GPIO_ACTIVE_LOW>;
+        vmmc-supply = <&reg_usdhc2_vmmc>;
+        vqmmc-supply = <&ldo5>;
+        bus-width = <4>;
+        status = "okay";
+};
+
+
+&usdhc3 {
+        assigned-clocks = <&clk IMX8MP_CLK_USDHC3>;
+        assigned-clock-rates = <400000000>;
+        pinctrl-names = "default", "state_100mhz", "state_200mhz";
+        pinctrl-0 = <&pinctrl_usdhc3>;
+        pinctrl-1 = <&pinctrl_usdhc3_100mhz>;
+        pinctrl-2 = <&pinctrl_usdhc3_200mhz>;
+        bus-width = <8>;
+        non-removable;
+        status = "okay";
 };
 
 /* ========== Ethernet ========== */
@@ -1012,38 +992,46 @@
 	};
 };
 
-/* ========== Camera CSI0 (OV5640): mipi_csi_1 -> isi_0 ==========
- * SMARC CSI0 maps to i.MX8MP MIPI_CSI2 = mipi_csi_1 node (try mipi_csi_0
- * instead if no frames). */
+/* ========== Camera CSI0 (OV5640): mipi_csi_1 -> isi_1 ========== */
+&cameradev {
+	status = "okay";
+};
+
 &mipi_csi_1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "okay";
 
-	ports {
-		port@0 {
-			mipi_csi1_in: endpoint {
-				remote-endpoint = <&ov5640_0_ep>;
-				data-lanes = <1 2>;
-			};
+	port@1 {
+		reg = <1>;
+
+		mipi_csi1_in: endpoint {
+			remote-endpoint = <&ov5640_0_ep>;
+			data-lanes = <2>;
+			clock-lanes = <0>;
 		};
 	};
 };
 
 &isi_0 {
-	status = "okay";
+	status = "disabled";
+
+	cap_device {
+		status = "disabled";
+	};
 };
 
-/* ========== Camera CSI1 (NVP6324/N4): mipi_csi_0 -> isi_0 port@0 ========== */
-&mipi_csi_0 {
+&isi_1 {
 	status = "okay";
 
-	ports {
-		port@0 {
-			mipi_csi0_in: endpoint {
-				remote-endpoint = <&n4_csi1_ep>;
-				data-lanes = <1 2 3 4>;
-			};
-		};
+	cap_device {
+		status = "okay";
 	};
+};
+
+/* CSI1 connector is configured by camera-specific DT variants. */
+&mipi_csi_0 {
+	status = "disabled";
 };
 
 /* ========== iomuxc pin control ========== */
@@ -1191,6 +1179,28 @@
 			MX8MP_IOMUXC_SD1_DATA3__USDHC1_DATA3	0x1d0
 		>;
 	};
+
+	pinctrl_usdhc1_100mhz: usdhc1-100mhzgrp {
+                fsl,pins = <
+                        MX8MP_IOMUXC_SD1_CLK__USDHC1_CLK        0x194
+                        MX8MP_IOMUXC_SD1_CMD__USDHC1_CMD        0x1d4
+                        MX8MP_IOMUXC_SD1_DATA0__USDHC1_DATA0    0x1d4
+                        MX8MP_IOMUXC_SD1_DATA1__USDHC1_DATA1    0x1d4
+                        MX8MP_IOMUXC_SD1_DATA2__USDHC1_DATA2    0x1d4
+                        MX8MP_IOMUXC_SD1_DATA3__USDHC1_DATA3    0x1d4
+                >;
+        };
+
+        pinctrl_usdhc1_200mhz: usdhc1-200mhzgrp {
+                fsl,pins = <
+                        MX8MP_IOMUXC_SD1_CLK__USDHC1_CLK        0x196
+                        MX8MP_IOMUXC_SD1_CMD__USDHC1_CMD        0x1d6
+                        MX8MP_IOMUXC_SD1_DATA0__USDHC1_DATA0    0x1d6
+                        MX8MP_IOMUXC_SD1_DATA1__USDHC1_DATA1    0x1d6
+                        MX8MP_IOMUXC_SD1_DATA2__USDHC1_DATA2    0x1d6
+                        MX8MP_IOMUXC_SD1_DATA3__USDHC1_DATA3    0x1d6
+                >;
+        };
 
 	pinctrl_usdhc2: usdhc2grp {
 		fsl,pins = <

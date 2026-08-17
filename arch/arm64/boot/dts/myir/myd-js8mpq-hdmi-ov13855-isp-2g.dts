@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * MYD-JS8MPQ 2G DDR variant with HDMI and CSI1 OV5640 camera.
+ */
+
+#include "myd-js8mpq-hdmi-ov13855-isp.dts"
+#include "myd-js8mpq-2g-memory.dtsi"

@@ -1,0 +1,7 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * MYD-JS8MPQ 2G DDR variant with independent LVDS0 and LVDS1 panels.
+ */
+
+#include "myd-js8mpq-lvds0-lvds1.dts"
+#include "myd-js8mpq-2g-memory.dtsi"

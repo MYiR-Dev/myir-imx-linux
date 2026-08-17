@@ -6,23 +6,61 @@
  *
  * LVDS0 and LVDS1 share the one LDB + lcdif2 source and the one touch
  * controller (FT5x06 @0x38 on i2c4), so they are mutually exclusive:
- * boot this dtb to use the LVDS1 FPC, the base myd-js8mpq.dtb for LVDS0.
+ * boot this dtb to use the LVDS1 FPC and myd-js8mpq-lvds0.dtb for LVDS0.
  *
  * LVDS1 (LDB channel 1) is muxed with MIPI DSI on the shared PHY through
  * two switches, both driven LOW to select LVDS1:
- *   - core module SEL2 = PCA9555 EIO_P12 (gpio_expander line 12)
+ *   - core module SEL2 = PCA9555 EIO_P12 (gpio_expander line 10)
  *   - baseboard select = GPIO4_IO21 (SAI2_RXFS pad)
- * Backlight: PWM2 (GPIO1_IO11) dimming + enable GPIO5_IO29 (UART4_TXD pad,
- * UART4 is disabled). Touch: same FT5x06 @0x38 on i2c4, INT = GPIO1_IO00.
+ * Backlight: PWM2 (GPIO1_IO11) dimming + enable GPIO5_IO29 (UART4_TXD pad).
+ * Touch: same FT5x06 @0x38 on i2c4, INT = GPIO1_IO00.
+ *
+ * The graph follows imx8mp-evk-jdi-wuxga-lvds-panel.dts: the selected LDB
+ * channel owns one output port connected bidirectionally to a panel node.
+ * This is a single-channel 1024x600 panel, so fsl,dual-channel is not used.
  */
 
 #include "myd-js8mpq.dts"
 
 / {
 	model = "MYIR MYD-JS8MPQ board (LVDS1 panel)";
+
+	panel_lvds1: panel-lvds1 {
+		compatible = "panel-lvds";
+		backlight = <&lvds_backlight>;
+		data-mapping = "vesa-24";
+		width-mm = <154>;
+		height-mm = <86>;
+
+		panel-timing {
+			/*
+			 * Use the MYIR LVDS070C porch values.  Keep the 49.5 MHz
+			 * pixel clock that the i.MX8MP display PLL can generate
+			 * exactly (the corresponding LDB clock is 346.5 MHz).
+			 */
+			clock-frequency = <49500000>;
+			hactive = <1024>;
+			vactive = <600>;
+			hfront-porch = <88>;
+			hsync-len = <6>;
+			hback-porch = <176>;
+			vfront-porch = <25>;
+			vsync-len = <5>;
+			vback-porch = <20>;
+			de-active = <1>;
+		};
+
+		port {
+			panel_lvds1_in: endpoint {
+				remote-endpoint = <&ldb_lvds_ch1>;
+			};
+		};
+	};
 };
 
-/* Move the panel from LDB channel 0 (LVDS0) to channel 1 (LVDS1). */
+/* Replace the inherited LVDS0 panel with the LVDS1 panel above. */
+/delete-node/ &panel_lvds;
+
 &ldb_lvds_ch0 {
 	/delete-property/ remote-endpoint;
 };
@@ -35,20 +73,18 @@
 	lvds-channel@1 {
 		#address-cells = <1>;
 		#size-cells = <0>;
+		fsl,data-mapping = "spwg";
+		fsl,data-width = <24>;
 		status = "okay";
 
 		port@1 {
 			reg = <1>;
 
 			ldb_lvds_ch1: endpoint {
-				remote-endpoint = <&panel_in_lvds>;
+				remote-endpoint = <&panel_lvds1_in>;
 			};
 		};
 	};
-};
-
-&panel_in_lvds {
-	remote-endpoint = <&ldb_lvds_ch1>;
 };
 
 /* The LVDS0 baseboard path select (GPIO1_IO07) is not used for LVDS1. */

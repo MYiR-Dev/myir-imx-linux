@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright 2026 MYIR Technology Co., Ltd.
+ *
+ * MYD-JS8MPQ with two independent single-channel LVDS panels enabled:
+ * LVDS0 is the panel on J11 and LVDS1 is the panel on J10.
+ *
+ * Display paths:
+ *   lcdif2 -> LDB channel 0 -> LVDS0 1024x600 panel
+ *   lcdif2 -> LDB channel 1 -> LVDS1 1024x600 panel
+ *
+ * Both LDB channels share the one LCDIF2 pixel source.  The two panels must
+ * therefore use the same mode and display a cloned image.  This is not the
+ * J12 split-pixel dual-link connection provided by myd-js8mpq-lvds-dual.dts,
+ * so this file must not set fsl,dual-channel.
+ *
+ * LVDS0 uses PWM1 + GPIO1_IO05 for its backlight.  LVDS1 uses PWM2 +
+ * GPIO5_IO29.  J10 and J11 route their touch controllers to the same I2C4
+ * bus, and the two FT5x06 controllers normally use the same 0x38 address.
+ * They therefore cannot operate on I2C4 at the same time.  This variant keeps
+ * the inherited LVDS0 touch node (INT = GPIO1_IO06); connect only the LVDS0
+ * touch interface and leave the LVDS1 touch interface disconnected.  To use
+ * LVDS1 touch instead, the LVDS0 touch interface must be disconnected and the
+ * node's interrupt must be changed to GPIO1_IO00 as in myd-js8mpq-lvds1.dts.
+ */
+
+#include "myd-js8mpq.dts"
+
+/ {
+	model = "MYIR MYD-JS8MPQ board (independent LVDS0 and LVDS1 panels)";
+
+	lvds1_backlight: backlight-lvds1 {
+		compatible = "pwm-backlight";
+		pwms = <&pwm2 0 100000 0>;
+		brightness-levels = <0 8 16 32 48 64 80 96 112 128
+				     144 160 176 192 208 224 240 255>;
+		default-brightness-level = <14>;
+		enable-gpios = <&gpio5 29 GPIO_ACTIVE_HIGH>;
+	};
+
+	panel_lvds1: panel-lvds1 {
+		compatible = "panel-lvds";
+		backlight = <&lvds1_backlight>;
+		data-mapping = "vesa-24";
+		width-mm = <154>;
+		height-mm = <86>;
+
+		panel-timing {
+			clock-frequency = <49500000>;
+			hactive = <1024>;
+			vactive = <600>;
+			hsync-len = <10>;
+			hfront-porch = <160>;
+			hback-porch = <160>;
+			vsync-len = <3>;
+			vfront-porch = <12>;
+			vback-porch = <23>;
+			de-active = <1>;
+		};
+
+		port {
+			panel_lvds1_in: endpoint {
+				remote-endpoint = <&ldb_lvds_ch1>;
+			};
+		};
+	};
+};
+
+&ldb {
+	/delete-property/ fsl,dual-channel;
+
+	lvds-channel@0 {
+		status = "okay";
+	};
+
+	lvds-channel@1 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		port@1 {
+			reg = <1>;
+
+			ldb_lvds_ch1: endpoint {
+				remote-endpoint = <&panel_lvds1_in>;
+			};
+		};
+	};
+};
+
+&pwm2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm2>;
+	status = "okay";
+};
+
+/* Core-module and baseboard switches: LOW routes channel 1 to LVDS1. */
+&gpio_expander {
+	lvds1-sel2-hog {
+		gpio-hog;
+		gpios = <10 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "lvds1_sel2";
+	};
+};
+
+&gpio4 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_wdt_en &pinctrl_lvds1_sel>;
+
+	lvds1-sel-hog {
+		gpio-hog;
+		gpios = <21 GPIO_ACTIVE_HIGH>;
+		output-low;
+		line-name = "lvds1_sel";
+	};
+};
+
+&gpio5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_lvds1_bl_en>;
+};
+
+&iomuxc {
+	pinctrl_pwm2: pwm2grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO11__PWM2_OUT	0x116
+		>;
+	};
+
+	pinctrl_lvds1_sel: lvds1selgrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI2_RXFS__GPIO4_IO21	0x140
+		>;
+	};
+
+	pinctrl_lvds1_bl_en: lvds1blengrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_UART4_TXD__GPIO5_IO29	0x140
+		>;
+	};
+};

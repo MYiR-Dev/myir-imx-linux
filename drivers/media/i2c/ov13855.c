@@ -802,7 +802,7 @@ static const struct regval ov13855_4224x3136_15fps_regs[] = {
 	{0x0312, 0x11},
 	{0x3022, 0x01},
 	{0x3012, 0x40},
-	{0x3013, 0x72},
+	{0x3013, 0x32},
 	{0x3016, 0x72},
 	{0x301b, 0xF0},
 	{0x301f, 0xd0},
@@ -885,7 +885,7 @@ static const struct regval ov13855_4224x3136_15fps_regs[] = {
 	{0x380b, 0x40},
 	{0x380c, 0x04},
 	{0x380d, 0x62},
-	{0x380e, 0x06},
+	{0x380e, 0x0c},
 	{0x380f, 0x8e},
 	{0x3811, 0x10},
 	{0x3813, 0x08},
@@ -950,8 +950,8 @@ static const struct regval ov13855_4224x3136_15fps_regs[] = {
 	{0x4d03, 0xd7},
 	{0x4d04, 0xf0},
 	{0x4d05, 0xa2},
-	{0x5000, 0xff},
-	{0x5001, 0x07},
+	{0x5000, 0xfd},
+	{0x5001, 0x01},
 	{0x5040, 0x39},
 	{0x5041, 0x10},
 	{0x5042, 0x10},
@@ -1013,7 +1013,7 @@ static const struct regval ov13855_4224x3136_15fps_regs[] = {
  * max_framerate 30fps
  * mipi_datarate per lane 1080Mbps
  */
-static const struct regval ov13855_4224x3136_30fps_regs[] = {
+static const struct regval ov13855_4224x3136_30fps_regs[] __maybe_unused = {
 	{0x0300, 0x02},
 	{0x0301, 0x00},
 	{0x0302, 0x5a},
@@ -1244,14 +1244,14 @@ static const struct ov13855_mode supported_modes[] = {
 		.height = 3136,
 		.max_fps = {
 			.numerator = 10000,
-			.denominator = 300000,
+			.denominator = 150000,
 		},
 		.exp_def = 0x0800,
 		.gain_def = OV13855_GAIN_DEFAULT,
-		.hts_def = 0x0462,
+		.hts_def = 0x08c4,
 		.vts_def = 0x0c8e,
 		.bpp = 10,
-		.reg_list = ov13855_4224x3136_30fps_regs,
+		.reg_list = ov13855_4224x3136_15fps_regs,
 		.link_freq_idx = 0,
 	},
 	{
@@ -1872,14 +1872,45 @@ static int ov13855_vvcam_copy_to(void *dst, const void *src, size_t size)
 #endif
 }
 
+static const u8 ov13855_vvcam_mode_map[] = {
+	2, /* 2112x1568 at 60 fps */
+	0, /* 4224x3136 at 15 fps */
+};
+
+static const struct ov13855_mode *ov13855_vvcam_sensor_mode(u32 index)
+{
+	if (index >= ARRAY_SIZE(ov13855_vvcam_mode_map))
+		return NULL;
+
+	return &supported_modes[ov13855_vvcam_mode_map[index]];
+}
+
+static int ov13855_vvcam_mode_index(const struct ov13855_mode *sensor_mode)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(ov13855_vvcam_mode_map); i++) {
+		if (sensor_mode == ov13855_vvcam_sensor_mode(i))
+			return i;
+	}
+
+	return -EINVAL;
+}
+
 static void ov13855_vvcam_fill_mode(struct ov13855 *ov13855,
+				    u32 index,
 				    struct vvcam_mode_info_s *mode)
 {
-	const struct ov13855_mode *sensor_mode = &supported_modes[2];
-	u32 fps = 60U << SENSOR_FIX_FRACBITS;
+	const struct ov13855_mode *sensor_mode;
+	u32 fps;
+
+	sensor_mode = ov13855_vvcam_sensor_mode(index);
+	fps = DIV_ROUND_CLOSEST(sensor_mode->max_fps.denominator,
+				sensor_mode->max_fps.numerator) <<
+		SENSOR_FIX_FRACBITS;
 
 	memset(mode, 0, sizeof(*mode));
-	mode->index = 0;
+	mode->index = index;
 	mode->size.bounds_width = sensor_mode->width;
 	mode->size.bounds_height = sensor_mode->height;
 	mode->size.width = sensor_mode->width;
@@ -1894,8 +1925,10 @@ static void ov13855_vvcam_fill_mode(struct ov13855 *ov13855,
 	else
 		mode->ae_info.curr_frm_len_lines = sensor_mode->vts_def;
 	mode->ae_info.one_line_exp_time_ns =
-		DIV_ROUND_CLOSEST_ULL(NSEC_PER_SEC,
-				      60ULL * sensor_mode->vts_def);
+		DIV_ROUND_CLOSEST_ULL((u64)NSEC_PER_SEC *
+				      sensor_mode->max_fps.numerator,
+				      (u64)sensor_mode->max_fps.denominator *
+				      sensor_mode->vts_def);
 	mode->ae_info.max_integration_line =
 		mode->ae_info.curr_frm_len_lines - 4;
 	mode->ae_info.min_integration_line = OV13855_EXPOSURE_MIN;
@@ -1906,7 +1939,8 @@ static void ov13855_vvcam_fill_mode(struct ov13855 *ov13855,
 	mode->ae_info.start_exposure =
 		800U << SENSOR_FIX_FRACBITS;
 	mode->ae_info.gain_step = 1;
-	mode->ae_info.cur_fps = ov13855->vvcam_fps ?: fps;
+	mode->ae_info.cur_fps = ov13855->cur_mode == sensor_mode ?
+		(ov13855->vvcam_fps ?: fps) : fps;
 	mode->ae_info.max_fps = fps;
 	mode->ae_info.min_fps = 1U << SENSOR_FIX_FRACBITS;
 	mode->ae_info.min_afps = 5U << SENSOR_FIX_FRACBITS;
@@ -1939,8 +1973,10 @@ static int ov13855_vvcam_query_modes(struct ov13855 *ov13855, void *arg)
 	modes = vzalloc(sizeof(*modes));
 	if (!modes)
 		return -ENOMEM;
-	modes->count = 1;
-	ov13855_vvcam_fill_mode(ov13855, &modes->modes[0]);
+	modes->count = ARRAY_SIZE(ov13855_vvcam_mode_map);
+	for (ret = 0; ret < modes->count; ret++)
+		ov13855_vvcam_fill_mode(ov13855, ret, &modes->modes[ret]);
+
 	ret = ov13855_vvcam_copy_to(arg, modes, sizeof(*modes));
 	vfree(modes);
 
@@ -1953,31 +1989,43 @@ static int ov13855_vvcam_set_mode(struct ov13855 *ov13855, void *arg)
 		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
 		.pad = 0,
 		.format = {
-			.width = 2112,
-			.height = 1568,
 			.code = OV13855_MEDIA_BUS_FMT,
 		},
 	};
+	const struct ov13855_mode *sensor_mode;
 	struct vvcam_mode_info_s mode;
+	u32 fps;
 	int ret;
 
 	ret = copy_from_user(&mode, arg, sizeof(mode)) ? -EFAULT : 0;
 	if (ret)
 		return ret;
-	if (mode.index != 0)
+	sensor_mode = ov13855_vvcam_sensor_mode(mode.index);
+	if (!sensor_mode)
 		return -EINVAL;
 
-	ov13855->vvcam_fps = 60U << SENSOR_FIX_FRACBITS;
+	fmt.format.width = sensor_mode->width;
+	fmt.format.height = sensor_mode->height;
+	fps = DIV_ROUND_CLOSEST(sensor_mode->max_fps.denominator,
+				sensor_mode->max_fps.numerator) <<
+		SENSOR_FIX_FRACBITS;
+	ov13855->vvcam_fps = fps;
 	return ov13855_set_fmt(&ov13855->subdev, NULL, &fmt);
 }
 
 static int ov13855_vvcam_set_fps(struct ov13855 *ov13855, u32 fps)
 {
-	const struct ov13855_mode *mode = &supported_modes[2];
-	u32 max_fps = 60U << SENSOR_FIX_FRACBITS;
+	const struct ov13855_mode *mode = ov13855->cur_mode;
+	u32 max_fps;
 	u32 min_fps = 1U << SENSOR_FIX_FRACBITS;
 	u32 vts;
 
+	if (ov13855_vvcam_mode_index(mode) < 0)
+		return -EINVAL;
+
+	max_fps = DIV_ROUND_CLOSEST(mode->max_fps.denominator,
+				    mode->max_fps.numerator) <<
+		  SENSOR_FIX_FRACBITS;
 	fps = clamp(fps, min_fps, max_fps);
 	vts = div_u64((u64)max_fps * mode->vts_def, fps);
 	vts = clamp_t(u32, vts, mode->vts_def, OV13855_VTS_MAX);
@@ -2020,7 +2068,10 @@ static long ov13855_vvcam_ioctl(struct v4l2_subdev *sd,
 	case VVSENSORIOC_QUERY:
 		return ov13855_vvcam_query_modes(ov13855, arg);
 	case VVSENSORIOC_G_SENSOR_MODE:
-		ov13855_vvcam_fill_mode(ov13855, &mode);
+		ret = ov13855_vvcam_mode_index(ov13855->cur_mode);
+		if (ret < 0)
+			return ret;
+		ov13855_vvcam_fill_mode(ov13855, ret, &mode);
 		return copy_to_user(arg, &mode, sizeof(mode)) ? -EFAULT : 0;
 	case VVSENSORIOC_S_SENSOR_MODE:
 		return ov13855_vvcam_set_mode(ov13855, arg);
@@ -2320,7 +2371,7 @@ static int ov13855_probe(struct i2c_client *client)
 
 	ov13855->client = client;
 	ov13855->cur_mode = &supported_modes[0];
-	ov13855->vvcam_fps = 60U << SENSOR_FIX_FRACBITS;
+	ov13855->vvcam_fps = 15U << SENSOR_FIX_FRACBITS;
 	of_property_read_u32(dev->of_node, "csi_id", &ov13855->csi_id);
 	endpoint = of_graph_get_next_endpoint(dev->of_node, NULL);
 	if (endpoint) {

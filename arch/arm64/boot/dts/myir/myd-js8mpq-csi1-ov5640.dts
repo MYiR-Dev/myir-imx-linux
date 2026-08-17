@@ -11,22 +11,81 @@
  * Pipeline: ov5640 (2-lane YUV) -> mipi_csi_0 -> isi_0 -> /dev/video*
  */
 
-#include "myd-js8mpq-dsi.dts"
+#include "myd-js8mpq.dts"
 
 / {
-	model = "MYIR MYD-JS8MPQ board (CSI1 OV5640 cross-check)";
+	model = "MYIR MYD-JS8MPQ board (HDMI + CSI1 OV5640)";
 };
 
-/* N4 off; its driver must not claim the shared reset/pwdn pins. */
-&n4_csi1 {
+/*
+ * This variant has one display output: the native HDMI path inherited from
+ * myd-js8mpq.dts.  Turn off the base DTS LVDS0 path and its panel controls.
+ */
+&lcdif2 {
 	status = "disabled";
 };
 
-&n4_csi1_ep {
+&ldb {
+	status = "disabled";
+};
+
+&ldb_lvds_ch0 {
+	/delete-property/ remote-endpoint;
+};
+
+&panel_in_lvds {
+	/delete-property/ remote-endpoint;
+};
+
+&panel_lvds {
+	status = "disabled";
+};
+
+&ldb_phy {
+	status = "disabled";
+};
+
+&pwm1 {
+	status = "disabled";
+};
+
+&lvds_backlight {
+	status = "disabled";
+};
+
+&lvds_touch {
+	status = "disabled";
+};
+
+&gpio1 {
+	/delete-node/ lvds0-sel-hog;
+};
+
+/*
+ * The base DTS also enables the CSI0 OV5640 on i2c3.  No module is fitted on
+ * CSI0 in this variant, so probing it produces misleading errors from 2-003c.
+ * CSI1 below is on i2c2 and appears as 1-003c at runtime.
+ */
+&ov5640_0 {
+	status = "disabled";
+};
+
+&ov5640_0_ep {
+	/delete-property/ remote-endpoint;
+};
+
+&mipi_csi_1 {
+	status = "disabled";
+};
+
+&mipi_csi1_in {
 	/delete-property/ remote-endpoint;
 };
 
 &i2c2 {
+	/* Replace the base-board N4 decoder on the shared CSI1 connector. */
+	/delete-node/ camera@31;
+
 	ov5640_csi1: camera@3c {
 		compatible = "ovti,ov5640";
 		reg = <0x3c>;
@@ -35,7 +94,7 @@
 		DOVDD-supply = <&reg_csi1_pwr>;
 		AVDD-supply = <&reg_csi1_pwr>;
 		DVDD-supply = <&reg_csi1_pwr>;
-		/* CSI1 pins, polarity per the 2026-06-05 OV5640-on-CSI1 probe */
+		/* PWDN polarity follows the 6.12 EVK; board RESETB is active-low. */
 		reset-gpios = <&gpio4 0 GPIO_ACTIVE_LOW>;
 		powerdown-gpios = <&gpio4 1 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
@@ -52,8 +111,27 @@
 	};
 };
 
-/* Re-point CSI1 host at the OV5640, 2 lanes. */
-&mipi_csi0_in {
-	remote-endpoint = <&ov5640_csi1_ep>;
-	data-lanes = <1 2>;
+
+/* Connect the CSI1 host to the OV5640, 2 lanes. */
+&mipi_csi_0 {
+	status = "okay";
+
+	/* Drop the inherited N4 graph before installing the OV5640 endpoint. */
+	/delete-node/ ports;
+
+	port {
+		mipi_csi0_in: endpoint {
+			remote-endpoint = <&ov5640_csi1_ep>;
+			data-lanes = <2>;
+			clock-lanes = <0>;
+		};
+	};
+};
+
+&isi_0 {
+	status = "okay";
+
+	cap_device {
+		status = "okay";
+	};
 };

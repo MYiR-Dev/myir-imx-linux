@@ -312,8 +312,8 @@ static const struct regval ov13855_global_regs[] = {
 	{0x4d03, 0xd7},
 	{0x4d04, 0xf0},
 	{0x4d05, 0xa2},
-	{0x5000, 0xff},
-	{0x5001, 0x07},
+	{0x5000, 0xfd},
+	{0x5001, 0x01},
 	{0x5040, 0x39},
 	{0x5041, 0x10},
 	{0x5042, 0x10},
@@ -530,8 +530,8 @@ static const struct regval ov13855_1920x1080_60fps_regs[] = {
 	{0x4d03, 0xd7},
 	{0x4d04, 0xf0},
 	{0x4d05, 0xa2},
-	{0x5000, 0xff},
-	{0x5001, 0x07},
+	{0x5000, 0xfd},
+	{0x5001, 0x01},
 	{0x5040, 0x39},
 	{0x5041, 0x10},
 	{0x5042, 0x10},
@@ -588,9 +588,9 @@ static const struct regval ov13855_2112x1568_60fps_regs[] = {
 	{0x030c, 0x02},
 	{0x030d, 0x88},
 	{0x0312, 0x11},
-	{0x3022, 0x41},
+	{0x3022, 0x01},
 	{0x3012, 0x40},
-	{0x3013, 0x72},
+	{0x3013, 0x32},
 	{0x3016, 0x72},
 	{0x301b, 0xF0},
 	{0x301f, 0xd0},
@@ -738,8 +738,8 @@ static const struct regval ov13855_2112x1568_60fps_regs[] = {
 	{0x4d03, 0xd7},
 	{0x4d04, 0xf0},
 	{0x4d05, 0xa2},
-	{0x5000, 0xff},
-	{0x5001, 0x07},
+	{0x5000, 0xfd},
+	{0x5001, 0x01},
 	{0x5040, 0x39},
 	{0x5041, 0x10},
 	{0x5042, 0x10},
@@ -1875,7 +1875,7 @@ static int ov13855_vvcam_copy_to(void *dst, const void *src, size_t size)
 static void ov13855_vvcam_fill_mode(struct ov13855 *ov13855,
 				    struct vvcam_mode_info_s *mode)
 {
-	const struct ov13855_mode *sensor_mode = &supported_modes[1];
+	const struct ov13855_mode *sensor_mode = &supported_modes[2];
 	u32 fps = 60U << SENSOR_FIX_FRACBITS;
 
 	memset(mode, 0, sizeof(*mode));
@@ -1953,8 +1953,8 @@ static int ov13855_vvcam_set_mode(struct ov13855 *ov13855, void *arg)
 		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
 		.pad = 0,
 		.format = {
-			.width = 1920,
-			.height = 1080,
+			.width = 2112,
+			.height = 1568,
 			.code = OV13855_MEDIA_BUS_FMT,
 		},
 	};
@@ -1973,7 +1973,7 @@ static int ov13855_vvcam_set_mode(struct ov13855 *ov13855, void *arg)
 
 static int ov13855_vvcam_set_fps(struct ov13855 *ov13855, u32 fps)
 {
-	const struct ov13855_mode *mode = &supported_modes[1];
+	const struct ov13855_mode *mode = &supported_modes[2];
 	u32 max_fps = 60U << SENSOR_FIX_FRACBITS;
 	u32 min_fps = 1U << SENSOR_FIX_FRACBITS;
 	u32 vts;

@@ -1915,6 +1915,12 @@ static void ov13855_vvcam_fill_mode(struct ov13855 *ov13855,
 	mode->size.bounds_height = sensor_mode->height;
 	mode->size.width = sensor_mode->width;
 	mode->size.height = sensor_mode->height;
+	if (index == 1) {
+		mode->size.left = 64;
+		mode->size.top = 32;
+		mode->size.width = 4096;
+		mode->size.height = 3072;
+	}
 	mode->hdr_mode = SENSOR_MODE_LINEAR;
 	mode->bit_width = sensor_mode->bpp;
 	mode->bayer_pattern = BAYER_BGGR;

@@ -79,12 +79,54 @@
 		disable-on-suspend;
 	};
 
-	/* ---- PWM fan: PWM3 @ 25 kHz, four cooling levels ---- */
+	/* ---- PWM fan: PWM3 @ 25 kHz ---- */
 	fan0: pwm-fan {
 		compatible = "pwm-fan";
 		#cooling-cells = <2>;
-		cooling-levels = <64 128 192 255>;
+		/* Q18 N-MOS low-side switch: active-high PWM, 25 kHz */
 		pwms = <&pwm3 0 40000 0>;
+		cooling-levels = <64 128 192 255>;
+	};
+
+	thermal-zones {
+		soc-thermal {
+			trips {
+				soc_active0: trip-active0 {
+					temperature = <55000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+
+				soc_active1: trip-active1 {
+					temperature = <65000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+
+				soc_active2: trip-active2 {
+					temperature = <75000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+			};
+
+			cooling-maps {
+				map-fan0 {
+					trip = <&soc_active0>;
+					cooling-device = <&fan0 1 1>;
+				};
+
+				map-fan1 {
+					trip = <&soc_active1>;
+					cooling-device = <&fan0 2 2>;
+				};
+
+				map-fan2 {
+					trip = <&soc_active2>;
+					cooling-device = <&fan0 3 3>;
+				};
+			};
+		};
 	};
 
 	/* ---- PCIe ref clock ---- */
@@ -821,33 +863,6 @@
 	status = "okay";
 };
 
-/* ========== HDMI: i.MX8MP native HDMI TX (no LT9611) ==========
- * lcdif3 -> hdmi_pavi -> hdmi is wired inside the 6.12 imx8mp.dtsi; here we
- * only enable the blocks. The 6.12 DW-HDMI bridge creates its connector. */
-&hdmi_blk_ctrl {
-	/*
-	 * The board imx8mp.dtsi strips the "noc" node down to compatible+reg
-	 * (no #interconnect-cells, no OPP), so the NoC never registers as an
-	 * interconnect provider. The mainline "interconnects = <&noc ...>"
-	 * here therefore has no supplier: fw_devlink keeps blk-ctrl (and the
-	 * whole HDMI chain) in deferred probe forever. Drop the NoC QoS hints;
-	 * HDMI does not depend on them. Restore them (plus noc #interconnect-
-	 * cells/OPP + ARM_IMX_BUS_DEVFREQ) only if high-res shows underflow.
-	 */
-	/delete-property/ interconnects;
-	/delete-property/ interconnect-names;
-	/*
-	 * Expose the HDMIMIX reset controller (the mainline node omits this);
-	 * &hdmi_pavi references IMX8MP_HDMIBLK_RESET_PAI to release the HDMI
-	 * parallel audio interface for HDMI audio.
-	 */
-	#reset-cells = <1>;
-	status = "okay";
-};
-
-&irqsteer_hdmi {
-	status = "okay";
-};
 
 &hdmi_pavi {
 	status = "okay";
@@ -859,6 +874,8 @@
 
 &lcdif3 {
 	status = "okay";
+	thres-low  = <1 2>;             /* (FIFO * 1 / 2) */
+        thres-high = <3 4>;             /* (FIFO * 3 / 4) */
 };
 
 /* HDMI audio transmit path (audio-cpu for sound-hdmi). */
@@ -890,7 +907,7 @@
 	};
 };
 
-/* ========== I2C4: LVDS0 capacitive touch (dedicated I2C4 pads) ========== */
+/* ========== I2C4: LVDS1 capacitive touch (dedicated I2C4 pads) ========== */
 &i2c4 {
 	clock-frequency = <400000>;
 	pinctrl-names = "default";
@@ -910,6 +927,28 @@
 		touchscreen-size-x = <1024>;
 		touchscreen-size-y = <600>;
 	};
+};
+
+/* ========== I2C5: LVDS0 capacitive touch (dedicated I2C5 pads) ========== */
+&i2c5 {
+        clock-frequency = <400000>;
+        pinctrl-names = "default";
+        pinctrl-0 = <&pinctrl_i2c5>;
+        status = "okay";
+
+        /* FocalTech FT5x06-family capacitive touch @0x38, INT = GPIO1_IO06.
+         * The exact FT variant is auto-identified by the driver at probe.
+         * Labelled so the LVDS1 variant DT can repoint the INT line. */
+        lvds0_touch: touchscreen@38 {
+                compatible = "edt,edt-ft5406";
+                reg = <0x38>;
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_touch_1>;
+                interrupt-parent = <&gpio1>;
+                interrupts = <0 IRQ_TYPE_EDGE_FALLING>; /* GPIO1_IO00 */
+                touchscreen-size-x = <1024>;
+                touchscreen-size-y = <600>;
+        };
 };
 
 /* ========== LVDS0 display: lcdif2 -> LDB ch0 -> panel-lvds ========== */
@@ -1058,7 +1097,7 @@
 
 	pinctrl_pwm3: pwm3grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO14__PWM3_OUT	0x6
+			MX8MP_IOMUXC_GPIO1_IO14__PWM3_OUT	0x116
 		>;
 	};
 
@@ -1074,6 +1113,19 @@
 			MX8MP_IOMUXC_GPIO1_IO06__GPIO1_IO06	0x1c0	/* touch INT */
 		>;
 	};
+
+	pinctrl_i2c5: i2c5grp {
+                fsl,pins = <
+                        MX8MP_IOMUXC_SPDIF_TX__I2C5_SCL         0x400001c3
+                        MX8MP_IOMUXC_SPDIF_RX__I2C5_SDA         0x400001c3
+                >;
+        };
+
+	pinctrl_touch_1: lvds0grp {
+                fsl,pins = <
+                        MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00     0x1c0   /* touch INT */
+                >;
+        };
 
 	pinctrl_lvds0_ctrl: lvds0ctrlgrp {
 		fsl,pins = <
@@ -1093,7 +1145,7 @@
 
 	pinctrl_hdmi_mux: hdmimuxgrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10	0x140
+			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10	0x19
 		>;
 	};
 

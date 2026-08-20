@@ -954,6 +954,7 @@ static int mxc_isi_source_fmt_init(struct mxc_isi_cap_dev *isi_cap)
 	if (!src_sd)
 		return -EINVAL;
 
+	memset(&src_fmt, 0, sizeof(src_fmt));
 	src_fmt.pad = source_pad->index;
 	src_fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
 	src_fmt.format.code = MEDIA_BUS_FMT_UYVY8_1X16;

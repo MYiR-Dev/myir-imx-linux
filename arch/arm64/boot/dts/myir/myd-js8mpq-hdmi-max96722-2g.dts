@@ -3,13 +3,14 @@
  * MYD-JS8MPQ 2GB DDR variant with native HDMI and a MAX96722 on the
  * physical CSI1 connector.
  *
- * The MYD CSI1 connector is wired to the first i.MX8MP CSI receiver:
+ * The GMSL adapter reuses the OV5640 CSI1 input on this carrier:
  *
- *   GMSL cameras -> MAX96722 -> mipi_csi_0 -> isi_0
+ *   GMSL cameras -> MAX96722 -> mipi_csi_1 -> isi_1
  *
- * The four-link topology follows the NXP MAX9286 CSI1 reference overlay.
- * Remote buses are disabled for deserializer-only bring-up and can be enabled
- * after the actual serializers and sensors are connected and identified.
+ * This follows the NVP6324/N4 single-output model used by the 6.18 BSP.  All
+ * four ALI360-YH links are initialized, but the MAX96722 exposes only the
+ * selected camera on VC0.  The active input is switched at runtime through
+ * the MAX96722 driver's active_camera attribute.
  */
 
 #include "myd-js8mpq.dts"
@@ -72,7 +73,7 @@
 	/delete-node/ lvds0-sel-hog;
 };
 
-/* The base CSI0 OV5640 path is not populated in this camera variant. */
+/* Replace the base OV5640 path on mipi_csi_1 with the MAX96722. */
 &ov5640_0 {
 	status = "disabled";
 };
@@ -81,30 +82,34 @@
 	/delete-property/ remote-endpoint;
 };
 
-&mipi_csi_1 {
-	status = "disabled";
-};
-
-&mipi_csi1_in {
-	/delete-property/ remote-endpoint;
-};
-
-&isi_1 {
-	status = "disabled";
-
-	cap_device {
-		status = "disabled";
-	};
-};
-
 &i2c3 {
 	clock-frequency = <100000>;
+
+	/*
+	 * NCA9555 on the GMSL adapter board.  P00 drives the MAX20087 EN
+	 * input through R73; R75 otherwise pulls EN low and disables all
+	 * four PoC outputs.  The CPU MIPI_CSI_PWREN alternative is DNP.
+	 */
+	gmsl_gpio: gpio@20 {
+		compatible = "nxp,pca9555";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		poc-enable-hog {
+			gpio-hog;
+			gpios = <0 GPIO_ACTIVE_HIGH>;
+			output-high;
+			line-name = "gmsl-poc-enable";
+		};
+	};
 
 	max96722: deserializer@6b {
 		compatible = "maxim,max96722";
 		reg = <0x6b>;
 		status = "okay";
 		maxim,allow-no-link;
+		maxim,ali360-yh-profile;
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_csi1>;
@@ -125,7 +130,7 @@
 
 				max96722_gmsl_a_in: endpoint@0 {
 					reg = <0>;
-					remote-endpoint = <&rdacm20_csi1_out0>;
+					remote-endpoint = <&max96717_a_gmsl_out>;
 				};
 
 				max96722_pipe_0_out: endpoint@1 {
@@ -141,7 +146,7 @@
 
 				max96722_gmsl_b_in: endpoint@0 {
 					reg = <0>;
-					remote-endpoint = <&rdacm20_csi1_out1>;
+					remote-endpoint = <&max96717_b_gmsl_out>;
 				};
 
 				max96722_pipe_1_out: endpoint@1 {
@@ -157,7 +162,7 @@
 
 				max96722_gmsl_c_in: endpoint@0 {
 					reg = <0>;
-					remote-endpoint = <&rdacm20_csi1_out2>;
+					remote-endpoint = <&max96717_c_gmsl_out>;
 				};
 
 				max96722_pipe_2_out: endpoint@1 {
@@ -173,7 +178,7 @@
 
 				max96722_gmsl_d_in: endpoint@0 {
 					reg = <0>;
-					remote-endpoint = <&rdacm20_csi1_out3>;
+					remote-endpoint = <&max96717_d_gmsl_out>;
 				};
 
 				max96722_pipe_3_out: endpoint@1 {
@@ -209,9 +214,15 @@
 
 				max96722_csi1_out: endpoint@4 {
 					reg = <4>;
-					data-lanes = <1 2 3 4>;
+					/*
+					 * The carrier exposes four lanes, but this board/adapter
+					 * combination is electrically validated with PHY0's two
+					 * lanes.  Four-lane mode produces an ECC error on nearly
+					 * every CSI-2 long-packet header.
+					 */
+					data-lanes = <1 2>;
 					clock-lanes = <0>;
-					remote-endpoint = <&mipi_csi0_in>;
+					remote-endpoint = <&mipi_csi1_in>;
 				};
 			};
 		};
@@ -224,16 +235,41 @@
 				reg = <0>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				status = "disabled";
+				status = "okay";
 
-				camera@51 {
-					compatible = "imi,rdacm20";
-					reg = <0x51>, <0x61>;
-					imi,no-poc;
+				max96717_a: serializer@40 {
+					compatible = "maxim,max96717", "maxim,max96717f";
+					reg = <0x40>;
+					status = "okay";
+					maxim,ali360-yh-profile;
+					gpio-controller;
+					#gpio-cells = <2>;
+					#clock-cells = <0>;
 
-					port {
-						rdacm20_csi1_out0: endpoint {
-							remote-endpoint = <&max96722_gmsl_a_in>;
+					ports {
+						#address-cells = <1>;
+						#size-cells = <0>;
+
+						port@0 {
+							reg = <0>;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							max96717_a_csi_in: endpoint@0 {
+								reg = <0>;
+								data-lanes = <1 2 3 4>;
+							};
+						};
+
+						port@1 {
+							reg = <1>;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							max96717_a_gmsl_out: endpoint@0 {
+								reg = <0>;
+								remote-endpoint = <&max96722_gmsl_a_in>;
+							};
 						};
 					};
 				};
@@ -243,16 +279,41 @@
 				reg = <1>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				status = "disabled";
+				status = "okay";
 
-				camera@52 {
-					compatible = "imi,rdacm20";
-					reg = <0x52>, <0x62>;
-					imi,no-poc;
+				max96717_b: serializer@40 {
+					compatible = "maxim,max96717", "maxim,max96717f";
+					reg = <0x40>;
+					status = "okay";
+					maxim,ali360-yh-profile;
+					gpio-controller;
+					#gpio-cells = <2>;
+					#clock-cells = <0>;
 
-					port {
-						rdacm20_csi1_out1: endpoint {
-							remote-endpoint = <&max96722_gmsl_b_in>;
+					ports {
+						#address-cells = <1>;
+						#size-cells = <0>;
+
+						port@0 {
+							reg = <0>;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							max96717_b_csi_in: endpoint@0 {
+								reg = <0>;
+								data-lanes = <1 2 3 4>;
+							};
+						};
+
+						port@1 {
+							reg = <1>;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							max96717_b_gmsl_out: endpoint@0 {
+								reg = <0>;
+								remote-endpoint = <&max96722_gmsl_b_in>;
+							};
 						};
 					};
 				};
@@ -262,16 +323,41 @@
 				reg = <2>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				status = "disabled";
+				status = "okay";
 
-				camera@53 {
-					compatible = "imi,rdacm20";
-					reg = <0x53>, <0x63>;
-					imi,no-poc;
+				max96717_c: serializer@40 {
+					compatible = "maxim,max96717", "maxim,max96717f";
+					reg = <0x40>;
+					status = "okay";
+					maxim,ali360-yh-profile;
+					gpio-controller;
+					#gpio-cells = <2>;
+					#clock-cells = <0>;
 
-					port {
-						rdacm20_csi1_out2: endpoint {
-							remote-endpoint = <&max96722_gmsl_c_in>;
+					ports {
+						#address-cells = <1>;
+						#size-cells = <0>;
+
+						port@0 {
+							reg = <0>;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							max96717_c_csi_in: endpoint@0 {
+								reg = <0>;
+								data-lanes = <1 2 3 4>;
+							};
+						};
+
+						port@1 {
+							reg = <1>;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							max96717_c_gmsl_out: endpoint@0 {
+								reg = <0>;
+								remote-endpoint = <&max96722_gmsl_c_in>;
+							};
 						};
 					};
 				};
@@ -281,16 +367,41 @@
 				reg = <3>;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				status = "disabled";
+				status = "okay";
 
-				camera@54 {
-					compatible = "imi,rdacm20";
-					reg = <0x54>, <0x64>;
-					imi,no-poc;
+				max96717_d: serializer@40 {
+					compatible = "maxim,max96717", "maxim,max96717f";
+					reg = <0x40>;
+					status = "okay";
+					maxim,ali360-yh-profile;
+					gpio-controller;
+					#gpio-cells = <2>;
+					#clock-cells = <0>;
 
-					port {
-						rdacm20_csi1_out3: endpoint {
-							remote-endpoint = <&max96722_gmsl_d_in>;
+					ports {
+						#address-cells = <1>;
+						#size-cells = <0>;
+
+						port@0 {
+							reg = <0>;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							max96717_d_csi_in: endpoint@0 {
+								reg = <0>;
+								data-lanes = <1 2 3 4>;
+							};
+						};
+
+						port@1 {
+							reg = <1>;
+							#address-cells = <1>;
+							#size-cells = <0>;
+
+							max96717_d_gmsl_out: endpoint@0 {
+								reg = <0>;
+								remote-endpoint = <&max96722_gmsl_d_in>;
+							};
 						};
 					};
 				};
@@ -304,23 +415,36 @@
 };
 
 &mipi_csi_0 {
-	status = "okay";
-	virtual-channel;
+	status = "disabled";
+};
 
-	port {
-		mipi_csi0_in: endpoint {
-			remote-endpoint = <&max96722_csi1_out>;
-			data-lanes = <4>;
-			clock-lanes = <0>;
-			csis-hs-settle = <10>;
-			csis-clk-settle = <2>;
-			csis-wclk;
-		};
-	};
+&mipi_csi_1 {
+	status = "okay";
+	maxim,max96717-chain;
+};
+
+/* Reuse the base DTS' physical CSI1 endpoint; OV5640 is disabled above. */
+&mipi_csi1_in {
+	remote-endpoint = <&max96722_csi1_out>;
+	data-lanes = <2>;
+	clock-lanes = <0>;
+	/* Preserve the previously validated two-lane receiver timing. */
+	csis-hs-settle = <10>;
+	csis-clk-settle = <2>;
+	csis-wclk;
 };
 
 &isi_0 {
+	status = "disabled";
+
+	cap_device {
+		status = "disabled";
+	};
+};
+
+&isi_1 {
 	status = "okay";
+	interface = <3 0 2>;
 
 	cap_device {
 		status = "okay";

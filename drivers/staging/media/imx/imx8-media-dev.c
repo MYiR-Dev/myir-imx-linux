@@ -106,6 +106,7 @@ struct mxc_sensor_info {
 	struct v4l2_subdev		*sd;
 	struct fwnode_handle *fwnode;
 	bool mipi_mode;
+	bool max96717_chain;
 };
 
 struct mxc_md {
@@ -120,6 +121,7 @@ struct mxc_md {
 	int valid_num_sensors;
 	unsigned int nr_isi;
 	bool parallel_csi;
+	bool max96717_chain;
 
 	struct media_device media_dev;
 	struct v4l2_device v4l2_dev;
@@ -532,22 +534,37 @@ static int mxc_md_create_links(struct mxc_md *mxc_md)
 				return -ENODEV;
 			}
 
-			memset(&endpoint, 0x0, sizeof(struct of_endpoint));
-			ret = of_graph_parse_endpoint(remote_ep, &endpoint);
-			of_node_put(remote_ep);
-			if (ret < 0) {
-				v4l2_err(&mxc_md->v4l2_dev,
-					 "Failed to parse remote endpoint\n");
-				return ret;
+			if (sensor->max96717_chain) {
+				ret = media_entity_get_fwnode_pad(source,
+								  of_fwnode_handle(remote_ep),
+								  MEDIA_PAD_FL_SOURCE);
+				if (ret < 0) {
+					of_node_put(remote_ep);
+					v4l2_err(&mxc_md->v4l2_dev,
+						 "Failed to find MAX96722 source pad\n");
+					return ret;
+				}
+				source_pad = ret;
+				sink_pad = MXC_MIPI_CSI2_VC0_PAD_SINK;
+			} else {
+				memset(&endpoint, 0, sizeof(endpoint));
+				ret = of_graph_parse_endpoint(remote_ep, &endpoint);
+				if (ret < 0) {
+					of_node_put(remote_ep);
+					v4l2_err(&mxc_md->v4l2_dev,
+						 "Failed to parse remote endpoint\n");
+					return ret;
+				}
+				source_pad = endpoint.port;
+				sink_pad = source_pad;
 			}
-
-			source_pad = endpoint.port;
-			sink_pad = source_pad;
+			of_node_put(remote_ep);
 
 			mipi_vc = (mipi_csi2->vchannel) ? 4 : 1;
 			for (j = 0; j < mipi_vc; j++) {
 				ret = media_create_pad_link(source,
-							    source_pad + j,
+							    source_pad +
+							    (sensor->max96717_chain ? 0 : j),
 							    sink,
 							    sink_pad + j,
 							    MEDIA_LNK_FL_IMMUTABLE |
@@ -558,7 +575,8 @@ static int mxc_md_create_links(struct mxc_md *mxc_md)
 				/* Notify MIPI subdev entity */
 				ret = media_entity_call(sink, link_setup,
 							&sink->pads[sink_pad + j],
-							&source->pads[source_pad + j],
+							&source->pads[source_pad +
+							(sensor->max96717_chain ? 0 : j)],
 							0);
 				if (ret)
 					return ret;
@@ -611,11 +629,18 @@ static int subdev_notifier_complete(struct v4l2_async_notifier *notifier)
 	dev_dbg(&mxc_md->pdev->dev, "%s\n", __func__);
 	mutex_lock(&mxc_md->media_dev.graph_mutex);
 
-	ret = mxc_md_create_links(mxc_md);
-	if (ret < 0)
-		goto unlock;
+	/*
+	 * A nested notifier can complete again as bridge children bind.  Keep
+	 * node registration repeatable, but create the fixed graph links only
+	 * once; duplicate enabled links unbalance legacy s_stream callbacks.
+	 */
+	if (!mxc_md->max96717_chain || !mxc_md->link_status) {
+		ret = mxc_md_create_links(mxc_md);
+		if (ret < 0)
+			goto unlock;
 
-	mxc_md->link_status = 1;
+		mxc_md->link_status = 1;
+	}
 
 	ret = v4l2_device_register_subdev_nodes(&mxc_md->v4l2_dev);
 unlock:
@@ -1049,6 +1074,11 @@ static int register_sensor_entities(struct mxc_md *mxc_md)
 		}
 
 		mxc_md->sensor[index].fwnode = of_fwnode_handle(rem);
+		mxc_md->sensor[index].max96717_chain =
+			of_device_is_compatible(rem, "maxim,max96722") &&
+			of_property_read_bool(rem, "maxim,ali360-yh-profile");
+		mxc_md->max96717_chain |=
+			mxc_md->sensor[index].max96717_chain;
 		asd = v4l2_async_nf_add_fwnode(
 						&mxc_md->subdev_notifier,
 						mxc_md->sensor[index].fwnode,

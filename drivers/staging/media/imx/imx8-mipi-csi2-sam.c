@@ -373,6 +373,8 @@ static const struct mipi_csis_event mipi_csis_events[] = {
  * @clock: CSIS clocks
  * @irq: requested s5p-mipi-csis irq number
  * @flags: the state variable for power and streaming control
+ * @stream_users: MAX96717 chain's shared receiver stream reference count
+ * @max96717_chain_workarounds: enable MAX96717/MAX96722-specific handling
  * @clock_frequency: device bus clock frequency
  * @hs_settle: HS-RX settle time
  * @clk_settle: Clk settle time
@@ -404,6 +406,8 @@ struct csi_state {
 	struct clk *csi_aclk;
 	int irq;
 	u32 flags;
+	unsigned int stream_users;
+	bool max96717_chain_workarounds;
 
 	u32 clk_frequency;
 	u32 hs_settle;
@@ -1094,6 +1098,14 @@ static int mipi_csis_s_power(struct v4l2_subdev *mipi_sd, int on)
 		return -EINVAL;
 	}
 
+	if (state->max96717_chain_workarounds) {
+		if (sen_sd->ops && sen_sd->ops->core &&
+		    sen_sd->ops->core->s_power)
+			return v4l2_subdev_call(sen_sd, core, s_power, on);
+
+		return 0;
+	}
+
 	if (sen_sd->ops->core->s_power)
 		return v4l2_subdev_call(sen_sd, core, s_power, on);
 	else
@@ -1103,17 +1115,54 @@ static int mipi_csis_s_power(struct v4l2_subdev *mipi_sd, int on)
 static int mipi_csis_s_stream(struct v4l2_subdev *mipi_sd, int enable)
 {
 	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
+	bool start = false;
+	bool stop = false;
 
 	v4l2_dbg(1, debug, mipi_sd, "%s: %d, state: 0x%x\n",
 		 __func__, enable, state->flags);
 
+	/* Preserve the original one-callback/one-transition behaviour for all
+	 * ordinary sensors.  The reference count is only needed by the
+	 * MAX96717 -> MAX96722 multi-VC bridge, whose fixed media links can issue
+	 * multiple stream callbacks for one physical CSI receiver.
+	 */
+	if (!state->max96717_chain_workarounds) {
+		if (enable) {
+			pm_runtime_get_sync(state->dev);
+			mipi_csis_clear_counters(state);
+			mipi_csis_start_stream(state);
+			dump_csis_regs(state, __func__);
+			dump_gasket_regs(state, __func__);
+		} else {
+			mipi_csis_stop_stream(state);
+			if (debug > 0)
+				mipi_csis_log_counters(state, true);
+			pm_runtime_put(state->dev);
+		}
+
+		return 0;
+	}
+
+	mutex_lock(&state->lock);
 	if (enable) {
+		start = !state->stream_users++;
+	} else if (state->stream_users) {
+		stop = !--state->stream_users;
+	}
+	mutex_unlock(&state->lock);
+
+	/*
+	 * Runtime PM callbacks can take state->lock.  Keep the shared-stream
+	 * accounting serialized, but never call into PM or hardware while the
+	 * lock is held or STREAMON can self-deadlock until the watchdog fires.
+	 */
+	if (start) {
 		pm_runtime_get_sync(state->dev);
 		mipi_csis_clear_counters(state);
 		mipi_csis_start_stream(state);
 		dump_csis_regs(state, __func__);
 		dump_gasket_regs(state, __func__);
-	} else {
+	} else if (stop) {
 		mipi_csis_stop_stream(state);
 		if (debug > 0)
 			mipi_csis_log_counters(state, true);
@@ -1222,7 +1271,9 @@ static int mipi_csis_set_frame_interval(struct v4l2_subdev *mipi_sd,
 					struct v4l2_subdev_frame_interval *interval)
 {
 	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
+	struct v4l2_subdev_state *sen_state;
 	struct v4l2_subdev *sen_sd;
+	int ret;
 
 	/* Get remote source pad subdev */
 	sen_sd = csis_get_remote_subdev(state, __func__);
@@ -1231,7 +1282,17 @@ static int mipi_csis_set_frame_interval(struct v4l2_subdev *mipi_sd,
 		return -EINVAL;
 	}
 
-	return v4l2_subdev_call(sen_sd, pad, set_frame_interval, sd_state, interval);
+	if (!state->max96717_chain_workarounds)
+		return v4l2_subdev_call(sen_sd, pad, set_frame_interval,
+					sd_state, interval);
+
+	/* A CSI state is not valid for the remote MAX96722 subdevice. */
+	sen_state = v4l2_subdev_lock_and_get_active_state(sen_sd);
+	ret = v4l2_subdev_call(sen_sd, pad, set_frame_interval, sen_state,
+			       interval);
+	v4l2_subdev_unlock_state(sen_state);
+
+	return ret;
 }
 
 static int mipi_csis_get_frame_interval(struct v4l2_subdev *mipi_sd,
@@ -1239,7 +1300,9 @@ static int mipi_csis_get_frame_interval(struct v4l2_subdev *mipi_sd,
 					struct v4l2_subdev_frame_interval *interval)
 {
 	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
+	struct v4l2_subdev_state *sen_state;
 	struct v4l2_subdev *sen_sd;
+	int ret;
 
 	/* Get remote source pad subdev */
 	sen_sd = csis_get_remote_subdev(state, __func__);
@@ -1248,7 +1311,16 @@ static int mipi_csis_get_frame_interval(struct v4l2_subdev *mipi_sd,
 		return -EINVAL;
 	}
 
-	return v4l2_subdev_call(sen_sd, pad, get_frame_interval, sd_state, interval);
+	if (!state->max96717_chain_workarounds)
+		return v4l2_subdev_call(sen_sd, pad, get_frame_interval,
+					sd_state, interval);
+
+	sen_state = v4l2_subdev_lock_and_get_active_state(sen_sd);
+	ret = v4l2_subdev_call(sen_sd, pad, get_frame_interval, sen_state,
+			       interval);
+	v4l2_subdev_unlock_state(sen_state);
+
+	return ret;
 }
 
 static int mipi_csis_enum_framesizes(struct v4l2_subdev *mipi_sd,
@@ -1290,6 +1362,26 @@ static int mipi_csis_log_status(struct v4l2_subdev *mipi_sd)
 	struct csi_state *state = mipi_sd_to_csi_state(mipi_sd);
 
 	mutex_lock(&state->lock);
+	if (state->max96717_chain_workarounds) {
+		u32 dphy_status, dphy_ctrl, intsrc;
+		u32 frame_count[4];
+
+		dphy_status = mipi_csis_read(state, MIPI_CSIS_DPHYSTATUS);
+		dphy_ctrl = mipi_csis_read(state, MIPI_CSIS_DPHYCTRL);
+		intsrc = mipi_csis_read(state, MIPI_CSIS_INTSRC);
+		frame_count[0] = mipi_csis_read(state,
+						MIPI_CSIS_FRAME_COUNTER_CH0);
+		frame_count[1] = mipi_csis_read(state,
+						MIPI_CSIS_FRAME_COUNTER_CH1);
+		frame_count[2] = mipi_csis_read(state,
+						MIPI_CSIS_FRAME_COUNTER_CH2);
+		frame_count[3] = mipi_csis_read(state,
+						MIPI_CSIS_FRAME_COUNTER_CH3);
+		v4l2_info(&state->sd,
+			  "DPHYSTATUS=%08x DPHYCTRL=%08x INTSRC=%08x frame_count=%08x/%08x/%08x/%08x max96717_chain=1\n",
+			  dphy_status, dphy_ctrl, intsrc, frame_count[0],
+			  frame_count[1], frame_count[2], frame_count[3]);
+	}
 	mipi_csis_log_counters(state, true);
 	if (debug) {
 		dump_csis_regs(state, __func__);
@@ -1514,6 +1606,8 @@ static int mipi_csis_parse_dt(struct platform_device *pdev,
 	struct device_node *node = pdev->dev.of_node;
 
 	state->index = of_alias_get_id(node, "csi");
+	state->max96717_chain_workarounds =
+		of_property_read_bool(node, "maxim,max96717-chain");
 
 	if (of_property_read_u32(node, "clock-frequency", &state->clk_frequency))
 		state->clk_frequency = DEFAULT_SCLK_CSIS_FREQ;

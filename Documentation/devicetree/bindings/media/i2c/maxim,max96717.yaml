@@ -46,6 +46,14 @@ properties:
   '#clock-cells':
     const: 0
 
+  maxim,ali360-yh-profile:
+    type: boolean
+    description: |
+      Apply the fixed-source initialization required by an ALI360-YH camera
+      module containing an SC360AT sensor, ISP, and MAX96717 serializer. The
+      module outputs 1920x1536 UYVY and receives a 30 Hz frame-sync signal on
+      serializer GPIO0.
+
   reg:
     maxItems: 1
 

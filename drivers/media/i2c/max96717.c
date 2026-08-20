@@ -82,6 +82,18 @@
 /* MAX96717 only have CSI port 'B' */
 #define MAX96717_FRONTOP0     CCI_REG8(0x308)
 #define MAX96717_START_PORT_B BIT(5)
+#define MAX96717_FRONTOP16    CCI_REG8(0x318)
+
+#define MAX96717_FRONTOP22        CCI_REG8(0x31e)
+#define MAX96717_SOFT_BPPZ        GENMASK(4, 0)
+#define MAX96717_SOFT_BPPZ_EN     BIT(5)
+#define MAX96717_SOFT_VCZ_EN      BIT(6)
+#define MAX96717_SOFT_DTZ_EN      BIT(7)
+#define MAX96717_FRONTOP24        CCI_REG8(0x320)
+#define MAX96717_SOFT_VCZ         GENMASK(5, 4)
+#define MAX96717_FRONTOP27        CCI_REG8(0x323)
+#define MAX96717_SOFT_DTZ         GENMASK(5, 0)
+#define MAX96717_CSI_DT_RGB888    0x24
 
 /* MIPI_RX */
 #define MAX96717_MIPI_RX1       CCI_REG8(0x331)
@@ -125,6 +137,8 @@ struct max96717_priv {
 	struct media_pad                  pads[MAX96717_PORTS];
 	struct v4l2_ctrl_handler          ctrl_handler;
 	struct v4l2_async_notifier        notifier;
+	bool                              notifier_initialized;
+	bool                              ali360_yh_profile;
 	struct v4l2_subdev                *source_sd;
 	u16                               source_sd_pad;
 	u64			          enabled_source_streams;
@@ -264,9 +278,36 @@ static int max96717_s_ctrl(struct v4l2_ctrl *ctrl)
 	 * Pattern generator doesn't work with tunnel mode.
 	 * Needs RGB color format and deserializer tunnel mode must be disabled.
 	 */
-	return cci_update_bits(priv->regmap, MAX96717_MIPI_RX_EXT11,
-			       MAX96717_TUN_MODE,
-			       priv->pattern ? 0 : MAX96717_TUN_MODE, &ret);
+	cci_update_bits(priv->regmap, MAX96717_MIPI_RX_EXT11,
+			MAX96717_TUN_MODE,
+			priv->pattern ? 0 : MAX96717_TUN_MODE, &ret);
+
+	/*
+	 * The internal pattern generator has no incoming CSI-2 packet header from
+	 * which the video transmitter can infer BPP, VC and data type.  Override
+	 * them explicitly so the generated RGB888 stream can be routed by the
+	 * deserializer's data-type mapping.
+	 */
+	cci_update_bits(priv->regmap, MAX96717_FRONTOP22,
+			MAX96717_SOFT_BPPZ | MAX96717_SOFT_BPPZ_EN |
+			MAX96717_SOFT_VCZ_EN | MAX96717_SOFT_DTZ_EN,
+			priv->pattern ?
+				FIELD_PREP(MAX96717_SOFT_BPPZ, 24) |
+				MAX96717_SOFT_BPPZ_EN |
+				MAX96717_SOFT_VCZ_EN |
+				MAX96717_SOFT_DTZ_EN : 0,
+			&ret);
+	if (priv->pattern) {
+		cci_update_bits(priv->regmap, MAX96717_FRONTOP24,
+				MAX96717_SOFT_VCZ,
+				FIELD_PREP(MAX96717_SOFT_VCZ, 0), &ret);
+		cci_update_bits(priv->regmap, MAX96717_FRONTOP27,
+				MAX96717_SOFT_DTZ,
+				FIELD_PREP(MAX96717_SOFT_DTZ,
+					   MAX96717_CSI_DT_RGB888), &ret);
+	}
+
+	return ret;
 }
 
 static const char * const max96717_test_pattern[] = {
@@ -381,13 +422,21 @@ static int _max96717_set_routing(struct v4l2_subdev *sd,
 				 struct v4l2_subdev_state *state,
 				 struct v4l2_subdev_krouting *routing)
 {
-	static const struct v4l2_mbus_framefmt format = {
+	struct max96717_priv *priv = sd_to_max96717(sd);
+	struct v4l2_mbus_framefmt format = {
 		.width = 1280,
 		.height = 1080,
 		.code = MEDIA_BUS_FMT_Y8_1X8,
 		.field = V4L2_FIELD_NONE,
 	};
 	int ret;
+
+	if (priv->ali360_yh_profile) {
+		format.width = 1920;
+		format.height = 1536;
+		format.code = MEDIA_BUS_FMT_UYVY8_1X16;
+		format.colorspace = V4L2_COLORSPACE_SRGB;
+	}
 
 	ret = v4l2_subdev_routing_validate(sd, routing,
 					   V4L2_SUBDEV_ROUTING_ONLY_1_TO_1);
@@ -499,14 +548,72 @@ static int max96717_enable_streams(struct v4l2_subdev *sd,
 	u64 sink_streams;
 	int ret;
 
-	if (!priv->enabled_source_streams)
-		max96717_start_csi(priv, true);
+	if (!priv->pattern && !priv->source_sd) {
+		u64 val;
+		int retries;
+
+		if (!priv->ali360_yh_profile)
+			return -ENOLINK;
+
+		/* ALI360-YH: power and hold the ISP/sensor in reset. */
+		ret = 0;
+		cci_write(priv->regmap, MAX96717_GPIO_REG_A(8), 0x80, &ret);
+		cci_write(priv->regmap, MAX96717_GPIO_REG_A(3), 0x80, &ret);
+		cci_write(priv->regmap, MAX96717_GPIO_REG_A(1), 0x80, &ret);
+		cci_write(priv->regmap, MAX96717_GPIO_REG_A(4), 0x90, &ret);
+		cci_write(priv->regmap, MAX96717_GPIO_REG_A(0), 0x80, &ret);
+		if (ret)
+			return ret;
+
+		msleep(100);
+
+		/* Pixel mode, pipe Z, and GPIO0 FSYNC receive ID 0. */
+		cci_write(priv->regmap, MAX96717_MIPI_RX_EXT11, 0x00, &ret);
+		cci_write(priv->regmap, MAX96717_FRONTOP16, 0x5e, &ret);
+		cci_write(priv->regmap, PIO_SLEW_1, 0x0c, &ret);
+		cci_write(priv->regmap, MAX96717_GPIO_REG_A(3), 0x90, &ret);
+		cci_write(priv->regmap, MAX96717_GPIO_REG_A(0), 0x84, &ret);
+		cci_write(priv->regmap, MAX96717_GPIO_REG_A(0) + 1, 0x20, &ret);
+		cci_write(priv->regmap, MAX96717_GPIO_REG_A(0) + 2, 0x00, &ret);
+		if (ret)
+			return ret;
+
+		/*
+		 * PCLKDET is gated by START_PORT_B.  The normal stop path clears
+		 * that bit, so start the CSI receiver before waiting for the camera
+		 * pixel clock.  Otherwise every stream after the first times out.
+		 */
+		ret = max96717_start_csi(priv, true);
+		if (ret)
+			return ret;
+
+		for (retries = 0; retries < 100; retries++) {
+			ret = cci_read(priv->regmap, MAX96717_VIDEO_TX2, &val, NULL);
+			if (ret)
+				goto stop_csi;
+			if (val & MAX96717_VIDEO_PCLKDET)
+				break;
+			usleep_range(10000, 12000);
+		}
+
+		if (retries == 100) {
+			ret = dev_err_probe(&priv->client->dev, -ETIMEDOUT,
+					    "ALI360-YH pixel clock not detected\n");
+			goto stop_csi;
+		}
+	}
+
+	if (!priv->enabled_source_streams) {
+		ret = max96717_start_csi(priv, true);
+		if (ret)
+			return ret;
+	}
 
 	ret = max96717_apply_patgen(priv, state);
 	if (ret)
 		goto stop_csi;
 
-	if (!priv->pattern) {
+	if (!priv->pattern && priv->source_sd) {
 		sink_streams =
 			v4l2_subdev_state_xlate_streams(state,
 							MAX96717_PAD_SOURCE,
@@ -547,7 +654,7 @@ static int max96717_disable_streams(struct v4l2_subdev *sd,
 	if (!priv->enabled_source_streams)
 		max96717_start_csi(priv, false);
 
-	if (!priv->pattern) {
+	if (!priv->pattern && priv->source_sd) {
 		int ret;
 
 		sink_streams =
@@ -633,17 +740,26 @@ static int max96717_v4l2_notifier_register(struct max96717_priv *priv)
 {
 	struct device *dev = &priv->client->dev;
 	struct v4l2_async_connection *asd;
-	struct fwnode_handle *ep_fwnode;
+	struct fwnode_handle *ep_fwnode, *remote_fwnode;
 	int ret;
 
 	ep_fwnode = fwnode_graph_get_endpoint_by_id(dev_fwnode(dev),
 						    MAX96717_PAD_SINK, 0, 0);
 	if (!ep_fwnode) {
-		dev_err(dev, "No graph endpoint\n");
-		return -ENODEV;
+		dev_info(dev, "No sensor endpoint; test-pattern mode only\n");
+		return 0;
 	}
 
+	remote_fwnode = fwnode_graph_get_remote_endpoint(ep_fwnode);
+	if (!remote_fwnode) {
+		fwnode_handle_put(ep_fwnode);
+		dev_info(dev, "No remote sensor; test-pattern mode only\n");
+		return 0;
+	}
+	fwnode_handle_put(remote_fwnode);
+
 	v4l2_async_subdev_nf_init(&priv->notifier, &priv->sd);
+	priv->notifier_initialized = true;
 
 	asd = v4l2_async_nf_add_fwnode_remote(&priv->notifier, ep_fwnode,
 					      struct v4l2_async_connection);
@@ -653,6 +769,7 @@ static int max96717_v4l2_notifier_register(struct max96717_priv *priv)
 	if (IS_ERR(asd)) {
 		dev_err(dev, "Failed to add subdev: %ld", PTR_ERR(asd));
 		v4l2_async_nf_cleanup(&priv->notifier);
+		priv->notifier_initialized = false;
 		return PTR_ERR(asd);
 	}
 
@@ -662,6 +779,7 @@ static int max96717_v4l2_notifier_register(struct max96717_priv *priv)
 	if (ret) {
 		dev_err(dev, "Failed to register subdev_notifier");
 		v4l2_async_nf_cleanup(&priv->notifier);
+		priv->notifier_initialized = false;
 		return ret;
 	}
 
@@ -724,8 +842,11 @@ static int max96717_subdev_init(struct max96717_priv *priv)
 	return 0;
 
 err_unreg_notif:
-	v4l2_async_nf_unregister(&priv->notifier);
-	v4l2_async_nf_cleanup(&priv->notifier);
+	if (priv->notifier_initialized) {
+		v4l2_async_nf_unregister(&priv->notifier);
+		v4l2_async_nf_cleanup(&priv->notifier);
+		priv->notifier_initialized = false;
+	}
 err_free_state:
 	v4l2_subdev_cleanup(&priv->sd);
 err_entity_cleanup:
@@ -739,8 +860,10 @@ err_free_ctrl:
 static void max96717_subdev_uninit(struct max96717_priv *priv)
 {
 	v4l2_async_unregister_subdev(&priv->sd);
-	v4l2_async_nf_unregister(&priv->notifier);
-	v4l2_async_nf_cleanup(&priv->notifier);
+	if (priv->notifier_initialized) {
+		v4l2_async_nf_unregister(&priv->notifier);
+		v4l2_async_nf_cleanup(&priv->notifier);
+	}
 	v4l2_subdev_cleanup(&priv->sd);
 	media_entity_cleanup(&priv->sd.entity);
 	v4l2_ctrl_handler_free(&priv->ctrl_handler);
@@ -978,15 +1101,21 @@ static int max96717_hw_init(struct max96717_priv *priv)
 		return dev_err_probe(dev, ret,
 				     "Fail to read device revision");
 
-	dev_dbg(dev, "Found %x (rev %lx)\n", (u8)dev_id,
-		(u8)val & MAX96717_DEV_REV_MASK);
+	dev_info(dev, "Found MAX96717%s serializer, id 0x%02x (rev %lu)\n",
+		 dev_id == MAX96717F_DEVICE_ID ? "F" : "", (u8)dev_id,
+		 (u8)val & MAX96717_DEV_REV_MASK);
 
 	ret = cci_read(priv->regmap, MAX96717_MIPI_RX_EXT11, &val, NULL);
 	if (ret)
 		return dev_err_probe(dev, ret,
 				     "Fail to read mipi rx extension");
 
-	if (!(val & MAX96717_TUN_MODE))
+	/*
+	 * ALI360-YH firmware leaves the serializer in pixel mode.  The profile
+	 * programs that mode explicitly when streaming, so do not reject the
+	 * already-correct power-on state during probe.
+	 */
+	if (!(val & MAX96717_TUN_MODE) && !priv->ali360_yh_profile)
 		return dev_err_probe(dev, -EOPNOTSUPP,
 				     "Only supporting tunnel mode");
 
@@ -1002,7 +1131,8 @@ static int max96717_parse_dt(struct max96717_priv *priv)
 	int ret;
 
 	ep_fwnode = fwnode_graph_get_endpoint_by_id(dev_fwnode(dev),
-						    MAX96717_PAD_SINK, 0, 0);
+						    MAX96717_PAD_SINK, 0,
+						    FWNODE_GRAPH_DEVICE_DISABLED);
 	if (!ep_fwnode)
 		return dev_err_probe(dev, -ENOENT, "no endpoint found\n");
 
@@ -1034,6 +1164,8 @@ static int max96717_probe(struct i2c_client *client)
 		return -ENOMEM;
 
 	priv->client = client;
+	priv->ali360_yh_profile = device_property_read_bool(dev,
+							    "maxim,ali360-yh-profile");
 	priv->regmap = devm_cci_regmap_init_i2c(client, 16);
 	if (IS_ERR(priv->regmap)) {
 		ret = PTR_ERR(priv->regmap);

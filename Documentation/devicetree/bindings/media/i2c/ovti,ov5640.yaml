@@ -44,6 +44,24 @@ properties:
     description: >
       Reference to the GPIO connected to the reset pin, if any.
 
+  ovti,auto-gain-ceiling:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    minimum: 16
+    maximum: 1023
+    default: 248
+    description: >
+      Maximum analogue gain used by the sensor automatic gain controller,
+      in 1/16 gain units. Lower values trade low-light brightness for less
+      chroma noise.
+
+  ovti,default-saturation:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    maximum: 255
+    default: 64
+    description: >
+      Initial value of the V4L2 saturation control. This does not prevent
+      userspace from selecting another value after probe.
+
   port:
     description: Digital Output Port
     $ref: /schemas/graph.yaml#/$defs/port-base

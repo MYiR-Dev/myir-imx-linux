@@ -1,20 +1,15 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
- * MYD-JS8MPQ CSI1 cross-check variant: known-good OV5640 on the CSI1
- * connector instead of the default NVP6324/N4.
+ * MYD-JS8MPQ native HDMI + CSI0 OV5640 variant.
  *
- * Purpose: isolate the CSI1 link itself.  If the OV5640 produces a
- * clean image through the same CSI1 connector, FPC, mipi_csi_0 and ISI
- * path, the CSI1 channel is cleared and a fault is pinned to the
- * camera module under test.
- *
- * Pipeline: ov5640 (2-lane YUV) -> mipi_csi_0 -> isi_0 -> /dev/video*
+ * The validated OV5640 pipeline is inherited unchanged from myd-js8mpq.dts:
+ * ov5640_0 (i2c3) -> mipi_csi_1 -> isi_1 -> /dev/video*.
  */
 
 #include "myd-js8mpq.dts"
 
 / {
-	model = "MYIR MYD-JS8MPQ board (HDMI + CSI1 OV5640)";
+	model = "MYIR MYD-JS8MPQ board (HDMI + CSI0 OV5640)";
 };
 
 /*
@@ -62,73 +57,54 @@
 };
 
 /*
- * The base DTS also enables the CSI0 OV5640 on i2c3.  No module is fitted on
- * CSI0 in this variant, so probing it produces misleading errors from 2-003c.
- * CSI1 below is on i2c2 and appears as 1-003c at runtime.
+ * Keep the EVK OV5640 topology, but use the MYD-JS8MPQ camera connector's
+ * actual power, reset and fixed 24 MHz clock resources.
  */
 &ov5640_0 {
-	status = "disabled";
+	clocks = <&cam_clk_24m>;
+	clock-names = "xclk";
+	DOVDD-supply = <&reg_csi0_pwr>;
+	AVDD-supply = <&reg_csi0_pwr>;
+	DVDD-supply = <&reg_csi0_pwr>;
+	/* Board-tuned limits: 7.75x AGC ceiling and reduced chroma noise. */
+	ovti,auto-gain-ceiling = <124>;
+	ovti,default-saturation = <48>;
+	powerdown-gpios = <&gpio5 5 GPIO_ACTIVE_HIGH>;
+	reset-gpios = <&gpio3 25 GPIO_ACTIVE_LOW>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_csi0>;
+	status = "okay";
 };
 
 &ov5640_0_ep {
-	/delete-property/ remote-endpoint;
+	remote-endpoint = <&mipi_csi1_in>;
+	data-lanes = <1 2>;
+	clock-lanes = <0>;
 };
 
 &mipi_csi_1 {
-	status = "disabled";
-};
-
-&mipi_csi1_in {
-	/delete-property/ remote-endpoint;
-};
-
-&i2c2 {
-	/* Replace the base-board N4 decoder on the shared CSI1 connector. */
-	/delete-node/ camera@31;
-
-	ov5640_csi1: camera@3c {
-		compatible = "ovti,ov5640";
-		reg = <0x3c>;
-		clocks = <&cam_clk_24m>;
-		clock-names = "xclk";
-		DOVDD-supply = <&reg_csi1_pwr>;
-		AVDD-supply = <&reg_csi1_pwr>;
-		DVDD-supply = <&reg_csi1_pwr>;
-		/* PWDN polarity follows the 6.12 EVK; board RESETB is active-low. */
-		reset-gpios = <&gpio4 0 GPIO_ACTIVE_LOW>;
-		powerdown-gpios = <&gpio4 1 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_csi1>;
-		status = "okay";
-
-		port {
-			ov5640_csi1_ep: endpoint {
-				remote-endpoint = <&mipi_csi0_in>;
-				data-lanes = <1 2>;
-				clock-lanes = <0>;
-			};
-		};
-	};
-};
-
-
-/* Connect the CSI1 host to the OV5640, 2 lanes. */
-&mipi_csi_0 {
 	status = "okay";
+};
 
-	/* Drop the inherited N4 graph before installing the OV5640 endpoint. */
-	/delete-node/ ports;
-
-	port {
-		mipi_csi0_in: endpoint {
-			remote-endpoint = <&ov5640_csi1_ep>;
-			data-lanes = <2>;
-			clock-lanes = <0>;
-		};
-	};
+/* Match the validated i.MX8MP EVK receiver timing for OV5640. */
+&mipi_csi1_in {
+	remote-endpoint = <&ov5640_0_ep>;
+	data-lanes = <2>;
+	clock-lanes = <0>;
+	csis-hs-settle = <13>;
+	csis-clk-settle = <2>;
+	csis-wclk;
 };
 
 &isi_0 {
+	status = "disabled";
+
+	cap_device {
+		status = "disabled";
+	};
+};
+
+&isi_1 {
 	status = "okay";
 
 	cap_device {

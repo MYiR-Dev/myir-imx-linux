@@ -16,6 +16,7 @@
 #include <linux/mod_devicetable.h>
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
+#include <linux/property.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/types.h>
@@ -76,6 +77,7 @@
 #define OV5640_REG_AEC_PK_MANUAL	0x3503
 #define OV5640_REG_AEC_PK_REAL_GAIN	0x350a
 #define OV5640_REG_AEC_PK_VTS		0x350c
+#define OV5640_REG_AEC_GAIN_CEILING	0x3a18
 #define OV5640_REG_TIMING_HS		0x3800
 #define OV5640_REG_TIMING_VS		0x3802
 #define OV5640_REG_TIMING_HW		0x3804
@@ -474,6 +476,8 @@ struct ov5640_dev {
 
 	u32 prev_sysclk, prev_hts;
 	u32 ae_low, ae_high, ae_target;
+	u16 auto_gain_ceiling;
+	u8 default_saturation;
 
 	bool pending_mode_change;
 	bool streaming;
@@ -2436,6 +2440,11 @@ static int ov5640_restore_mode(struct ov5640_dev *sensor)
 	ov5640_load_regs(sensor, ov5640_init_setting,
 			 ARRAY_SIZE(ov5640_init_setting));
 
+	ret = ov5640_write_reg16(sensor, OV5640_REG_AEC_GAIN_CEILING,
+				 sensor->auto_gain_ceiling);
+	if (ret)
+		return ret;
+
 	ret = ov5640_mod_reg(sensor, OV5640_REG_SYS_ROOT_DIVIDER, 0x3f,
 			     (ilog2(OV5640_SCLK2X_ROOT_DIV) << 2) |
 			     ilog2(OV5640_SCLK_ROOT_DIV));
@@ -3513,7 +3522,8 @@ static int ov5640_init_controls(struct ov5640_dev *sensor)
 					0, 1023, 1, 0);
 
 	ctrls->saturation = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_SATURATION,
-					      0, 255, 1, 64);
+					      0, 255, 1,
+					      sensor->default_saturation);
 	ctrls->hue = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_HUE,
 				       0, 359, 1, 0);
 	ctrls->contrast = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_CONTRAST,
@@ -3920,6 +3930,7 @@ static int ov5640_probe(struct i2c_client *client)
 	struct device *dev = &client->dev;
 	struct fwnode_handle *endpoint;
 	struct ov5640_dev *sensor;
+	u32 value;
 	int ret;
 
 	sensor = devm_kzalloc(dev, sizeof(*sensor), GFP_KERNEL);
@@ -3942,6 +3953,24 @@ static int ov5640_probe(struct i2c_client *client)
 		ov5640_csi2_link_freqs[OV5640_DEFAULT_LINK_FREQ];
 
 	sensor->ae_target = 52;
+	sensor->auto_gain_ceiling = 0xf8;
+	sensor->default_saturation = 64;
+
+	if (!device_property_read_u32(dev, "ovti,auto-gain-ceiling", &value)) {
+		if (value < 16 || value > 0x3ff) {
+			dev_err(dev, "invalid auto gain ceiling %u\n", value);
+			return -EINVAL;
+		}
+		sensor->auto_gain_ceiling = value;
+	}
+
+	if (!device_property_read_u32(dev, "ovti,default-saturation", &value)) {
+		if (value > 255) {
+			dev_err(dev, "invalid default saturation %u\n", value);
+			return -EINVAL;
+		}
+		sensor->default_saturation = value;
+	}
 
 	endpoint = fwnode_graph_get_next_endpoint(dev_fwnode(&client->dev),
 						  NULL);

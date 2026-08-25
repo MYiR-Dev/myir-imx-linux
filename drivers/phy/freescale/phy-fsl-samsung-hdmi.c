@@ -85,11 +85,28 @@
 #define PHY_REG_46		0xb8
 #define PHY_REG_47		0xbc
 
+#define REG01_PMS_P_MASK	GENMASK(3, 0)
+#define REG03_PMS_S_MASK	GENMASK(7, 4)
+
 #define PHY_PLL_DIV_REGS_NUM 6
+
+#ifndef MHZ
+#define MHZ	(1000UL * 1000UL)
+#endif
 
 struct phy_config {
 	u32	pixclk;
 	u8	pll_div_regs[PHY_PLL_DIV_REGS_NUM];
+	u8	pms_p;
+};
+
+/*
+ * Integer-divider settings are calculated at runtime.  The last four
+ * divider registers are fixed while P, M and S are selected for the
+ * requested pixel clock.
+ */
+static struct phy_config calculated_phy_pll_cfg = {
+	.pll_div_regs = { 0x00, 0x00, 0x00, 0x00, 0x80, 0x00 },
 };
 
 static const struct phy_config phy_pll_cfg[] = {
@@ -412,40 +429,6 @@ to_fsl_samsung_hdmi_phy(struct clk_hw *hw)
 }
 
 static void
-fsl_samsung_hdmi_phy_configure_pixclk(struct fsl_samsung_hdmi_phy *phy,
-				      const struct phy_config *cfg)
-{
-	u8 div = 0x1;
-
-	switch (cfg->pixclk) {
-	case  22250000 ...  33750000:
-		div = 0xf;
-		break;
-	case  35000000 ...  40000000:
-		div = 0xb;
-		break;
-	case  43200000 ...  47500000:
-		div = 0x9;
-		break;
-	case  50349650 ...  63500000:
-		div = 0x7;
-		break;
-	case  67500000 ...  90000000:
-		div = 0x5;
-		break;
-	case  94000000 ... 148500000:
-		div = 0x3;
-		break;
-	case 154000000 ... 297000000:
-		div = 0x1;
-		break;
-	}
-
-	writeb(REG21_SEL_TX_CK_INV | FIELD_PREP(REG21_PMS_S_MASK, div),
-	       phy->regs + PHY_REG_21);
-}
-
-static void
 fsl_samsung_hdmi_phy_configure_pll_lock_det(struct fsl_samsung_hdmi_phy *phy,
 					    const struct phy_config *cfg)
 {
@@ -496,6 +479,66 @@ fsl_samsung_hdmi_phy_configure_pll_lock_det(struct fsl_samsung_hdmi_phy *phy,
 	       phy->regs + PHY_REG_14);
 }
 
+static unsigned long
+fsl_samsung_hdmi_phy_find_pms(unsigned long fout, u8 *p, u16 *m, u8 *s)
+{
+	unsigned long best_freq = 0;
+	u32 min_delta = U32_MAX;
+	u8 candidate_p, best_p = 0;
+	u16 candidate_m, best_m = 0;
+	u8 candidate_s, best_s = 0;
+
+	/* The PHY PLL runs at five times the TMDS pixel clock. */
+	fout *= 5;
+
+	for (candidate_p = 1; candidate_p <= 11; candidate_p++) {
+		for (candidate_s = 1; candidate_s <= 16; candidate_s++) {
+			u64 tmp;
+			u32 delta;
+
+			/* S must be one or even, and 14 is forbidden by the TRM. */
+			if (candidate_s > 1 && (candidate_s & 1))
+				candidate_s++;
+			if (candidate_s == 14)
+				continue;
+
+			tmp = (u64)fout * candidate_p * candidate_s;
+			do_div(tmp, 24 * MHZ);
+			if (tmp > 255)
+				continue;
+			candidate_m = tmp;
+
+			/* Fvco = M * Fref / P, valid from 750 MHz to 3 GHz. */
+			tmp = div64_ul((u64)candidate_m * 24 * MHZ,
+				       candidate_p);
+			if (tmp < 750 * MHZ || tmp > 3000 * MHZ)
+				continue;
+
+			do_div(tmp, candidate_s);
+			delta = abs(fout - tmp);
+			if (delta < min_delta) {
+				best_p = candidate_p;
+				best_m = candidate_m;
+				best_s = candidate_s;
+				best_freq = tmp;
+				min_delta = delta;
+			}
+
+			if (!delta)
+				goto done;
+		}
+	}
+
+done:
+	if (best_freq) {
+		*p = best_p;
+		*m = best_m;
+		*s = best_s;
+	}
+
+	return best_freq / 5;
+}
+
 static int fsl_samsung_hdmi_phy_configure(struct fsl_samsung_hdmi_phy *phy,
 					  const struct phy_config *cfg)
 {
@@ -513,7 +556,15 @@ static int fsl_samsung_hdmi_phy_configure(struct fsl_samsung_hdmi_phy *phy,
 	for (i = 0; i < PHY_PLL_DIV_REGS_NUM; i++)
 		writeb(cfg->pll_div_regs[i], phy->regs + PHY_REG_02 + i * 4);
 
-	fsl_samsung_hdmi_phy_configure_pixclk(phy, cfg);
+	/* Static fractional entries use the common REG1 value. */
+	if (cfg->pms_p)
+		writeb(FIELD_PREP(REG01_PMS_P_MASK, cfg->pms_p),
+		       phy->regs + PHY_REG_01);
+
+	/* The high nibble of REG3 and low nibble of REG21 both contain S. */
+	writeb(REG21_SEL_TX_CK_INV | FIELD_PREP(REG21_PMS_S_MASK,
+	       cfg->pll_div_regs[1] >> 4), phy->regs + PHY_REG_21);
+
 	fsl_samsung_hdmi_phy_configure_pll_lock_det(phy, cfg);
 
 	writeb(REG33_FIX_DA | REG33_MODE_SET_DONE, phy->regs + PHY_REG_33);
@@ -544,22 +595,9 @@ static unsigned long phy_clk_recalc_rate(struct clk_hw *hw,
 	return phy->cur_cfg->pixclk;
 }
 
-static long phy_clk_round_rate(struct clk_hw *hw,
-			       unsigned long rate, unsigned long *parent_rate)
+static const struct phy_config *
+fsl_samsung_hdmi_phy_lookup_rate(unsigned long rate)
 {
-	int i;
-
-	for (i = ARRAY_SIZE(phy_pll_cfg) - 1; i >= 0; i--)
-		if (phy_pll_cfg[i].pixclk <= rate)
-			return phy_pll_cfg[i].pixclk;
-
-	return -EINVAL;
-}
-
-static int phy_clk_set_rate(struct clk_hw *hw,
-			    unsigned long rate, unsigned long parent_rate)
-{
-	struct fsl_samsung_hdmi_phy *phy = to_fsl_samsung_hdmi_phy(hw);
 	int i;
 
 	for (i = ARRAY_SIZE(phy_pll_cfg) - 1; i >= 0; i--)
@@ -567,9 +605,79 @@ static int phy_clk_set_rate(struct clk_hw *hw,
 			break;
 
 	if (i < 0)
+		return NULL;
+
+	if (phy_pll_cfg[i].pixclk == rate ||
+	    i + 1 >= ARRAY_SIZE(phy_pll_cfg))
+		return &phy_pll_cfg[i];
+
+	return abs((long)rate - (long)phy_pll_cfg[i].pixclk) <
+	       abs((long)rate - (long)phy_pll_cfg[i + 1].pixclk) ?
+	       &phy_pll_cfg[i] : &phy_pll_cfg[i + 1];
+}
+
+static void
+fsl_samsung_hdmi_calculate_phy(struct phy_config *cfg, unsigned long rate,
+			       u8 p, u16 m, u8 s)
+{
+	cfg->pixclk = rate;
+	cfg->pms_p = p;
+	cfg->pll_div_regs[0] = m;
+	cfg->pll_div_regs[1] = FIELD_PREP(REG03_PMS_S_MASK, s - 1);
+}
+
+static const struct phy_config *
+fsl_samsung_hdmi_phy_find_settings(unsigned long rate)
+{
+	const struct phy_config *fractional;
+	unsigned long integer_rate;
+	u16 m;
+	u8 p, s;
+
+	if (rate > 297000000 || rate < 22250000)
+		return NULL;
+
+	fractional = fsl_samsung_hdmi_phy_lookup_rate(rate);
+	if (!fractional || fractional->pixclk == rate)
+		return fractional;
+
+	integer_rate = fsl_samsung_hdmi_phy_find_pms(rate, &p, &m, &s);
+	if (!integer_rate)
+		return fractional;
+
+	fsl_samsung_hdmi_calculate_phy(&calculated_phy_pll_cfg,
+					 integer_rate, p, m, s);
+
+	if (abs((long)rate - (long)integer_rate) <
+	    abs((long)rate - (long)fractional->pixclk))
+		return &calculated_phy_pll_cfg;
+
+	return fractional;
+}
+
+static long phy_clk_round_rate(struct clk_hw *hw,
+			       unsigned long rate, unsigned long *parent_rate)
+{
+	const struct phy_config *cfg;
+
+	cfg = fsl_samsung_hdmi_phy_find_settings(rate);
+	if (!cfg)
 		return -EINVAL;
 
-	phy->cur_cfg = &phy_pll_cfg[i];
+	return cfg->pixclk;
+}
+
+static int phy_clk_set_rate(struct clk_hw *hw,
+			    unsigned long rate, unsigned long parent_rate)
+{
+	struct fsl_samsung_hdmi_phy *phy = to_fsl_samsung_hdmi_phy(hw);
+	const struct phy_config *cfg;
+
+	cfg = fsl_samsung_hdmi_phy_find_settings(rate);
+	if (!cfg)
+		return -EINVAL;
+
+	phy->cur_cfg = cfg;
 
 	return fsl_samsung_hdmi_phy_configure(phy, phy->cur_cfg);
 }

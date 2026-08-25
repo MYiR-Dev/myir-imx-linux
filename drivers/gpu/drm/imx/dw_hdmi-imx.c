@@ -181,6 +181,7 @@ imx6dl_hdmi_mode_valid(struct dw_hdmi *hdmi, void *data,
 static bool imx8mp_hdmi_check_clk_rate(struct imx_hdmi *hdmi, int rate_khz)
 {
 	struct clk *clk_pix;
+	long rounded_rate;
 	int rate = rate_khz * 1000;
 
 	clk_pix = devm_clk_get(hdmi->dev, "pix");
@@ -189,8 +190,13 @@ static bool imx8mp_hdmi_check_clk_rate(struct imx_hdmi *hdmi, int rate_khz)
 	if (IS_ERR(clk_pix))
 		return true;
 
-	/* Check hdmi phy pixel clock support rate */
-	if (rate != clk_round_rate(clk_pix, rate))
+	/*
+	 * The HDMI PHY cannot generate every EDID pixel clock exactly.
+	 * VESA and CEA-861 modes permit a 0.5% clock tolerance, so accept
+	 * the closest PHY rate when it remains inside that range.
+	 */
+	rounded_rate = clk_round_rate(clk_pix, rate);
+	if (rounded_rate < 0 || abs(rounded_rate - rate) > rate_khz * 5)
 		return false;
 	return true;
 }

@@ -327,6 +327,29 @@ get_phy:
 			goto disable_pm_runtime;
 	}
 
+	/*
+	 * The two LDB channels share LCDIF2.  Only board variants that route the
+	 * channels to two independent single-link panels may expose both encoders
+	 * as clones.  Keep the default behavior unchanged for all other boards and
+	 * display variants.
+	 */
+	if (of_property_read_bool(np, "fsl,channel-clone")) {
+		u32 clone_mask;
+
+		if (ldb->dual || !imx8mp_ldb->channel[0].base.is_valid ||
+		    !imx8mp_ldb->channel[1].base.is_valid) {
+			dev_err(dev,
+				"fsl,channel-clone requires two single-link channels\n");
+			ret = -EINVAL;
+			goto disable_pm_runtime;
+		}
+
+		clone_mask = drm_encoder_mask(encoder[0]) |
+			     drm_encoder_mask(encoder[1]);
+		encoder[0]->possible_clones = clone_mask;
+		encoder[1]->possible_clones = clone_mask;
+	}
+
 	return 0;
 
 free_child:

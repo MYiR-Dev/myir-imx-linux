@@ -12,7 +12,8 @@
  * Both LDB channels share the one LCDIF2 pixel source.  The two panels must
  * therefore use the same mode and display a cloned image.  This is not the
  * J12 split-pixel dual-link connection provided by myd-js8mpq-lvds-dual.dts,
- * so this file must not set fsl,dual-channel.
+ * so this file must not set fsl,dual-channel.  fsl,channel-clone limits the
+ * DRM encoder-clone capability to this dual single-link display variant.
  *
  * LVDS0 uses PWM1 + GPIO1_IO05 for its backlight.  LVDS1 uses PWM2 +
  * GPIO5_IO29.  J10 and J11 route their touch controllers to the same I2C4
@@ -68,6 +69,7 @@
 
 &ldb {
 	/delete-property/ fsl,dual-channel;
+	fsl,channel-clone;
 
 	lvds-channel@0 {
 		status = "okay";

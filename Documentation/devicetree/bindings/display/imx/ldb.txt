@@ -18,8 +18,10 @@ Required properties:
                 LVDS channel.
                 i.MX8qm LDB supports 10bit RGB input and needs an additional
                 phy.
-                i.MX8qxp and i.MX8mp LDB only supports one LVDS encoder
-                channel(either channel0 or channel1).
+                i.MX8qxp LDB only supports one LVDS encoder channel (either
+                channel0 or channel1). i.MX8mp normally supports one LVDS
+                encoder channel, or two cloned single-link channels when
+                fsl,channel-clone is present.
                 i.MX93 LDB only supports one LVDS encoder channel(channel0).
  - gpr : should be <&gpr> on i.MX53 and i.MX6q.
          The phandle points to the iomuxc-gpr region containing the LVDS
@@ -64,6 +66,10 @@ Optional properties:
  - fsl,dual-channel : boolean. if it exists, only LVDS channel 0 should
    be configured - one input will be distributed on both outputs in dual
    channel mode
+ - fsl,channel-clone : boolean. Valid only on i.MX8mp. If it exists, both LVDS
+   channels must be configured as independent single-link outputs. Both
+   encoders receive the same LCDIF pixel stream and may be driven as cloned DRM
+   outputs. This property is mutually exclusive with fsl,dual-channel.
 
 LVDS Channel
 ============

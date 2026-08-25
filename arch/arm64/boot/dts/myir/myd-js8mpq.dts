@@ -400,6 +400,22 @@
 &A53_2 { cpu-supply = <&buck2>; };
 &A53_3 { cpu-supply = <&buck2>; };
 
+&vpu_g1 {
+	status = "okay";
+};
+
+&vpu_g2 {
+	status = "okay";
+};
+
+&vpu_vc8000e {
+	status = "okay";
+};
+
+&vpu_v4l2 {
+	status = "okay";
+};
+
 /* Vivante GPU/NPU cores used by Galcore and Weston's G2D renderer. */
 &gpu_3d {
 	status = "okay";
@@ -921,9 +937,9 @@
 		compatible = "edt,edt-ft5406";
 		reg = <0x38>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_touch>;
+		pinctrl-0 = <&pinctrl_touch_1>;
 		interrupt-parent = <&gpio1>;
-		interrupts = <6 IRQ_TYPE_EDGE_FALLING>;	/* GPIO1_IO06 */
+		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;	/* GPIO1_IO00 */
 		touchscreen-size-x = <1024>;
 		touchscreen-size-y = <600>;
 	};
@@ -943,9 +959,9 @@
                 compatible = "edt,edt-ft5406";
                 reg = <0x38>;
                 pinctrl-names = "default";
-                pinctrl-0 = <&pinctrl_touch_1>;
+                pinctrl-0 = <&pinctrl_touch>;
                 interrupt-parent = <&gpio1>;
-                interrupts = <0 IRQ_TYPE_EDGE_FALLING>; /* GPIO1_IO00 */
+                interrupts = <6 IRQ_TYPE_EDGE_FALLING>; /* GPIO1_IO06 */
                 touchscreen-size-x = <1024>;
                 touchscreen-size-y = <600>;
         };

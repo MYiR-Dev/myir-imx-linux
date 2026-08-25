@@ -19,6 +19,7 @@ dtb-$(CONFIG_ARCH_MXC) += myd-js8mpq-lvds-dual.dtb
 dtb-$(CONFIG_ARCH_MXC) += myd-js8mpq-dsi.dtb
 dtb-$(CONFIG_ARCH_MXC) += myd-js8mpq-hdmi-ov5640.dtb
 dtb-$(CONFIG_ARCH_MXC) += myd-js8mpq-hdmi-ov13855-isp.dtb
+dtb-$(CONFIG_ARCH_MXC) += myd-js8mpq-hdmi-max96722.dtb
 dtb-$(CONFIG_ARCH_MXC) += myd-js8mpq-2g.dtb
 dtb-$(CONFIG_ARCH_MXC) += myd-js8mpq-dsi-2g.dtb
 dtb-$(CONFIG_ARCH_MXC) += myd-js8mpq-lvds1-2g.dtb

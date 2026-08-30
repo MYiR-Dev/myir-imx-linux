@@ -648,6 +648,7 @@
         cd-gpios = <&gpio2 12 GPIO_ACTIVE_LOW>;
         vmmc-supply = <&reg_usdhc2_vmmc>;
         vqmmc-supply = <&ldo5>;
+	no-1-8-v;
         bus-width = <4>;
         status = "okay";
 };

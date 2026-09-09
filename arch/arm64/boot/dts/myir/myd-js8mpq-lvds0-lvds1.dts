@@ -16,13 +16,9 @@
  * DRM encoder-clone capability to this dual single-link display variant.
  *
  * LVDS0 uses PWM1 + GPIO1_IO05 for its backlight.  LVDS1 uses PWM2 +
- * GPIO5_IO29.  J10 and J11 route their touch controllers to the same I2C4
- * bus, and the two FT5x06 controllers normally use the same 0x38 address.
- * They therefore cannot operate on I2C4 at the same time.  This variant keeps
- * the inherited LVDS0 touch node (INT = GPIO1_IO06); connect only the LVDS0
- * touch interface and leave the LVDS1 touch interface disconnected.  To use
- * LVDS1 touch instead, the LVDS0 touch interface must be disconnected and the
- * node's interrupt must be changed to GPIO1_IO00 as in myd-js8mpq-lvds1.dts.
+ * GPIO5_IO29.  The two FT5x06 controllers both use address 0x38, but are on
+ * separate buses: LVDS1 uses I2C4 with GPIO1_IO00 as its interrupt, while
+ * LVDS0 uses I2C5 with GPIO1_IO06 as its interrupt.
  */
 
 #include "myd-js8mpq.dts"
@@ -65,6 +61,19 @@
 			};
 		};
 	};
+};
+
+/*
+ * Only the dual-panel variant enables panel-coupled deferred probing.  Touch
+ * power follows the corresponding panel connector and may not be ready when
+ * the I2C controller first probes.
+ */
+&lvds_touch {
+	panel = <&panel_lvds1>;
+};
+
+&lvds0_touch {
+	panel = <&panel_lvds>;
 };
 
 &ldb {

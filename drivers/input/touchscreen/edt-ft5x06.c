@@ -25,6 +25,7 @@
 #include <linux/irq.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/property.h>
 #include <linux/ratelimit.h>
 #include <linux/regmap.h>
@@ -1275,6 +1276,18 @@ static int edt_ft5x06_ts_probe(struct i2c_client *client)
 
 	error = edt_ft5x06_ts_identify(client, tsdata);
 	if (error) {
+		/*
+		 * A controller associated with a panel may be powered by the panel
+		 * connector.  Let the driver core retry after panel/display devices
+		 * have finished probing instead of permanently failing the first I2C
+		 * access during boot.
+		 */
+		if (of_machine_is_compatible("myir,imx8mp-myd-js8mpq") &&
+		    (error == -ENXIO || error == -EREMOTEIO) &&
+		    device_property_present(&client->dev, "panel"))
+			return dev_err_probe(&client->dev, -EPROBE_DEFER,
+					     "touchscreen is not ready\n");
+
 		dev_err(&client->dev, "touchscreen probe failed\n");
 		return error;
 	}

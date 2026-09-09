@@ -197,7 +197,7 @@
 /* Baseboard select = GPIO4_IO21. HIGH = DSI. */
 &gpio4 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wdt_en &pinctrl_dsi_sel>;
+	pinctrl-0 = <&pinctrl_dsi_sel>;
 
 	dsi-sel-hog {
 		gpio-hog;

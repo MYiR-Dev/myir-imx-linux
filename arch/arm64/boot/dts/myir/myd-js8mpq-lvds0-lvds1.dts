@@ -108,7 +108,7 @@
 
 &gpio4 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wdt_en &pinctrl_lvds1_sel>;
+	pinctrl-0 = <&pinctrl_lvds1_sel>;
 
 	lvds1-sel-hog {
 		gpio-hog;

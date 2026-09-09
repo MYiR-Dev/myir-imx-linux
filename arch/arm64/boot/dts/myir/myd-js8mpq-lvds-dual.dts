@@ -128,7 +128,7 @@
 /* Baseboard ch1 select = GPIO4_IO21, low selects the LVDS1 path. */
 &gpio4 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wdt_en &pinctrl_lvds_ch1_sel>;
+	pinctrl-0 = <&pinctrl_lvds_ch1_sel>;
 
 	lvds-ch1-sel-hog {
 		gpio-hog;

@@ -17,6 +17,7 @@
 #include <linux/clocksource.h>
 #include <linux/net_tstamp.h>
 #include <linux/pm_qos.h>
+#include <linux/gpio/consumer.h>
 #include <linux/bpf.h>
 #include <linux/ptp_clock_kernel.h>
 #include <linux/timecounter.h>
@@ -611,6 +612,8 @@ struct fec_enet_private {
 	struct clk *clk_2x_txclk;
 
 	bool ptp_clk_on;
+	struct gpio_desc *phy_reset;
+        int phy_reset_msec;
 	struct mutex ptp_clk_mutex;
 	unsigned int num_tx_queues;
 	unsigned int num_rx_queues;

@@ -540,6 +540,27 @@ static int ip_options_get_finish(struct net *net, struct ip_options_rcu **optp,
 	return 0;
 }
 
+/* Backport of upstream commit e3f33b0a1d89 ("ipv4: free inet_opt and ireq_opt
+ * after an RCU grace period"): inet_opt/ireq_opt can still be read by RCU
+ * readers (SYNACK retransmit racing tcp_v4_send_synack, tcp_migrate_req clone)
+ * when the socket/request destructors run, so they must be released only after
+ * a grace period. 5.4 lacks kfree_rcu() support for the __rcu pointer returned
+ * by rcu_dereference_protected(), so use call_rcu() with an explicit callback.
+ */
+static void ip_options_rcu_free(struct rcu_head *head)
+{
+	struct ip_options_rcu *opt = container_of(head, struct ip_options_rcu, rcu);
+
+	kfree(opt);
+}
+
+void ip_options_free_rcu(struct ip_options_rcu *opt)
+{
+	if (!opt)
+		return;
+	call_rcu(&opt->rcu, ip_options_rcu_free);
+}
+
 int ip_options_get_from_user(struct net *net, struct ip_options_rcu **optp,
 			     unsigned char __user *data, int optlen)
 {

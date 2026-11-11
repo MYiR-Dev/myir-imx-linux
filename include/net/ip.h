@@ -715,6 +715,7 @@ int ip_options_get(struct net *net, struct ip_options_rcu **optp,
 int ip_options_get_from_user(struct net *net, struct ip_options_rcu **optp,
 			     unsigned char __user *data, int optlen);
 void ip_options_undo(struct ip_options *opt);
+void ip_options_free_rcu(struct ip_options_rcu *opt);
 void ip_forward_options(struct sk_buff *skb);
 int ip_options_rcv_srr(struct sk_buff *skb, struct net_device *dev);
 
